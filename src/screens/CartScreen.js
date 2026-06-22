@@ -23,7 +23,11 @@ export default function CartScreen({ navigation }) {
     <ScrollView contentContainerStyle={styles.container}>
       {cartItems.map((item) => (
         <View key={item.cartId} style={styles.item}>
-          <Pressable style={styles.deleteButton} onPress={() => removeFromCart(item.cartId)}>
+          <Pressable
+            accessibilityLabel={`${item.name} 삭제`}
+            style={styles.deleteButton}
+            onPress={() => removeFromCart(item.cartId)}
+          >
             <Text style={styles.deleteButtonText}>삭제</Text>
           </Pressable>
 
@@ -43,13 +47,14 @@ export default function CartScreen({ navigation }) {
             <Text style={styles.itemMeta}>옵션 없음</Text>
           )}
 
-          <View style={styles.itemActions}>
+          <View style={styles.quantityPanel}>
+            <Text style={styles.quantityLabel}>수량</Text>
             <QuantitySelector
               quantity={item.quantity}
               onDecrease={() => changeCartItemQuantity(item.cartId, -1)}
               onIncrease={() => changeCartItemQuantity(item.cartId, 1)}
             />
-            <Text style={styles.minHint}>최소 1개</Text>
+            <Text style={styles.minHint}>최소 1개, 제거는 삭제 버튼</Text>
           </View>
         </View>
       ))}
@@ -129,14 +134,22 @@ const styles = StyleSheet.create({
     color: "#666666",
     lineHeight: 19,
   },
-  itemActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 14,
+  quantityPanel: {
     marginTop: 14,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: "#fffaf2",
+    borderWidth: 1,
+    borderColor: "#f0dfcc",
+  },
+  quantityLabel: {
+    marginBottom: 10,
+    color: "#222222",
+    fontSize: 14,
+    fontWeight: "900",
   },
   minHint: {
+    marginTop: 10,
     color: "#8a7566",
     fontSize: 12,
     fontWeight: "800",
