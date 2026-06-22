@@ -44,7 +44,7 @@ export default function App() {
     document.head.appendChild(style);
   }, []);
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded && Platform.OS !== "web") {
     return <View style={{ flex: 1, backgroundColor: "#fffaf2" }} />;
   }
 
