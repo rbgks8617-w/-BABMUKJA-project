@@ -13,9 +13,14 @@ export default function MenuDetailScreen({ route, navigation }) {
   const [quantity, setQuantity] = useState(1);
   const [selectedOptions, setSelectedOptions] = useState([]);
 
-  const optionTotal = useMemo(
-    () => selectedOptions.reduce((sum, option) => sum + option.price, 0),
+  const normalizedSelectedOptions = useMemo(
+    () => [...selectedOptions].sort((a, b) => a.id.localeCompare(b.id)),
     [selectedOptions],
+  );
+
+  const optionTotal = useMemo(
+    () => normalizedSelectedOptions.reduce((sum, option) => sum + option.price, 0),
+    [normalizedSelectedOptions],
   );
 
   if (!menu) {
@@ -26,7 +31,8 @@ export default function MenuDetailScreen({ route, navigation }) {
     );
   }
 
-  const totalPrice = (menu.price + optionTotal) * quantity;
+  const unitPrice = menu.price + optionTotal;
+  const totalPrice = unitPrice * quantity;
 
   function toggleOption(option) {
     setSelectedOptions((prevOptions) => {
@@ -40,8 +46,9 @@ export default function MenuDetailScreen({ route, navigation }) {
       menuId: menu.id,
       name: menu.name,
       quantity,
-      selectedOptions,
+      selectedOptions: normalizedSelectedOptions,
       basePrice: menu.price,
+      unitPrice,
       totalPrice,
     };
   }

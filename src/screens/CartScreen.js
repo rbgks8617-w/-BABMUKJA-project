@@ -1,11 +1,12 @@
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import PriceSummary from "../components/PriceSummary";
+import QuantitySelector from "../components/QuantitySelector";
 import { useCart } from "../store/CartContext";
 import { formatPrice } from "../utils/formatPrice";
 
 export default function CartScreen({ navigation }) {
-  const { cartItems, removeFromCart, totalPrice } = useCart();
+  const { cartItems, changeCartItemQuantity, removeFromCart, totalPrice } = useCart();
 
   if (cartItems.length === 0) {
     return (
@@ -23,18 +24,31 @@ export default function CartScreen({ navigation }) {
       {cartItems.map((item) => (
         <View key={item.cartId} style={styles.item}>
           <View style={styles.itemHeader}>
-            <Text style={styles.itemName}>{item.name}</Text>
+            <View style={styles.itemTitleArea}>
+              <Text style={styles.itemName}>{item.name}</Text>
+              <Text style={styles.itemMeta}>개당 {formatPrice(item.unitPrice ?? item.basePrice)}</Text>
+            </View>
             <Text style={styles.itemPrice}>{formatPrice(item.totalPrice)}</Text>
           </View>
-          <Text style={styles.itemMeta}>수량 {item.quantity}개</Text>
-          {item.selectedOptions.length > 0 && (
+
+          {item.selectedOptions.length > 0 ? (
             <Text style={styles.itemMeta}>
               옵션: {item.selectedOptions.map((option) => option.name).join(", ")}
             </Text>
+          ) : (
+            <Text style={styles.itemMeta}>옵션 없음</Text>
           )}
-          <Pressable onPress={() => removeFromCart(item.cartId)}>
-            <Text style={styles.removeText}>삭제</Text>
-          </Pressable>
+
+          <View style={styles.itemActions}>
+            <QuantitySelector
+              quantity={item.quantity}
+              onDecrease={() => changeCartItemQuantity(item.cartId, -1)}
+              onIncrease={() => changeCartItemQuantity(item.cartId, 1)}
+            />
+            <Pressable onPress={() => removeFromCart(item.cartId)}>
+              <Text style={styles.removeText}>삭제</Text>
+            </Pressable>
+          </View>
         </View>
       ))}
 
@@ -78,8 +92,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 10,
   },
-  itemName: {
+  itemTitleArea: {
     flex: 1,
+  },
+  itemName: {
     color: "#222222",
     fontSize: 18,
     fontWeight: "900",
@@ -92,8 +108,14 @@ const styles = StyleSheet.create({
     marginTop: 8,
     color: "#666666",
   },
+  itemActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 14,
+    marginTop: 14,
+  },
   removeText: {
-    marginTop: 12,
     color: "#d9532b",
     fontWeight: "800",
   },

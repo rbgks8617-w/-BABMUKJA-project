@@ -8,7 +8,7 @@ import { useCart } from "../store/CartContext";
 export default function RestaurantListScreen({ navigation }) {
   const university = getUniversity();
   const restaurants = getRestaurants();
-  const { cartItems } = useCart();
+  const { totalQuantity } = useCart();
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -18,7 +18,7 @@ export default function RestaurantListScreen({ navigation }) {
           <Text style={styles.title}>오늘 캠퍼스에서 뭐 먹지?</Text>
         </View>
         <Pressable style={styles.cartButton} onPress={() => navigation.navigate("Cart")}>
-          <Text style={styles.cartText}>장바구니 {cartItems.length}</Text>
+          <Text style={styles.cartText}>장바구니 {totalQuantity}</Text>
         </Pressable>
       </View>
 
