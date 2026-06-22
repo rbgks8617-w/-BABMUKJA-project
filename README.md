@@ -70,6 +70,36 @@ npm run ios
 npm run web
 ```
 
+## Windows EXE 미리보기
+
+PC에서 바로 확인할 수 있도록 `windows-preview` 폴더에 Windows용 미리보기 앱을 분리해두었습니다.
+
+현재 PC에서 바로 실행 파일을 만들 때는 아래 명령어를 사용합니다.
+
+```bash
+python -m PyInstaller --onefile --windowed --name UniversityBabmukja windows-preview/babmukja_preview.py
+```
+
+빌드 후 실행 파일:
+
+```text
+dist/UniversityBabmukja.exe
+```
+
+`desktop-preview` 폴더에는 .NET WinForms 버전의 미리보기 앱도 준비되어 있습니다. .NET SDK가 설치된 PC에서는 아래 명령어로 빌드할 수 있습니다.
+
+빌드:
+
+```bash
+dotnet publish desktop-preview -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true
+```
+
+빌드 후 실행 파일:
+
+```text
+desktop-preview/bin/Release/net9.0-windows/win-x64/publish/UniversityBabmukja.exe
+```
+
 ## MVP 개발 순서
 
 1. 스플래시 화면
