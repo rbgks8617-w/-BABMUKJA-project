@@ -1,5 +1,5 @@
 import React from "react";
-import { Platform, Pressable, StyleSheet, Text } from "react-native";
+import { Pressable, StyleSheet, Text } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import CartScreen from "../screens/CartScreen";
 import MenuDetailScreen from "../screens/MenuDetailScreen";
@@ -9,20 +9,15 @@ import RecommendationScreen from "../screens/RecommendationScreen";
 import RestaurantDetailScreen from "../screens/RestaurantDetailScreen";
 import RestaurantListScreen from "../screens/RestaurantListScreen";
 import SplashScreen from "../screens/SplashScreen";
+import { APP_FONT_FAMILY } from "../theme/typography";
 
 const Stack = createNativeStackNavigator();
-const appFontFamily = Platform.select({
-  android: "sans-serif",
-  ios: "Apple SD Gothic Neo",
-  web: "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI', sans-serif",
-  default: undefined,
-});
 
 const headerTitleStyle = {
   color: "#27211d",
-  fontFamily: appFontFamily,
+  fontFamily: APP_FONT_FAMILY,
   fontSize: 17,
-  fontWeight: "800",
+  fontWeight: "700",
 };
 
 function BackHeaderButton({ navigation, label = "뒤로" }) {
@@ -115,14 +110,14 @@ const styles = StyleSheet.create({
   backIcon: {
     marginRight: 2,
     color: "#c94a25",
-    fontFamily: appFontFamily,
+    fontFamily: APP_FONT_FAMILY,
     fontSize: 20,
     fontWeight: "500",
     lineHeight: 22,
   },
   backButtonText: {
     color: "#c94a25",
-    fontFamily: appFontFamily,
+    fontFamily: APP_FONT_FAMILY,
     fontSize: 13,
     fontWeight: "700",
     lineHeight: 17,
