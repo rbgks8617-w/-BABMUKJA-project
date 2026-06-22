@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import PriceSummary from "../components/PriceSummary";
 import QuantitySelector from "../components/QuantitySelector";
 import { getMenuById } from "../services/restaurantService";
@@ -13,6 +13,9 @@ export default function MenuDetailScreen({ route, navigation }) {
   const [quantity, setQuantity] = useState(1);
   const [selectedOptions, setSelectedOptions] = useState([]);
   const [addedMessage, setAddedMessage] = useState("");
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const toastTranslateY = useRef(new Animated.Value(28)).current;
+  const toastAnimation = useRef(null);
 
   const normalizedSelectedOptions = useMemo(
     () => [...selectedOptions].sort((a, b) => a.id.localeCompare(b.id)),
@@ -35,6 +38,14 @@ export default function MenuDetailScreen({ route, navigation }) {
   const unitPrice = menu.price + optionTotal;
   const totalPrice = unitPrice * quantity;
 
+  useEffect(() => {
+    return () => {
+      if (toastAnimation.current) {
+        toastAnimation.current.stop();
+      }
+    };
+  }, []);
+
   function toggleOption(option) {
     setAddedMessage("");
     setSelectedOptions((prevOptions) => {
@@ -55,9 +66,53 @@ export default function MenuDetailScreen({ route, navigation }) {
     };
   }
 
+  function showAddedToast(message) {
+    if (toastAnimation.current) {
+      toastAnimation.current.stop();
+    }
+
+    setAddedMessage(message);
+    toastOpacity.setValue(0);
+    toastTranslateY.setValue(28);
+
+    toastAnimation.current = Animated.sequence([
+      Animated.parallel([
+        Animated.timing(toastOpacity, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: false,
+        }),
+        Animated.timing(toastTranslateY, {
+          toValue: 0,
+          duration: 220,
+          useNativeDriver: false,
+        }),
+      ]),
+      Animated.delay(1300),
+      Animated.parallel([
+        Animated.timing(toastOpacity, {
+          toValue: 0,
+          duration: 420,
+          useNativeDriver: false,
+        }),
+        Animated.timing(toastTranslateY, {
+          toValue: 18,
+          duration: 420,
+          useNativeDriver: false,
+        }),
+      ]),
+    ]);
+
+    toastAnimation.current.start(({ finished }) => {
+      if (finished) {
+        setAddedMessage("");
+      }
+    });
+  }
+
   function handleAddToCart() {
     addToCart(makeOrderItem());
-    setAddedMessage(`${menu.name} ${quantity}개를 장바구니에 담았어요.`);
+    showAddedToast(`${menu.name} ${quantity}개가 추가되었습니다.`);
   }
 
   function handleDirectPayment() {
@@ -65,68 +120,84 @@ export default function MenuDetailScreen({ route, navigation }) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Image source={{ uri: menu.imageUrl }} style={styles.image} />
-      <Text style={styles.category}>{menu.category}</Text>
-      <Text style={styles.name}>{menu.name}</Text>
-      <Text style={styles.price}>{formatPrice(menu.price)}</Text>
-      <Text style={styles.description}>{menu.description}</Text>
+    <View style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Image source={{ uri: menu.imageUrl }} style={styles.image} />
+        <Text style={styles.category}>{menu.category}</Text>
+        <Text style={styles.name}>{menu.name}</Text>
+        <Text style={styles.price}>{formatPrice(menu.price)}</Text>
+        <Text style={styles.description}>{menu.description}</Text>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>옵션 선택</Text>
-        {menu.options.map((option) => {
-          const isSelected = selectedOptions.some((item) => item.id === option.id);
-          return (
-            <Pressable
-              key={option.id}
-              style={[styles.option, isSelected && styles.optionSelected]}
-              onPress={() => toggleOption(option)}
-            >
-              <Text style={styles.optionName}>{option.name}</Text>
-              <Text style={styles.optionPrice}>+ {formatPrice(option.price)}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>옵션 선택</Text>
+          {menu.options.map((option) => {
+            const isSelected = selectedOptions.some((item) => item.id === option.id);
+            return (
+              <Pressable
+                key={option.id}
+                style={[styles.option, isSelected && styles.optionSelected]}
+                onPress={() => toggleOption(option)}
+              >
+                <Text style={styles.optionName}>{option.name}</Text>
+                <Text style={styles.optionPrice}>+ {formatPrice(option.price)}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
 
-      <View style={styles.quantityRow}>
-        <Text style={styles.sectionTitle}>수량</Text>
-        <QuantitySelector
-          quantity={quantity}
-          onDecrease={() => {
-            setAddedMessage("");
-            setQuantity((value) => Math.max(1, value - 1));
-          }}
-          onIncrease={() => {
-            setAddedMessage("");
-            setQuantity((value) => value + 1);
-          }}
-        />
-      </View>
+        <View style={styles.quantityRow}>
+          <Text style={styles.sectionTitle}>수량</Text>
+          <QuantitySelector
+            quantity={quantity}
+            onDecrease={() => {
+              setAddedMessage("");
+              setQuantity((value) => Math.max(1, value - 1));
+            }}
+            onIncrease={() => {
+              setAddedMessage("");
+              setQuantity((value) => value + 1);
+            }}
+          />
+        </View>
 
-      <PriceSummary price={totalPrice} />
+        <PriceSummary price={totalPrice} />
+
+        <View style={styles.actions}>
+          <Pressable style={[styles.actionButton, styles.secondary]} onPress={handleAddToCart}>
+            <Text style={styles.secondaryText}>장바구니 담기</Text>
+          </Pressable>
+          <Pressable style={[styles.actionButton, styles.primary]} onPress={handleDirectPayment}>
+            <Text style={styles.primaryText}>바로 결제</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
 
       {addedMessage ? (
-        <View style={styles.addedBox}>
-          <Text style={styles.addedText}>{addedMessage}</Text>
-        </View>
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.toast,
+            {
+              opacity: toastOpacity,
+              transform: [{ translateY: toastTranslateY }],
+            },
+          ]}
+        >
+          <Text style={styles.toastText}>{addedMessage}</Text>
+        </Animated.View>
       ) : null}
-
-      <View style={styles.actions}>
-        <Pressable style={[styles.actionButton, styles.secondary]} onPress={handleAddToCart}>
-          <Text style={styles.secondaryText}>장바구니 담기</Text>
-        </Pressable>
-        <Pressable style={[styles.actionButton, styles.primary]} onPress={handleDirectPayment}>
-          <Text style={styles.primaryText}>바로 결제</Text>
-        </Pressable>
-      </View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: "#fffaf4",
+  },
   container: {
     padding: 20,
+    paddingBottom: 120,
   },
   empty: {
     flex: 1,
@@ -203,19 +274,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginVertical: 24,
   },
-  addedBox: {
-    marginTop: 14,
-    padding: 13,
-    borderRadius: 12,
-    backgroundColor: "#ecfff5",
-    borderWidth: 1,
-    borderColor: "#bdebd2",
-  },
-  addedText: {
-    color: "#1f8f5f",
-    fontWeight: "900",
-    lineHeight: 20,
-  },
   actions: {
     flexDirection: "row",
     gap: 12,
@@ -242,5 +300,28 @@ const styles = StyleSheet.create({
   secondaryText: {
     color: "#d9532b",
     fontWeight: "900",
+  },
+  toast: {
+    position: "absolute",
+    left: 20,
+    right: 20,
+    bottom: 28,
+    alignItems: "center",
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: "rgba(24, 24, 24, 0.94)",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+  toastText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "900",
+    textAlign: "center",
+    lineHeight: 20,
   },
 });
