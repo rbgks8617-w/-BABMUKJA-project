@@ -1,42 +1,86 @@
-# BABMUKJA Project
+# 대학교 밥먹자
 
-밥먹자(BABMUKJA)는 오늘 먹을 메뉴를 빠르게 고를 수 있도록 도와주는 간단한 웹앱입니다.
+대학교 밥먹자는 캠퍼스 안 식당과 메뉴를 보여주고, 사용자가 음식을 선택해 더미 결제까지 진행할 수 있는 대학 전용 음식 주문 앱 MVP입니다.
 
-## 주요 기능
+## 앱 전체 기능 요약
 
-- 한식, 중식, 일식, 양식, 분식 카테고리별 메뉴 확인
-- 검색어로 메뉴 필터링
-- 랜덤 메뉴 추천
-- 선택한 메뉴를 오늘의 메뉴로 표시
+- 앱 실행 시 대학교 로고가 나오는 스플래시 화면
+- 학교 안 식당 리스트 확인
+- 식당별 메뉴 목록 확인
+- 메뉴 상세, 옵션 선택, 수량 선택
+- 장바구니 담기 또는 바로 결제
+- 더미 결제 화면
+- 주문 완료 화면
 
-## 프로젝트 구조
+## 추천 기술 스택
+
+- React Native
+- Expo
+- React Navigation
+- Context API
+- 더미 데이터 기반 프론트엔드 MVP
+
+## 폴더 구조
 
 ```text
 BABMUKJA-project/
-├── index.html
-├── README.md
+├── App.js
+├── package.json
+├── assets/
 ├── src/
-│   ├── app.js
-│   └── styles.css
-└── assets/
-    └── .gitkeep
+│   ├── components/
+│   ├── data/
+│   ├── navigation/
+│   ├── screens/
+│   ├── services/
+│   ├── store/
+│   └── utils/
+└── README.md
 ```
 
 ## 실행 방법
 
-별도 설치 없이 `index.html` 파일을 브라우저에서 열면 바로 실행됩니다.
-
-로컬 서버로 실행하고 싶다면 프로젝트 폴더에서 아래 명령어를 사용할 수 있습니다.
+의존성 설치:
 
 ```bash
-python -m http.server 8000
+npm install
 ```
 
-이후 브라우저에서 `http://localhost:8000`으로 접속합니다.
+Expo 실행:
 
-## 다음에 추가하면 좋은 기능
+```bash
+npm start
+```
 
-- 사용자별 선호 메뉴 저장
-- 위치 기반 주변 식당 추천
-- 매운맛, 가격대, 거리 필터
-- 로그인 및 즐겨찾기 기능
+Android 실행:
+
+```bash
+npm run android
+```
+
+iOS 실행:
+
+```bash
+npm run ios
+```
+
+웹 미리보기:
+
+```bash
+npm run web
+```
+
+## MVP 개발 순서
+
+1. 스플래시 화면
+2. 식당 리스트 화면
+3. 식당 상세 및 메뉴 리스트 화면
+4. 메뉴 상세 화면
+5. 장바구니 상태 관리
+6. 더미 결제 화면
+7. 주문 완료 화면
+8. Firebase 또는 백엔드 연결 준비
+
+## 데이터 구조
+
+현재는 `src/data/dummyData.js`에 더미 데이터를 넣었습니다. 나중에 Firebase나 백엔드 서버를 붙일 때는 `src/services` 안의 함수만 실제 API 호출로 바꾸면 됩니다.
