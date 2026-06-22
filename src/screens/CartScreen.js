@@ -36,7 +36,6 @@ export default function CartScreen({ navigation }) {
               <Text style={styles.itemName}>{item.name}</Text>
               <Text style={styles.itemMeta}>개당 {formatPrice(item.unitPrice ?? item.basePrice)}</Text>
             </View>
-            <Text style={styles.itemPrice}>{formatPrice(item.totalPrice)}</Text>
           </View>
 
           {item.selectedOptions.length > 0 ? (
@@ -54,7 +53,6 @@ export default function CartScreen({ navigation }) {
               onDecrease={() => changeCartItemQuantity(item.cartId, -1)}
               onIncrease={() => changeCartItemQuantity(item.cartId, 1)}
             />
-            <Text style={styles.minHint}>최소 1개, 제거는 삭제 버튼</Text>
           </View>
         </View>
       ))}
@@ -114,7 +112,7 @@ const styles = StyleSheet.create({
   itemHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 74,
+    paddingRight: 62,
   },
   itemTitleArea: {
     flex: 1,
@@ -123,11 +121,6 @@ const styles = StyleSheet.create({
     color: "#222222",
     fontSize: 18,
     fontWeight: "900",
-  },
-  itemPrice: {
-    color: "#d9532b",
-    fontWeight: "900",
-    textAlign: "right",
   },
   itemMeta: {
     marginTop: 8,
@@ -147,12 +140,6 @@ const styles = StyleSheet.create({
     color: "#222222",
     fontSize: 14,
     fontWeight: "900",
-  },
-  minHint: {
-    marginTop: 10,
-    color: "#8a7566",
-    fontSize: 12,
-    fontWeight: "800",
   },
   primaryButton: {
     alignItems: "center",
