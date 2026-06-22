@@ -115,6 +115,15 @@ export default function MenuDetailScreen({ route, navigation }) {
     showAddedToast(`${menu.name} ${quantity}개가 추가되었습니다.`);
   }
 
+  function handleGoToCart() {
+    if (toastAnimation.current) {
+      toastAnimation.current.stop();
+    }
+
+    setAddedMessage("");
+    navigation.navigate("Cart");
+  }
+
   function handleDirectPayment() {
     navigation.navigate("Payment", { orderItems: [makeOrderItem()] });
   }
@@ -174,7 +183,6 @@ export default function MenuDetailScreen({ route, navigation }) {
 
       {addedMessage ? (
         <Animated.View
-          pointerEvents="none"
           style={[
             styles.toast,
             {
@@ -184,6 +192,9 @@ export default function MenuDetailScreen({ route, navigation }) {
           ]}
         >
           <Text style={styles.toastText}>{addedMessage}</Text>
+          <Pressable hitSlop={8} style={styles.toastAction} onPress={handleGoToCart}>
+            <Text style={styles.toastActionText}>장바구니로 가기</Text>
+          </Pressable>
         </Animated.View>
       ) : null}
     </View>
@@ -306,7 +317,10 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     bottom: 28,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
     paddingHorizontal: 18,
     paddingVertical: 14,
     borderRadius: 14,
@@ -318,10 +332,22 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   toastText: {
+    flex: 1,
     color: "#ffffff",
     fontSize: 14,
-    fontWeight: "900",
-    textAlign: "center",
+    fontWeight: "800",
     lineHeight: 20,
+  },
+  toastAction: {
+    paddingLeft: 12,
+    paddingVertical: 3,
+    borderLeftWidth: 1,
+    borderLeftColor: "rgba(255, 255, 255, 0.22)",
+  },
+  toastActionText: {
+    color: "#ffd2bf",
+    fontSize: 13,
+    fontWeight: "900",
+    lineHeight: 18,
   },
 });
