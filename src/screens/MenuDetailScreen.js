@@ -12,6 +12,7 @@ export default function MenuDetailScreen({ route, navigation }) {
   const { addToCart } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [selectedOptions, setSelectedOptions] = useState([]);
+  const [addedMessage, setAddedMessage] = useState("");
 
   const normalizedSelectedOptions = useMemo(
     () => [...selectedOptions].sort((a, b) => a.id.localeCompare(b.id)),
@@ -35,6 +36,7 @@ export default function MenuDetailScreen({ route, navigation }) {
   const totalPrice = unitPrice * quantity;
 
   function toggleOption(option) {
+    setAddedMessage("");
     setSelectedOptions((prevOptions) => {
       const exists = prevOptions.some((item) => item.id === option.id);
       return exists ? prevOptions.filter((item) => item.id !== option.id) : [...prevOptions, option];
@@ -55,7 +57,7 @@ export default function MenuDetailScreen({ route, navigation }) {
 
   function handleAddToCart() {
     addToCart(makeOrderItem());
-    navigation.navigate("Cart");
+    setAddedMessage(`${menu.name} ${quantity}개를 장바구니에 담았어요.`);
   }
 
   function handleDirectPayment() {
@@ -91,12 +93,24 @@ export default function MenuDetailScreen({ route, navigation }) {
         <Text style={styles.sectionTitle}>수량</Text>
         <QuantitySelector
           quantity={quantity}
-          onDecrease={() => setQuantity((value) => Math.max(1, value - 1))}
-          onIncrease={() => setQuantity((value) => value + 1)}
+          onDecrease={() => {
+            setAddedMessage("");
+            setQuantity((value) => Math.max(1, value - 1));
+          }}
+          onIncrease={() => {
+            setAddedMessage("");
+            setQuantity((value) => value + 1);
+          }}
         />
       </View>
 
       <PriceSummary price={totalPrice} />
+
+      {addedMessage ? (
+        <View style={styles.addedBox}>
+          <Text style={styles.addedText}>{addedMessage}</Text>
+        </View>
+      ) : null}
 
       <View style={styles.actions}>
         <Pressable style={[styles.actionButton, styles.secondary]} onPress={handleAddToCart}>
@@ -188,6 +202,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginVertical: 24,
+  },
+  addedBox: {
+    marginTop: 14,
+    padding: 13,
+    borderRadius: 12,
+    backgroundColor: "#ecfff5",
+    borderWidth: 1,
+    borderColor: "#bdebd2",
+  },
+  addedText: {
+    color: "#1f8f5f",
+    fontWeight: "900",
+    lineHeight: 20,
   },
   actions: {
     flexDirection: "row",
