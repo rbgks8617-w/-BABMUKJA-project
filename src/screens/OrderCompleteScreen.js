@@ -1,5 +1,6 @@
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { colors } from "../theme/colors";
 import { formatPrice } from "../utils/formatPrice";
 
 export default function OrderCompleteScreen({ route, navigation }) {
@@ -48,17 +49,17 @@ const styles = StyleSheet.create({
   completeBox: {
     alignItems: "center",
     padding: 28,
-    borderRadius: 14,
-    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#f0dfcc",
+    borderColor: colors.border,
   },
   check: {
     width: 58,
     height: 58,
     marginBottom: 14,
     borderRadius: 29,
-    backgroundColor: "#1f8f5f",
+    backgroundColor: colors.success,
     color: "#ffffff",
     fontSize: 38,
     fontWeight: "900",
@@ -66,27 +67,27 @@ const styles = StyleSheet.create({
     lineHeight: 58,
   },
   title: {
-    color: "#222222",
+    color: colors.text,
     fontSize: 25,
-    fontWeight: "900",
+    fontWeight: "800",
   },
   orderNumber: {
     marginTop: 8,
-    color: "#666666",
+    color: colors.textMuted,
     fontWeight: "700",
   },
   summary: {
     padding: 18,
-    borderRadius: 14,
-    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#f0dfcc",
+    borderColor: colors.border,
   },
   sectionTitle: {
     marginBottom: 14,
-    color: "#222222",
+    color: colors.text,
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "800",
   },
   row: {
     flexDirection: "row",
@@ -96,32 +97,32 @@ const styles = StyleSheet.create({
   },
   itemName: {
     flex: 1,
-    color: "#222222",
+    color: colors.text,
     fontWeight: "700",
   },
   itemPrice: {
-    color: "#d9532b",
-    fontWeight: "900",
+    color: colors.primary,
+    fontWeight: "800",
   },
   divider: {
     height: 1,
     marginVertical: 10,
-    backgroundColor: "#f0dfcc",
+    backgroundColor: colors.border,
   },
   totalLabel: {
-    color: "#222222",
+    color: colors.text,
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "800",
   },
   totalPrice: {
-    color: "#d9532b",
+    color: colors.primary,
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "800",
   },
   readyBox: {
     padding: 18,
-    borderRadius: 14,
-    backgroundColor: "#222222",
+    borderRadius: 16,
+    backgroundColor: colors.ink,
   },
   readyLabel: {
     color: "#ffffff",
@@ -136,8 +137,8 @@ const styles = StyleSheet.create({
   homeButton: {
     alignItems: "center",
     paddingVertical: 15,
-    borderRadius: 10,
-    backgroundColor: "#d9532b",
+    borderRadius: 14,
+    backgroundColor: colors.primary,
   },
   homeButtonText: {
     color: "#ffffff",

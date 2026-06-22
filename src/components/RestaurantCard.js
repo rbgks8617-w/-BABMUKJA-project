@@ -1,5 +1,6 @@
 import React from "react";
 import { ImageBackground, Pressable, StyleSheet, Text, View } from "react-native";
+import { colors } from "../theme/colors";
 
 export default function RestaurantCard({ restaurant, onPress }) {
   return (
@@ -31,9 +32,9 @@ const styles = StyleSheet.create({
     minWidth: 0,
     overflow: "hidden",
     borderRadius: 14,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#ead9c8",
+    borderColor: colors.border,
   },
   image: {
     flex: 1,
@@ -60,7 +61,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   open: {
-    backgroundColor: "#1f8f5f",
+    backgroundColor: colors.success,
   },
   closed: {
     backgroundColor: "#8b8b8b",

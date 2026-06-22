@@ -4,6 +4,7 @@ import RecommendationBanner from "../components/RecommendationBanner";
 import RestaurantCard from "../components/RestaurantCard";
 import { getRestaurants, getUniversity } from "../services/restaurantService";
 import { useCart } from "../store/CartContext";
+import { colors } from "../theme/colors";
 
 function chunkPairs(items) {
   const rows = [];
@@ -72,22 +73,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   eyebrow: {
-    color: "#d9532b",
+    color: colors.primary,
     fontWeight: "800",
   },
   title: {
     maxWidth: 230,
     marginTop: 6,
-    color: "#222222",
+    color: colors.text,
     fontSize: 26,
-    fontWeight: "900",
+    fontWeight: "800",
     lineHeight: 32,
   },
   cartButton: {
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: "#222222",
+    borderRadius: 999,
+    backgroundColor: colors.ink,
   },
   cartText: {
     color: "#ffffff",
@@ -101,12 +102,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    color: "#222222",
+    color: colors.text,
     fontSize: 21,
-    fontWeight: "900",
+    fontWeight: "800",
   },
   sectionMeta: {
-    color: "#8a7566",
+    color: colors.textSoft,
     fontWeight: "800",
   },
   grid: {

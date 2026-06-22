@@ -1,5 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { colors } from "../theme/colors";
 import { formatPrice } from "../utils/formatPrice";
 
 export default function PriceSummary({ label = "총 결제 금액", price }) {
@@ -17,8 +18,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     padding: 18,
-    borderRadius: 12,
-    backgroundColor: "#222222",
+    borderRadius: 16,
+    backgroundColor: colors.ink,
   },
   label: {
     color: "#ffffff",

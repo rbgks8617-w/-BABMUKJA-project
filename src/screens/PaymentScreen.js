@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import PriceSummary from "../components/PriceSummary";
 import { createDummyPayment } from "../services/paymentService";
 import { useCart } from "../store/CartContext";
+import { colors } from "../theme/colors";
 import { formatPrice } from "../utils/formatPrice";
 
 const paymentMethods = ["학교 포인트", "체크카드", "간편결제"];
@@ -61,57 +62,57 @@ const styles = StyleSheet.create({
   },
   title: {
     marginBottom: 4,
-    color: "#222222",
+    color: colors.text,
     fontSize: 26,
-    fontWeight: "900",
+    fontWeight: "800",
   },
   sectionTitle: {
     marginTop: 14,
-    color: "#222222",
+    color: colors.text,
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "800",
   },
   item: {
     padding: 16,
-    borderRadius: 12,
-    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#f0dfcc",
+    borderColor: colors.border,
   },
   itemName: {
-    color: "#222222",
+    color: colors.text,
     fontSize: 17,
-    fontWeight: "900",
+    fontWeight: "800",
   },
   itemMeta: {
     marginTop: 6,
-    color: "#666666",
+    color: colors.textMuted,
   },
   itemPrice: {
     marginTop: 8,
-    color: "#d9532b",
-    fontWeight: "900",
+    color: colors.primary,
+    fontWeight: "800",
   },
   method: {
     padding: 15,
-    borderRadius: 10,
-    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#f0dfcc",
+    borderColor: colors.border,
   },
   methodSelected: {
-    borderColor: "#d9532b",
-    backgroundColor: "#fff0e8",
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceWarm,
   },
   methodText: {
-    color: "#222222",
+    color: colors.text,
     fontWeight: "800",
   },
   payButton: {
     alignItems: "center",
     paddingVertical: 15,
-    borderRadius: 10,
-    backgroundColor: "#d9532b",
+    borderRadius: 14,
+    backgroundColor: colors.primary,
   },
   payButtonText: {
     color: "#ffffff",

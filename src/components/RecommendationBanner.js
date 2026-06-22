@@ -1,5 +1,6 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { colors } from "../theme/colors";
 
 export default function RecommendationBanner({ onPress }) {
   return (
@@ -25,27 +26,27 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     padding: 18,
     borderRadius: 16,
-    backgroundColor: "#ffe3d5",
+    backgroundColor: colors.surfaceWarm,
     borderWidth: 1,
-    borderColor: "#ffc4ad",
+    borderColor: colors.borderStrong,
   },
   copy: {
     flex: 1,
   },
   eyebrow: {
-    color: "#b8401f",
+    color: colors.primaryDark,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "800",
   },
   title: {
     marginTop: 5,
-    color: "#222222",
-    fontSize: 22,
-    fontWeight: "900",
+    color: colors.text,
+    fontSize: 21,
+    fontWeight: "800",
   },
   description: {
     marginTop: 6,
-    color: "#7c4b3b",
+    color: colors.textMuted,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -55,7 +56,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 31,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
   },
   icon: {
     fontSize: 32,

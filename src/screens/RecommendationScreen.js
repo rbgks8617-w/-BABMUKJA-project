@@ -5,6 +5,7 @@ import {
   getRecommendedMenuByTags,
   getRestaurantNameById,
 } from "../services/restaurantService";
+import { colors } from "../theme/colors";
 import { formatPrice } from "../utils/formatPrice";
 
 export default function RecommendationScreen({ navigation }) {
@@ -147,18 +148,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     padding: 20,
     borderRadius: 16,
-    backgroundColor: "#222222",
+    backgroundColor: colors.ink,
   },
   eyebrow: {
     color: "#ffc4ad",
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "800",
   },
   title: {
     marginTop: 8,
     color: "#ffffff",
     fontSize: 27,
-    fontWeight: "900",
+    fontWeight: "800",
     lineHeight: 34,
   },
   description: {
@@ -170,19 +171,19 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     padding: 14,
     borderRadius: 14,
-    backgroundColor: "#fff0e8",
+    backgroundColor: colors.surfaceWarm,
     borderWidth: 1,
-    borderColor: "#ffc4ad",
+    borderColor: colors.borderStrong,
   },
   pathLabel: {
-    color: "#b8401f",
+    color: colors.primaryDark,
     fontSize: 12,
     fontWeight: "900",
   },
   pathText: {
     marginTop: 5,
-    color: "#222222",
-    fontWeight: "900",
+    color: colors.text,
+    fontWeight: "800",
   },
   treeWrap: {
     gap: 12,
@@ -190,9 +191,9 @@ const styles = StyleSheet.create({
   stepBlock: {
     padding: 16,
     borderRadius: 16,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#f0dfcc",
+    borderColor: colors.border,
   },
   stepHeader: {
     flexDirection: "row",
@@ -206,7 +207,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 17,
-    backgroundColor: "#d9532b",
+    backgroundColor: colors.primary,
   },
   stepNumberText: {
     color: "#ffffff",
@@ -216,13 +217,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   stepTitle: {
-    color: "#222222",
+    color: colors.text,
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "800",
   },
   stepSubtitle: {
     marginTop: 3,
-    color: "#666666",
+    color: colors.textMuted,
     lineHeight: 19,
   },
   optionGrid: {
@@ -237,14 +238,14 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "#f8efe6",
     borderWidth: 1,
-    borderColor: "#f0dfcc",
+    borderColor: colors.border,
   },
   optionButtonActive: {
-    backgroundColor: "#d9532b",
-    borderColor: "#d9532b",
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   optionText: {
-    color: "#222222",
+    color: colors.text,
     fontWeight: "800",
   },
   optionTextActive: {
@@ -260,20 +261,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#f0dfcc",
+    borderColor: colors.border,
   },
   lightButtonText: {
-    color: "#d9532b",
-    fontWeight: "900",
+    color: colors.primary,
+    fontWeight: "800",
   },
   resultCard: {
     overflow: "hidden",
     borderRadius: 16,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#f0dfcc",
+    borderColor: colors.border,
   },
   resultImage: {
     width: "100%",
@@ -288,25 +289,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: "#fff0e8",
-    color: "#d9532b",
+    backgroundColor: colors.surfaceWarm,
+    color: colors.primary,
     fontSize: 12,
     fontWeight: "900",
   },
   resultName: {
     marginTop: 12,
-    color: "#222222",
+    color: colors.text,
     fontSize: 25,
-    fontWeight: "900",
+    fontWeight: "800",
   },
   restaurant: {
     marginTop: 6,
-    color: "#d9532b",
+    color: colors.primary,
     fontWeight: "800",
   },
   resultDescription: {
     marginTop: 10,
-    color: "#666666",
+    color: colors.textMuted,
     lineHeight: 21,
   },
   tagRow: {
@@ -327,13 +328,13 @@ const styles = StyleSheet.create({
   },
   price: {
     marginTop: 12,
-    color: "#222222",
+    color: colors.text,
     fontSize: 20,
-    fontWeight: "900",
+    fontWeight: "800",
   },
   cta: {
     marginTop: 12,
-    color: "#d9532b",
-    fontWeight: "900",
+    color: colors.primary,
+    fontWeight: "800",
   },
 });

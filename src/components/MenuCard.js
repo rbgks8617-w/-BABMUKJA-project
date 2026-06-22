@@ -1,5 +1,6 @@
 import React from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { colors } from "../theme/colors";
 import { formatPrice } from "../utils/formatPrice";
 
 export default function MenuCard({ menu, onPress }) {
@@ -21,10 +22,10 @@ const styles = StyleSheet.create({
     gap: 14,
     marginBottom: 14,
     padding: 12,
-    borderRadius: 12,
-    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#f0dfcc",
+    borderColor: colors.border,
   },
   image: {
     width: 96,
@@ -35,18 +36,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   name: {
-    color: "#222222",
+    color: colors.text,
     fontSize: 18,
     fontWeight: "800",
   },
   description: {
     marginTop: 6,
-    color: "#666666",
+    color: colors.textMuted,
     lineHeight: 19,
   },
   price: {
     marginTop: 8,
-    color: "#d9532b",
+    color: colors.primary,
     fontSize: 16,
     fontWeight: "800",
   },
