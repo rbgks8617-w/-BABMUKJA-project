@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { Platform, Pressable, StyleSheet, Text } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import CartScreen from "../screens/CartScreen";
 import MenuDetailScreen from "../screens/MenuDetailScreen";
@@ -11,6 +11,19 @@ import RestaurantListScreen from "../screens/RestaurantListScreen";
 import SplashScreen from "../screens/SplashScreen";
 
 const Stack = createNativeStackNavigator();
+const appFontFamily = Platform.select({
+  android: "sans-serif",
+  ios: "Apple SD Gothic Neo",
+  web: "Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI', sans-serif",
+  default: undefined,
+});
+
+const headerTitleStyle = {
+  color: "#27211d",
+  fontFamily: appFontFamily,
+  fontSize: 17,
+  fontWeight: "800",
+};
 
 function BackHeaderButton({ navigation, label = "뒤로" }) {
   return (
@@ -36,7 +49,7 @@ function modalOptions(navigation, title, label = "뒤로") {
     headerLeft: () => <BackHeaderButton navigation={navigation} label={label} />,
     headerShadowVisible: false,
     headerStyle: { backgroundColor: "#fffaf2" },
-    headerTitleStyle: { fontWeight: "800" },
+    headerTitleStyle,
     presentation: "modal",
     title,
   };
@@ -52,7 +65,7 @@ export default function AppNavigator() {
         gestureEnabled: true,
         headerShadowVisible: false,
         headerStyle: { backgroundColor: "#fffaf2" },
-        headerTitleStyle: { fontWeight: "800" },
+        headerTitleStyle,
       }}
     >
       <Stack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} />
@@ -87,28 +100,31 @@ const styles = StyleSheet.create({
   backButton: {
     flexDirection: "row",
     alignItems: "center",
-    minHeight: 34,
-    paddingLeft: 7,
-    paddingRight: 12,
+    minHeight: 32,
+    paddingLeft: 8,
+    paddingRight: 11,
     borderRadius: 999,
-    backgroundColor: "#fff0e8",
+    backgroundColor: "#fff4ec",
     borderWidth: 1,
-    borderColor: "#f4cbb9",
+    borderColor: "#f3d5c8",
   },
   backButtonPressed: {
     opacity: 0.72,
     transform: [{ scale: 0.98 }],
   },
   backIcon: {
-    marginRight: 3,
-    color: "#d9532b",
-    fontSize: 23,
-    fontWeight: "900",
-    lineHeight: 25,
+    marginRight: 2,
+    color: "#c94a25",
+    fontFamily: appFontFamily,
+    fontSize: 20,
+    fontWeight: "500",
+    lineHeight: 22,
   },
   backButtonText: {
-    color: "#d9532b",
+    color: "#c94a25",
+    fontFamily: appFontFamily,
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
+    lineHeight: 17,
   },
 });
