@@ -1,6 +1,10 @@
 node_modules/
 dist/
+dist-web/
 build/
+.expo/
+.expo-web.*.log
+release/*.apk
 .env
 .DS_Store
 Thumbs.db

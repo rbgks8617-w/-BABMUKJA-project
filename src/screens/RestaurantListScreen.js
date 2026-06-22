@@ -1,5 +1,6 @@
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import RecommendationBanner from "../components/RecommendationBanner";
 import RestaurantCard from "../components/RestaurantCard";
 import { getRestaurants, getUniversity } from "../services/restaurantService";
 import { useCart } from "../store/CartContext";
@@ -21,6 +22,9 @@ export default function RestaurantListScreen({ navigation }) {
         </Pressable>
       </View>
 
+      <RecommendationBanner onPress={() => navigation.navigate("Recommendation")} />
+
+      <Text style={styles.sectionTitle}>학교 식당</Text>
       {restaurants.map((restaurant) => (
         <RestaurantCard
           key={restaurant.id}
@@ -64,5 +68,11 @@ const styles = StyleSheet.create({
   cartText: {
     color: "#ffffff",
     fontWeight: "800",
+  },
+  sectionTitle: {
+    marginBottom: 12,
+    color: "#222222",
+    fontSize: 21,
+    fontWeight: "900",
   },
 });

@@ -1,24 +1,57 @@
-import React, { useEffect } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
-import { getUniversity } from "../services/restaurantService";
+import React, { useEffect, useRef } from "react";
+import { Animated, Easing, Image, StyleSheet, Text, View } from "react-native";
+
+const tukLogo = require("../../assets/tuk-logo.png");
 
 export default function SplashScreen({ navigation }) {
-  const university = getUniversity();
+  const logoTranslateX = useRef(new Animated.Value(-90)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const screenOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    const timerId = setTimeout(() => {
+    Animated.sequence([
+      Animated.parallel([
+        Animated.timing(logoTranslateX, {
+          toValue: 0,
+          duration: 900,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoOpacity, {
+          toValue: 1,
+          duration: 650,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.delay(850),
+      Animated.timing(screenOpacity, {
+        toValue: 0,
+        duration: 650,
+        easing: Easing.inOut(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
       navigation.replace("RestaurantList");
-    }, 1800);
-
-    return () => clearTimeout(timerId);
-  }, [navigation]);
+    });
+  }, [logoOpacity, logoTranslateX, navigation, screenOpacity]);
 
   return (
-    <View style={styles.container}>
-      <Image source={{ uri: university.logoUrl }} style={styles.logo} />
-      <Text style={styles.university}>{university.name}</Text>
-      <Text style={styles.title}>대학교 밥먹자</Text>
-    </View>
+    <Animated.View style={[styles.container, { opacity: screenOpacity }]}>
+      <Animated.View
+        style={[
+          styles.logoWrap,
+          {
+            opacity: logoOpacity,
+            transform: [{ translateX: logoTranslateX }],
+          },
+        ]}
+      >
+        <Image source={tukLogo} style={styles.logo} resizeMode="contain" />
+      </Animated.View>
+      <View style={styles.shimmerLine} />
+      <Text style={styles.caption}>대학교 밥먹자</Text>
+    </Animated.View>
   );
 }
 
@@ -27,24 +60,30 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 24,
-    backgroundColor: "#fffaf2",
+    paddingHorizontal: 28,
+    backgroundColor: "#ffffff",
+  },
+  logoWrap: {
+    width: "100%",
+    alignItems: "center",
   },
   logo: {
-    width: 132,
-    height: 132,
-    borderRadius: 66,
-    marginBottom: 22,
+    width: "100%",
+    maxWidth: 360,
+    height: 130,
   },
-  university: {
-    color: "#d9532b",
-    fontSize: 18,
-    fontWeight: "800",
+  shimmerLine: {
+    width: 210,
+    height: 3,
+    marginTop: 18,
+    borderRadius: 999,
+    backgroundColor: "#1c68b3",
+    opacity: 0.18,
   },
-  title: {
-    marginTop: 8,
-    color: "#222222",
-    fontSize: 34,
+  caption: {
+    marginTop: 18,
+    color: "#1c68b3",
+    fontSize: 16,
     fontWeight: "900",
   },
 });

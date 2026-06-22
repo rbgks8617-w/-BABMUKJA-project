@@ -17,6 +17,15 @@ export default function MenuDetailScreen({ route, navigation }) {
     () => selectedOptions.reduce((sum, option) => sum + option.price, 0),
     [selectedOptions],
   );
+
+  if (!menu) {
+    return (
+      <View style={styles.empty}>
+        <Text>메뉴 정보를 찾을 수 없습니다.</Text>
+      </View>
+    );
+  }
+
   const totalPrice = (menu.price + optionTotal) * quantity;
 
   function toggleOption(option) {
@@ -49,6 +58,7 @@ export default function MenuDetailScreen({ route, navigation }) {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Image source={{ uri: menu.imageUrl }} style={styles.image} />
+      <Text style={styles.category}>{menu.category}</Text>
       <Text style={styles.name}>{menu.name}</Text>
       <Text style={styles.price}>{formatPrice(menu.price)}</Text>
       <Text style={styles.description}>{menu.description}</Text>
@@ -97,13 +107,30 @@ const styles = StyleSheet.create({
   container: {
     padding: 20,
   },
+  empty: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   image: {
     width: "100%",
     height: 240,
     borderRadius: 14,
     marginBottom: 18,
   },
+  category: {
+    alignSelf: "flex-start",
+    overflow: "hidden",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: "#fff0e8",
+    color: "#d9532b",
+    fontSize: 12,
+    fontWeight: "900",
+  },
   name: {
+    marginTop: 10,
     color: "#222222",
     fontSize: 28,
     fontWeight: "900",
