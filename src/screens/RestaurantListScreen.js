@@ -5,15 +5,24 @@ import RestaurantCard from "../components/RestaurantCard";
 import { getRestaurants, getUniversity } from "../services/restaurantService";
 import { useCart } from "../store/CartContext";
 
+function chunkPairs(items) {
+  const rows = [];
+  for (let index = 0; index < items.length; index += 2) {
+    rows.push(items.slice(index, index + 2));
+  }
+  return rows;
+}
+
 export default function RestaurantListScreen({ navigation }) {
   const university = getUniversity();
   const restaurants = getRestaurants();
+  const restaurantRows = chunkPairs(restaurants);
   const { totalQuantity } = useCart();
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerCopy}>
           <Text style={styles.eyebrow}>{university.name}</Text>
           <Text style={styles.title}>오늘 캠퍼스에서 뭐 먹지?</Text>
         </View>
@@ -24,28 +33,43 @@ export default function RestaurantListScreen({ navigation }) {
 
       <RecommendationBanner onPress={() => navigation.navigate("Recommendation")} />
 
-      <Text style={styles.sectionTitle}>학교 식당</Text>
-      {restaurants.map((restaurant) => (
-        <RestaurantCard
-          key={restaurant.id}
-          restaurant={restaurant}
-          onPress={() => navigation.navigate("RestaurantDetail", { restaurantId: restaurant.id })}
-        />
-      ))}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>학교 식당</Text>
+        <Text style={styles.sectionMeta}>{restaurants.length}곳</Text>
+      </View>
+
+      <View style={styles.grid}>
+        {restaurantRows.map((row) => (
+          <View key={row.map((restaurant) => restaurant.id).join("-")} style={styles.gridRow}>
+            {row.map((restaurant) => (
+              <RestaurantCard
+                key={restaurant.id}
+                restaurant={restaurant}
+                onPress={() => navigation.navigate("RestaurantDetail", { restaurantId: restaurant.id })}
+              />
+            ))}
+            {row.length === 1 && <View style={styles.emptyCell} />}
+          </View>
+        ))}
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    padding: 18,
+    paddingBottom: 28,
   },
   header: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: 14,
-    marginBottom: 18,
+    gap: 12,
+    marginBottom: 16,
+  },
+  headerCopy: {
+    flex: 1,
   },
   eyebrow: {
     color: "#d9532b",
@@ -55,24 +79,44 @@ const styles = StyleSheet.create({
     maxWidth: 230,
     marginTop: 6,
     color: "#222222",
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "900",
-    lineHeight: 34,
+    lineHeight: 32,
   },
   cartButton: {
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: "#222222",
   },
   cartText: {
     color: "#ffffff",
-    fontWeight: "800",
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
   },
   sectionTitle: {
-    marginBottom: 12,
     color: "#222222",
     fontSize: 21,
     fontWeight: "900",
+  },
+  sectionMeta: {
+    color: "#8a7566",
+    fontWeight: "800",
+  },
+  grid: {
+    gap: 12,
+  },
+  gridRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  emptyCell: {
+    flex: 1,
   },
 });

@@ -24,8 +24,9 @@ function withCalculatedTotal(item) {
 
   return {
     ...item,
+    quantity: Math.max(1, item.quantity),
     unitPrice,
-    totalPrice: unitPrice * item.quantity,
+    totalPrice: unitPrice * Math.max(1, item.quantity),
   };
 }
 
@@ -63,18 +64,16 @@ export function CartProvider({ children }) {
 
   function changeCartItemQuantity(cartId, amount) {
     setCartItems((prevItems) =>
-      prevItems
-        .map((item) => {
-          if (item.cartId !== cartId) {
-            return item;
-          }
+      prevItems.map((item) => {
+        if (item.cartId !== cartId) {
+          return item;
+        }
 
-          return withCalculatedTotal({
-            ...item,
-            quantity: item.quantity + amount,
-          });
-        })
-        .filter((item) => item.quantity > 0),
+        return withCalculatedTotal({
+          ...item,
+          quantity: Math.max(1, item.quantity + amount),
+        });
+      }),
     );
   }
 

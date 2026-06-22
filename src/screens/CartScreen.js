@@ -23,6 +23,10 @@ export default function CartScreen({ navigation }) {
     <ScrollView contentContainerStyle={styles.container}>
       {cartItems.map((item) => (
         <View key={item.cartId} style={styles.item}>
+          <Pressable style={styles.deleteButton} onPress={() => removeFromCart(item.cartId)}>
+            <Text style={styles.deleteButtonText}>삭제</Text>
+          </Pressable>
+
           <View style={styles.itemHeader}>
             <View style={styles.itemTitleArea}>
               <Text style={styles.itemName}>{item.name}</Text>
@@ -45,9 +49,7 @@ export default function CartScreen({ navigation }) {
               onDecrease={() => changeCartItemQuantity(item.cartId, -1)}
               onIncrease={() => changeCartItemQuantity(item.cartId, 1)}
             />
-            <Pressable onPress={() => removeFromCart(item.cartId)}>
-              <Text style={styles.removeText}>삭제</Text>
-            </Pressable>
+            <Text style={styles.minHint}>최소 1개</Text>
           </View>
         </View>
       ))}
@@ -81,16 +83,33 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   item: {
+    position: "relative",
     padding: 16,
-    borderRadius: 12,
+    paddingTop: 18,
+    borderRadius: 14,
     backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: "#f0dfcc",
   },
+  deleteButton: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    zIndex: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "#fff0e8",
+  },
+  deleteButtonText: {
+    color: "#d9532b",
+    fontSize: 12,
+    fontWeight: "900",
+  },
   itemHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 10,
+    gap: 74,
   },
   itemTitleArea: {
     flex: 1,
@@ -103,10 +122,12 @@ const styles = StyleSheet.create({
   itemPrice: {
     color: "#d9532b",
     fontWeight: "900",
+    textAlign: "right",
   },
   itemMeta: {
     marginTop: 8,
     color: "#666666",
+    lineHeight: 19,
   },
   itemActions: {
     flexDirection: "row",
@@ -115,8 +136,9 @@ const styles = StyleSheet.create({
     gap: 14,
     marginTop: 14,
   },
-  removeText: {
-    color: "#d9532b",
+  minHint: {
+    color: "#8a7566",
+    fontSize: 12,
     fontWeight: "800",
   },
   primaryButton: {

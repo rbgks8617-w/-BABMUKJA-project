@@ -1,59 +1,63 @@
 import React from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { ImageBackground, Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function RestaurantCard({ restaurant, onPress }) {
   return (
     <Pressable style={styles.card} onPress={onPress}>
-      <Image source={{ uri: restaurant.imageUrl }} style={styles.image} />
-      <View style={styles.content}>
-        <View style={styles.titleRow}>
-          <Text style={styles.name}>{restaurant.name}</Text>
+      <ImageBackground source={{ uri: restaurant.imageUrl }} style={styles.image} imageStyle={styles.imageRadius}>
+        <View style={styles.overlay} />
+        <View style={styles.topRow}>
           <Text style={[styles.badge, restaurant.isOpen ? styles.open : styles.closed]}>
             {restaurant.isOpen ? "운영중" : "준비중"}
           </Text>
         </View>
-        <Text style={styles.location}>{restaurant.location}</Text>
-        <Text style={styles.description}>{restaurant.description}</Text>
-      </View>
+        <View style={styles.content}>
+          <Text style={styles.name} numberOfLines={2}>
+            {restaurant.name}
+          </Text>
+          <Text style={styles.location} numberOfLines={1}>
+            {restaurant.location}
+          </Text>
+        </View>
+      </ImageBackground>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
+    flex: 1,
+    aspectRatio: 1,
+    minWidth: 0,
     overflow: "hidden",
-    marginBottom: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#f0dfcc",
+    borderColor: "#ead9c8",
   },
   image: {
-    width: "100%",
-    height: 150,
-  },
-  content: {
-    padding: 16,
-  },
-  titleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  name: {
     flex: 1,
-    color: "#222222",
-    fontSize: 20,
-    fontWeight: "800",
+    justifyContent: "space-between",
+  },
+  imageRadius: {
+    borderRadius: 14,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(24, 20, 17, 0.34)",
+  },
+  topRow: {
+    alignItems: "flex-start",
+    padding: 10,
   },
   badge: {
     overflow: "hidden",
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "800",
+    fontSize: 11,
+    fontWeight: "900",
   },
   open: {
     backgroundColor: "#1f8f5f",
@@ -61,14 +65,19 @@ const styles = StyleSheet.create({
   closed: {
     backgroundColor: "#8b8b8b",
   },
-  location: {
-    marginTop: 6,
-    color: "#d9532b",
-    fontWeight: "700",
+  content: {
+    padding: 12,
   },
-  description: {
-    marginTop: 8,
-    color: "#666666",
-    lineHeight: 20,
+  name: {
+    color: "#ffffff",
+    fontSize: 17,
+    fontWeight: "900",
+    lineHeight: 21,
+  },
+  location: {
+    marginTop: 5,
+    color: "rgba(255, 255, 255, 0.88)",
+    fontSize: 12,
+    fontWeight: "800",
   },
 });
