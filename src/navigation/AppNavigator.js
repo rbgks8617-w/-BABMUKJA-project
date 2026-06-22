@@ -14,8 +14,13 @@ const Stack = createNativeStackNavigator();
 
 function BackHeaderButton({ navigation, label = "뒤로" }) {
   return (
-    <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
-      <Text style={styles.backButtonText}>‹ {label}</Text>
+    <Pressable
+      hitSlop={8}
+      style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
+      onPress={() => navigation.goBack()}
+    >
+      <Text style={styles.backIcon}>‹</Text>
+      <Text style={styles.backButtonText}>{label}</Text>
     </Pressable>
   );
 }
@@ -80,13 +85,30 @@ export default function AppNavigator() {
 
 const styles = StyleSheet.create({
   backButton: {
-    minHeight: 36,
-    justifyContent: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 34,
+    paddingLeft: 7,
     paddingRight: 12,
+    borderRadius: 999,
+    backgroundColor: "#fff0e8",
+    borderWidth: 1,
+    borderColor: "#f4cbb9",
+  },
+  backButtonPressed: {
+    opacity: 0.72,
+    transform: [{ scale: 0.98 }],
+  },
+  backIcon: {
+    marginRight: 3,
+    color: "#d9532b",
+    fontSize: 23,
+    fontWeight: "900",
+    lineHeight: 25,
   },
   backButtonText: {
     color: "#d9532b",
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "900",
   },
 });
