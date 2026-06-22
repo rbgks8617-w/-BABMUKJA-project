@@ -6,16 +6,28 @@ export const university = {
 
 export const recommendationTree = [
   {
+    id: "situation",
+    title: "지금 어떤 상황이야?",
+    subtitle: "추천앱들은 보통 위치보다 먼저 지금 먹는 상황을 잡아요.",
+    options: [
+      { id: "between-class", label: "수업 사이 빠르게", tags: ["빠른", "가벼운"] },
+      { id: "proper-meal", label: "제대로 한 끼", tags: ["든든", "밥"] },
+      { id: "study-break", label: "공부하다 리프레시", tags: ["리프레시", "음료", "디저트"] },
+      { id: "with-friends", label: "친구랑 같이", tags: ["공유", "간식"] },
+      { id: "random-situation", label: "상황 상관없음", tags: [] },
+    ],
+  },
+  {
     id: "taste",
-    title: "지금 어떤 맛이 땡겨?",
-    subtitle: "첫 느낌부터 골라봐요.",
+    title: "입맛은 어느 쪽이야?",
+    subtitle: "단맛, 짠맛, 매운맛처럼 오늘 끌리는 맛을 고르면 정확도가 올라가요.",
     options: [
       { id: "sweet", label: "단게 땡김", tags: ["달달"] },
       { id: "salty", label: "짠게 땡김", tags: ["짭짤"] },
       { id: "spicy", label: "매운게 땡김", tags: ["매콤"] },
       { id: "savory", label: "고소한게 땡김", tags: ["고소"] },
       { id: "clean", label: "깔끔한게 땡김", tags: ["깔끔"] },
-      { id: "random-taste", label: "아무거나", tags: [] },
+      { id: "random-taste", label: "맛은 맡길게", tags: [] },
     ],
   },
   {
@@ -33,16 +45,14 @@ export const recommendationTree = [
     ],
   },
   {
-    id: "mood",
-    title: "지금 상황은 어때?",
-    subtitle: "마지막으로 먹는 상황을 맞춰볼게요.",
+    id: "budget",
+    title: "가격대는 어느 정도?",
+    subtitle: "상용화 때는 할인, 포인트, 시간대까지 같이 반영할 수 있어요.",
     options: [
-      { id: "heavy", label: "든든하게", tags: ["든든"] },
-      { id: "quick", label: "빠르게", tags: ["빠른"] },
-      { id: "share", label: "같이 나눠먹기", tags: ["공유"] },
-      { id: "light", label: "가볍게", tags: ["가벼운"] },
-      { id: "refresh", label: "리프레시", tags: ["리프레시"] },
-      { id: "random-mood", label: "랜덤으로", tags: [] },
+      { id: "cheap", label: "5천원 안팎", tags: ["저렴"] },
+      { id: "normal", label: "7천원대까지", tags: ["보통"] },
+      { id: "premium", label: "든든하면 OK", tags: ["든든"] },
+      { id: "random-budget", label: "가격 상관없음", tags: [] },
     ],
   },
 ];

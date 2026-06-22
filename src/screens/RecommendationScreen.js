@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState } from "react";
 import { Animated, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
   getRecommendationTree,
-  getRecommendedMenuByTags,
+  getRecommendedMenuResult,
   getRestaurantNameById,
 } from "../services/restaurantService";
 import { colors } from "../theme/colors";
@@ -19,7 +19,8 @@ export default function RecommendationScreen({ navigation }) {
 
   const activeStepIndex = Math.min(Object.keys(selectedOptions).length, tree.length - 1);
   const visibleSteps = tree.slice(0, activeStepIndex + 1);
-  const recommendedMenu = useMemo(() => getRecommendedMenuByTags(selectedTags), [selectedTags]);
+  const recommendation = useMemo(() => getRecommendedMenuResult(selectedTags), [selectedTags]);
+  const recommendedMenu = recommendation.primary;
   const selectedPath = tree.map((step) => selectedOptions[step.id]?.label).filter(Boolean);
 
   function handleSelect(stepId, option) {
@@ -45,6 +46,8 @@ export default function RecommendationScreen({ navigation }) {
     animateResult();
   }
 
+  const progressText = `${selectedPath.length}/${tree.length}개 선택`;
+
   function animateResult() {
     resultOpacity.setValue(0);
     Animated.timing(resultOpacity, {
@@ -57,17 +60,20 @@ export default function RecommendationScreen({ navigation }) {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.hero}>
-        <Text style={styles.eyebrow}>취향 트리 추천</Text>
-        <Text style={styles.title}>뭐가 땡기는지 따라가보자</Text>
+        <Text style={styles.eyebrow}>오늘 메뉴 큐레이션</Text>
+        <Text style={styles.title}>몇 번만 고르면 메뉴가 좁혀져요</Text>
         <Text style={styles.description}>
-          단맛, 짠맛, 국물, 볶음처럼 지금 끌리는 느낌을 고르면 메뉴 추천이 점점 좁혀져요.
+          상황, 입맛, 형태, 가격대를 반영해 캠퍼스 메뉴 중 가장 잘 맞는 후보를 골라줄게요.
         </Text>
+        <View style={styles.progressPill}>
+          <Text style={styles.progressText}>{progressText}</Text>
+        </View>
       </View>
 
       {selectedPath.length > 0 && (
         <View style={styles.pathBox}>
-          <Text style={styles.pathLabel}>선택한 흐름</Text>
-          <Text style={styles.pathText}>{selectedPath.join("  >  ")}</Text>
+          <Text style={styles.pathLabel}>내가 고른 취향</Text>
+          <Text style={styles.pathText}>{selectedPath.join("  /  ")}</Text>
         </View>
       )}
 
@@ -107,12 +113,13 @@ export default function RecommendationScreen({ navigation }) {
           <Text style={styles.lightButtonText}>처음부터</Text>
         </Pressable>
         <Pressable style={styles.lightButton} onPress={handleShuffle}>
-          <Text style={styles.lightButtonText}>다시 추천</Text>
+          <Text style={styles.lightButtonText}>후보 바꾸기</Text>
         </Pressable>
       </View>
 
       {recommendedMenu && (
         <Animated.View style={{ opacity: resultOpacity }}>
+          <Text style={styles.resultSectionTitle}>지금 가장 잘 맞는 메뉴</Text>
           <Pressable
             style={styles.resultCard}
             onPress={() => navigation.navigate("MenuDetail", { menuId: recommendedMenu.id })}
@@ -122,9 +129,11 @@ export default function RecommendationScreen({ navigation }) {
               <Text style={styles.resultBadge}>{recommendedMenu.category}</Text>
               <Text style={styles.resultName}>{recommendedMenu.name}</Text>
               <Text style={styles.restaurant}>{getRestaurantNameById(recommendedMenu.restaurantId)}</Text>
-              <Text style={styles.resultDescription}>{recommendedMenu.recommendationText}</Text>
+              <Text style={styles.resultDescription}>{recommendedMenu.recommendationReason}</Text>
               <View style={styles.tagRow}>
-                {recommendedMenu.tags.slice(0, 5).map((tag) => (
+                {(recommendedMenu.matchedTags?.length ? recommendedMenu.matchedTags : recommendedMenu.tags)
+                  .slice(0, 5)
+                  .map((tag) => (
                   <Text key={tag} style={styles.tag}>
                     #{tag}
                   </Text>
@@ -134,6 +143,29 @@ export default function RecommendationScreen({ navigation }) {
               <Text style={styles.cta}>이 메뉴로 갈래요</Text>
             </View>
           </Pressable>
+
+          {recommendation.alternatives.length > 0 && (
+            <View style={styles.alternativeWrap}>
+              <Text style={styles.alternativeTitle}>다른 후보도 있어요</Text>
+              {recommendation.alternatives.map((menu) => (
+                <Pressable
+                  key={menu.id}
+                  style={styles.alternativeItem}
+                  onPress={() => navigation.navigate("MenuDetail", { menuId: menu.id })}
+                >
+                  <View style={styles.alternativeCopy}>
+                    <Text style={styles.alternativeName}>{menu.name}</Text>
+                    <Text style={styles.alternativeMeta}>
+                      {getRestaurantNameById(menu.restaurantId)} · {formatPrice(menu.price)}
+                    </Text>
+                  </View>
+                  <Text style={styles.alternativeTag}>
+                    {menu.matchedTags?.[0] ? `#${menu.matchedTags[0]}` : "보기"}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
         </Animated.View>
       )}
     </ScrollView>
@@ -166,6 +198,19 @@ const styles = StyleSheet.create({
     marginTop: 8,
     color: "#f5ded3",
     lineHeight: 21,
+  },
+  progressPill: {
+    alignSelf: "flex-start",
+    marginTop: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
+  },
+  progressText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "800",
   },
   pathBox: {
     marginBottom: 14,
@@ -276,6 +321,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  resultSectionTitle: {
+    marginBottom: 10,
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: "800",
+  },
   resultImage: {
     width: "100%",
     height: 220,
@@ -335,6 +386,51 @@ const styles = StyleSheet.create({
   cta: {
     marginTop: 12,
     color: colors.primary,
+    fontWeight: "800",
+  },
+  alternativeWrap: {
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  alternativeTitle: {
+    marginBottom: 10,
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  alternativeItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#f6e8dc",
+  },
+  alternativeCopy: {
+    flex: 1,
+  },
+  alternativeName: {
+    color: colors.text,
+    fontWeight: "800",
+  },
+  alternativeMeta: {
+    marginTop: 3,
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  alternativeTag: {
+    overflow: "hidden",
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceWarm,
+    color: colors.primary,
+    fontSize: 12,
     fontWeight: "800",
   },
 });
