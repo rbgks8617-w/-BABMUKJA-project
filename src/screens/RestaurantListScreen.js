@@ -13,6 +13,11 @@ import { colors } from "../theme/colors";
 import { formatPrice } from "../utils/formatPrice";
 
 const categoryTabs = ["전체", "한식", "중식", "분식", "양식", "카페", "가성비", "혼밥"];
+const buildingDisplayNames = {
+  tip: "TIP",
+  education: "종합교육관",
+  industry: "산학융합관",
+};
 
 function findRestaurant(restaurants, restaurantId) {
   return restaurants.find((restaurant) => restaurant.id === restaurantId);
@@ -88,6 +93,7 @@ export default function RestaurantListScreen({ navigation }) {
     return {
       ...building,
       index: index + 1,
+      displayName: buildingDisplayNames[building.id] ?? building.name,
       imageUrl: firstRestaurant?.imageUrl,
       menuPreview: building.restaurants.map((item) => item.label).slice(0, 3).join(", "),
       firstRestaurantId: firstRestaurant?.id,
@@ -176,9 +182,12 @@ export default function RestaurantListScreen({ navigation }) {
                 <Text style={styles.slideRank}>{building.index}</Text>
                 <Text style={styles.heartBadge}>♡</Text>
               </View>
+              <View style={styles.slideNameBadge}>
+                <Text numberOfLines={1} style={styles.slideNameBadgeText}>{building.displayName}</Text>
+              </View>
             </ImageBackground>
             <View style={styles.slideBody}>
-              <Text style={styles.slideTitle}>{building.name} 식당</Text>
+              <Text numberOfLines={1} style={styles.slideTitle}>{building.displayName} 식당</Text>
               <Text style={styles.slideMenu} numberOfLines={1}>
                 {building.menuPreview}
               </Text>
@@ -235,7 +244,7 @@ export default function RestaurantListScreen({ navigation }) {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
           {categoryTabs.map((tab, index) => (
             <Pressable key={tab} style={[styles.categoryChip, index === 0 && styles.categoryChipActive]}>
-              <Text style={[styles.categoryText, index === 0 && styles.categoryTextActive]}>{tab}</Text>
+              <Text numberOfLines={1} style={[styles.categoryText, index === 0 && styles.categoryTextActive]}>{tab}</Text>
             </Pressable>
           ))}
         </ScrollView>
@@ -424,11 +433,15 @@ const styles = StyleSheet.create({
   },
   categoryRow: {
     gap: 8,
-    paddingBottom: 14,
+    paddingBottom: 10,
   },
   categoryChip: {
-    paddingHorizontal: 15,
-    paddingVertical: 10,
+    height: 32,
+    minWidth: 58,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 13,
+    paddingVertical: 0,
     borderRadius: 999,
     backgroundColor: "#ffffff",
     borderWidth: 1,
@@ -440,8 +453,9 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     color: colors.text,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "900",
+    lineHeight: 15,
   },
   categoryTextActive: {
     color: "#ffffff",
@@ -787,6 +801,23 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: 10,
   },
+  slideNameBadge: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    bottom: 10,
+    alignSelf: "flex-start",
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: "rgba(255, 255, 255, 0.94)",
+  },
+  slideNameBadgeText: {
+    color: colors.ink,
+    fontSize: 14,
+    fontWeight: "900",
+    lineHeight: 17,
+  },
   slideRank: {
     width: 30,
     height: 30,
@@ -818,6 +849,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 18,
     fontWeight: "900",
+    lineHeight: 23,
   },
   slideMenu: {
     marginTop: 6,
