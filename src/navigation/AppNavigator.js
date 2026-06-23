@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import CartScreen from "../screens/CartScreen";
 import MenuDetailScreen from "../screens/MenuDetailScreen";
@@ -40,7 +40,7 @@ function HomeHeaderTitle() {
   return (
     <View style={styles.homeLogo}>
       <View style={styles.homeLogoMark}>
-        <Text style={styles.homeLogoMarkText}>밥</Text>
+        <Image source={require("../../assets/tuk-symbol.png")} style={styles.homeLogoImage} />
       </View>
       <View>
         <Text style={styles.homeLogoName}>대학교 밥먹자</Text>
@@ -127,21 +127,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 15,
-    backgroundColor: colors.primary,
-    borderWidth: 2,
-    borderColor: "#dcf5ff",
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#cbeaf7",
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.14,
     shadowRadius: 8,
     elevation: 3,
   },
-  homeLogoMarkText: {
-    color: "#ffffff",
-    fontFamily: APP_FONT_FAMILY,
-    fontSize: 12,
-    fontWeight: "900",
-    lineHeight: 15,
+  homeLogoImage: {
+    width: 24,
+    height: 24,
+    resizeMode: "contain",
   },
   homeLogoName: {
     color: colors.ink,
