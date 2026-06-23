@@ -1,40 +1,78 @@
-import React, { useMemo, useState } from "react";
-import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Animated,
+  Image,
+  ImageBackground,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { campusMapBuildings, getRestaurantById, getRestaurants } from "../services/restaurantService";
 import { colors } from "../theme/colors";
 
 const campusMapImage = require("../../assets/tuk-campus-map.png");
+const tukSymbol = require("../../assets/tuk-symbol.png");
 const mapAspectRatio = 1536 / 1190;
 
-const zones = {
-  search: { left: "68%", top: "3%", width: "27%", height: "7%" },
-  hasRestaurant: { left: "2%", top: "12%", width: "11%", height: "6%" },
-  noRestaurant: { left: "14%", top: "12%", width: "11%", height: "6%" },
-  zoomIn: { right: "1.8%", top: "9%", width: "5%", height: "6%" },
-  zoomOut: { right: "1.8%", top: "15%", width: "5%", height: "6%" },
-  list: { left: "2%", bottom: "4%", width: "10%", height: "6%" },
-  tip: { left: "18%", top: "25%", width: "17%", height: "14%" },
-  education: { left: "39%", top: "17%", width: "18%", height: "16%" },
-  industry: { right: "7%", top: "30%", width: "18%", height: "16%" },
+const filters = [
+  { id: "open", label: "식당 있음" },
+  { id: "none", label: "식당 없음" },
+];
+
+const cardAnchors = {
+  tip: { left: "14%", top: "24%", width: 210 },
+  education: { left: "39%", top: "15%", width: 230 },
+  industry: { right: "8%", top: "30%", width: 220 },
+};
+
+const buildingTouchAreas = {
+  tip: { left: "7%", top: "28%", width: "31%", height: "34%" },
+  education: { left: "38%", top: "20%", width: "25%", height: "31%" },
+  industry: { right: "8%", top: "33%", width: "24%", height: "25%" },
 };
 
 export default function CampusMapScreen({ navigation }) {
-  const [selectedBuildingId, setSelectedBuildingId] = useState(null);
+  const { width } = useWindowDimensions();
+  const [selectedBuildingId, setSelectedBuildingId] = useState("education");
+  const [filter, setFilter] = useState("open");
   const [showList, setShowList] = useState(false);
-  const [filter, setFilter] = useState("all");
+  const [zoom, setZoom] = useState(1);
+  const floatMotion = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatMotion, {
+          toValue: 1,
+          duration: 1450,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatMotion, {
+          toValue: 0,
+          duration: 1450,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    animation.start();
+    return () => animation.stop();
+  }, [floatMotion]);
+
+  const selectedBuilding = campusMapBuildings.find((building) => building.id === selectedBuildingId) ?? campusMapBuildings[0];
   const restaurants = getRestaurants();
-  const selectedBuilding = campusMapBuildings.find((building) => building.id === selectedBuildingId);
+  const isCompact = width < 620;
+  const mapWidth = Math.min(Math.max(width - 20, 360), 1180);
 
   const visibleRestaurants = useMemo(() => {
-    if (filter === "open") {
-      return restaurants.filter((restaurant) => restaurant.isOpen);
-    }
-
     if (filter === "none") {
       return [];
     }
 
-    return restaurants;
+    return restaurants.filter((restaurant) => restaurant.isOpen);
   }, [filter, restaurants]);
 
   const openRestaurantDetail = (restaurantId) => {
@@ -46,37 +84,137 @@ export default function CampusMapScreen({ navigation }) {
     setShowList(false);
   };
 
+  const getFloatingCardStyle = (buildingId, index) => {
+    const translateY = floatMotion.interpolate({
+      inputRange: [0, 1],
+      outputRange: index % 2 === 0 ? [-4, -14] : [-12, -3],
+    });
+
+    return [
+      styles.infoBubbleWrap,
+      cardAnchors[buildingId],
+      {
+        width: isCompact ? 160 : cardAnchors[buildingId].width,
+        transform: [{ translateY }],
+      },
+    ];
+  };
+
   return (
     <View style={styles.screen}>
-      <View style={styles.mapFrame}>
-        <ImageBackground
-          source={campusMapImage}
-          resizeMode="contain"
-          style={styles.mapImage}
-          imageStyle={styles.mapImageContent}
-        >
-          <Pressable style={[styles.touchZone, zones.search]} onPress={() => setShowList(true)} />
-          <Pressable style={[styles.touchZone, zones.hasRestaurant]} onPress={() => setFilter("open")} />
-          <Pressable style={[styles.touchZone, zones.noRestaurant]} onPress={() => setFilter("none")} />
-          <Pressable style={[styles.touchZone, zones.zoomIn]} />
-          <Pressable style={[styles.touchZone, zones.zoomOut]} />
-          <Pressable style={[styles.touchZone, zones.list]} onPress={() => setShowList(true)} />
-          <Pressable style={[styles.touchZone, zones.tip]} onPress={() => selectBuilding("tip")} />
-          <Pressable style={[styles.touchZone, zones.education]} onPress={() => selectBuilding("education")} />
-          <Pressable style={[styles.touchZone, zones.industry]} onPress={() => selectBuilding("industry")} />
-        </ImageBackground>
+      <View style={styles.mapStage}>
+        <Animated.View style={[styles.mapCanvas, { width: mapWidth, aspectRatio: mapAspectRatio, transform: [{ scale: zoom }] }]}>
+          <ImageBackground source={campusMapImage} resizeMode="contain" style={styles.mapImage}>
+            <View style={styles.topHeader}>
+              <View style={styles.brandRow}>
+                <Image source={tukSymbol} style={styles.logo} />
+                <View>
+                  <Text style={styles.brandName}>한국공학대학교</Text>
+                  <Text style={styles.mapTitle}>식당 안내 지도</Text>
+                </View>
+              </View>
+              <Pressable style={styles.searchBox} onPress={() => setShowList(true)}>
+                <Text style={styles.searchIcon}>⌕</Text>
+                <Text style={styles.searchText}>건물 또는 식당 검색</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.filterCard}>
+              {filters.map((item) => (
+                <Pressable
+                  key={item.id}
+                  style={[styles.filterItem, filter === item.id && styles.filterItemActive]}
+                  onPress={() => setFilter(item.id)}
+                >
+                  <View style={[styles.filterIcon, item.id === "none" && styles.filterIconMuted]}>
+                    <Text style={styles.filterIconText}>식</Text>
+                  </View>
+                  <Text style={styles.filterLabel}>{item.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {campusMapBuildings.map((building) => (
+              <Pressable
+                key={`${building.id}-touch`}
+                style={[styles.touchArea, buildingTouchAreas[building.id]]}
+                onPress={() => selectBuilding(building.id)}
+              />
+            ))}
+
+            {campusMapBuildings.map((building, index) => {
+              const isSelected = selectedBuilding.id === building.id;
+              const visibleItems = building.restaurants.slice(0, isCompact ? 2 : building.restaurants.length);
+
+              return (
+                <Animated.View key={building.id} pointerEvents="box-none" style={getFloatingCardStyle(building.id, index)}>
+                  <Pressable
+                    style={[styles.infoBubble, isSelected && styles.infoBubbleSelected]}
+                    onPress={() => selectBuilding(building.id)}
+                  >
+                    <View style={styles.infoTitleRow}>
+                      <View style={styles.restaurantIcon}>
+                        <Text style={styles.restaurantIconText}>식</Text>
+                      </View>
+                      <Text style={styles.infoTitle} numberOfLines={1}>
+                        {building.name}
+                      </Text>
+                    </View>
+                    {visibleItems.map((item) => (
+                      <Pressable
+                        key={item.restaurantId}
+                        style={styles.infoRow}
+                        onPress={() => openRestaurantDetail(item.restaurantId)}
+                      >
+                        <Text style={styles.infoBullet}>·</Text>
+                        <Text style={styles.infoName} numberOfLines={1}>
+                          {item.label}
+                        </Text>
+                        {!isCompact ? <Text style={styles.infoTime}>{item.hours}</Text> : null}
+                      </Pressable>
+                    ))}
+                    <View style={styles.statusRow}>
+                      <View style={styles.statusIcon}>
+                        <Text style={styles.statusIconText}>식</Text>
+                      </View>
+                      <Text style={styles.statusText}>식당 있음</Text>
+                    </View>
+                  </Pressable>
+                </Animated.View>
+              );
+            })}
+
+            <View style={styles.zoomControl}>
+              <Pressable style={styles.zoomButton} onPress={() => setZoom((current) => Math.min(1.1, current + 0.04))}>
+                <Text style={styles.zoomText}>＋</Text>
+              </Pressable>
+              <View style={styles.zoomDivider} />
+              <Pressable style={styles.zoomButton} onPress={() => setZoom((current) => Math.max(0.92, current - 0.04))}>
+                <Text style={styles.zoomText}>－</Text>
+              </Pressable>
+            </View>
+
+            <Pressable style={styles.listButton} onPress={() => setShowList(true)}>
+              <Text style={styles.listIcon}>☰</Text>
+              <Text style={styles.listButtonText}>목록 보기</Text>
+            </Pressable>
+
+            <View style={styles.helpCard}>
+              <Text style={styles.helpIcon}>!</Text>
+              <Text style={styles.helpText}>건물을 클릭하면 식당 정보를 확인할 수 있어요.</Text>
+            </View>
+          </ImageBackground>
+        </Animated.View>
       </View>
 
       {selectedBuilding ? (
-        <View style={styles.sheet}>
+        <View style={styles.bottomSheet}>
           <View style={styles.sheetTop}>
             <View>
               <Text style={styles.sheetEyebrow}>선택한 건물</Text>
               <Text style={styles.sheetTitle}>{selectedBuilding.name}</Text>
             </View>
-            <Pressable style={styles.closeButton} onPress={() => setSelectedBuildingId(null)}>
-              <Text style={styles.closeButtonText}>닫기</Text>
-            </Pressable>
+            <Text style={styles.sheetCount}>{selectedBuilding.restaurants.length}곳</Text>
           </View>
           {selectedBuilding.restaurants.map((item) => {
             const restaurant = getRestaurantById(item.restaurantId);
@@ -100,16 +238,16 @@ export default function CampusMapScreen({ navigation }) {
 
       {showList ? (
         <View style={styles.listPanel}>
-          <View style={styles.sheetTop}>
+          <View style={styles.listPanelTop}>
             <Text style={styles.listTitle}>{filter === "none" ? "식당 없는 건물" : "식당 목록"}</Text>
             <Pressable style={styles.closeButton} onPress={() => setShowList(false)}>
-              <Text style={styles.closeButtonText}>닫기</Text>
+              <Text style={styles.closeText}>닫기</Text>
             </Pressable>
           </View>
           {visibleRestaurants.length === 0 ? (
             <View style={styles.emptyBox}>
               <Text style={styles.emptyTitle}>현재 표시할 식당이 없어요</Text>
-              <Text style={styles.emptyText}>사진의 필터 영역을 다시 눌러 식당 목록을 볼 수 있어요.</Text>
+              <Text style={styles.emptyText}>식당 있음 필터를 누르면 목록이 다시 보여요.</Text>
             </View>
           ) : (
             <ScrollView style={styles.listScroll}>
@@ -133,67 +271,347 @@ const styles = StyleSheet.create({
     backgroundColor: "#eef5f9",
     padding: 8,
   },
-  mapFrame: {
+  mapStage: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    borderRadius: 24,
-    backgroundColor: "#f6fbff",
+    borderRadius: 26,
+    backgroundColor: "#f7fbfe",
+    borderWidth: 1,
+    borderColor: "#dcebf2",
+  },
+  mapCanvas: {
+    maxHeight: "100%",
   },
   mapImage: {
     width: "100%",
-    aspectRatio: mapAspectRatio,
-    maxHeight: "100%",
+    height: "100%",
   },
-  mapImageContent: {
-    borderRadius: 24,
-  },
-  touchZone: {
+  topHeader: {
     position: "absolute",
+    left: "2%",
+    right: "2%",
+    top: "2%",
+    zIndex: 3,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  brandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  logo: {
+    width: 38,
+    height: 38,
+    resizeMode: "contain",
+  },
+  brandName: {
+    color: colors.primary,
+    fontSize: 19,
+    fontWeight: "900",
+    lineHeight: 23,
+  },
+  mapTitle: {
+    marginTop: 2,
+    color: colors.primaryDark,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  searchBox: {
+    width: "30%",
+    minWidth: 190,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    paddingHorizontal: 17,
+    paddingVertical: 12,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.95)",
+    shadowColor: "#4d6070",
+    shadowOffset: { width: 0, height: 9 },
+    shadowOpacity: 0.14,
+    shadowRadius: 18,
+    elevation: 6,
+  },
+  searchIcon: {
+    color: colors.ink,
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  searchText: {
+    color: colors.textSoft,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  filterCard: {
+    position: "absolute",
+    left: "2%",
+    top: "12%",
+    zIndex: 3,
+    flexDirection: "row",
+    gap: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.96)",
+    shadowColor: "#4d6070",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.13,
+    shadowRadius: 16,
+    elevation: 5,
+  },
+  filterItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    opacity: 0.72,
+  },
+  filterItemActive: {
+    opacity: 1,
+  },
+  filterIcon: {
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    backgroundColor: "#2ea455",
+  },
+  filterIconMuted: {
+    backgroundColor: "#9d9d9d",
+  },
+  filterIconText: {
+    color: "#ffffff",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  filterLabel: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  touchArea: {
+    position: "absolute",
+    borderRadius: 16,
+  },
+  infoBubbleWrap: {
+    position: "absolute",
+    zIndex: 4,
+  },
+  infoBubble: {
+    padding: 13,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.96)",
+    shadowColor: "#4d6070",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.17,
+    shadowRadius: 18,
+    elevation: 7,
+  },
+  infoBubbleSelected: {
+    borderWidth: 1,
+    borderColor: "#9bd9ed",
+  },
+  infoTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 7,
+  },
+  restaurantIcon: {
+    width: 25,
+    height: 25,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 13,
+    backgroundColor: "#2ea455",
+  },
+  restaurantIconText: {
+    color: "#ffffff",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  infoTitle: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 2,
+  },
+  infoBullet: {
+    color: colors.ink,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  infoName: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  infoTime: {
+    color: colors.textMuted,
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    marginTop: 7,
+  },
+  statusIcon: {
+    width: 21,
+    height: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 11,
+    backgroundColor: "#2ea455",
+  },
+  statusIconText: {
+    color: "#ffffff",
+    fontSize: 9,
+    fontWeight: "900",
+  },
+  statusText: {
+    color: "#2a9a50",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  zoomControl: {
+    position: "absolute",
+    right: "2%",
+    top: "10%",
+    zIndex: 5,
+    overflow: "hidden",
     borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.96)",
+    shadowColor: "#4d6070",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    elevation: 6,
   },
-  sheet: {
+  zoomButton: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  zoomText: {
+    color: colors.ink,
+    fontSize: 22,
+    fontWeight: "900",
+  },
+  zoomDivider: {
+    height: 1,
+    backgroundColor: "#e4edf3",
+  },
+  listButton: {
     position: "absolute",
-    left: 14,
-    right: 14,
-    bottom: 14,
+    left: "2%",
+    bottom: "5%",
+    zIndex: 5,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.96)",
+    shadowColor: "#4d6070",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  listIcon: {
+    color: colors.ink,
+    fontSize: 17,
+    fontWeight: "900",
+  },
+  listButtonText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  helpCard: {
+    position: "absolute",
+    right: "2%",
+    bottom: "5%",
+    zIndex: 5,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 11,
+    maxWidth: 260,
     padding: 14,
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.97)",
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.96)",
+    shadowColor: "#4d6070",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  helpIcon: {
+    width: 32,
+    height: 32,
+    overflow: "hidden",
+    borderRadius: 16,
+    backgroundColor: "#fff2d3",
+    color: "#e89b22",
+    fontSize: 20,
+    fontWeight: "900",
+    lineHeight: 32,
+    textAlign: "center",
+  },
+  helpText: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: "900",
+    lineHeight: 17,
+  },
+  bottomSheet: {
+    marginTop: 9,
+    padding: 13,
+    borderRadius: 20,
+    backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: "#d7e9f1",
-    shadowColor: "#4d6070",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.17,
-    shadowRadius: 20,
-    elevation: 8,
   },
   sheetTop: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   sheetEyebrow: {
     color: colors.primary,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "900",
   },
   sheetTitle: {
     marginTop: 3,
     color: colors.text,
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: "900",
   },
-  closeButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  sheetCount: {
+    overflow: "hidden",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     borderRadius: 999,
     backgroundColor: "#eaf7fc",
-  },
-  closeButtonText: {
     color: colors.primaryDark,
     fontSize: 12,
     fontWeight: "900",
@@ -201,12 +619,12 @@ const styles = StyleSheet.create({
   sheetRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    paddingVertical: 8,
+    gap: 9,
+    paddingVertical: 7,
   },
   sheetIcon: {
-    width: 32,
-    height: 32,
+    width: 31,
+    height: 31,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 16,
@@ -246,24 +664,43 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 14,
     right: 14,
-    top: 84,
+    top: 82,
     bottom: 14,
+    zIndex: 10,
     padding: 14,
     borderRadius: 22,
     backgroundColor: "rgba(255,255,255,0.98)",
     borderWidth: 1,
     borderColor: "#d7e9f1",
   },
+  listPanelTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 10,
+  },
   listTitle: {
     color: colors.text,
-    fontSize: 19,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  closeButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: "#eaf7fc",
+  },
+  closeText: {
+    color: colors.primaryDark,
+    fontSize: 12,
     fontWeight: "900",
   },
   listScroll: {
     flex: 1,
   },
   listRestaurant: {
-    paddingVertical: 12,
+    paddingVertical: 11,
     borderBottomWidth: 1,
     borderBottomColor: "#edf3f7",
   },
