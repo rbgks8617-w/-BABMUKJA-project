@@ -61,6 +61,7 @@ const styles = StyleSheet.create({
   container: {
     padding: 18,
     paddingBottom: 28,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: "row",
@@ -73,7 +74,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   eyebrow: {
-    color: colors.primary,
+    color: colors.sky,
     fontWeight: "800",
   },
   title: {
@@ -88,7 +89,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 999,
-    backgroundColor: colors.ink,
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 3,
   },
   cartText: {
     color: "#ffffff",

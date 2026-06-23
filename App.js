@@ -5,6 +5,7 @@ import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
 import AppNavigator from "./src/navigation/AppNavigator";
 import { CartProvider } from "./src/store/CartContext";
+import { colors } from "./src/theme/colors";
 import { roundedTextStyle } from "./src/theme/typography";
 
 function applyDefaultFont(Component) {
@@ -45,7 +46,7 @@ export default function App() {
   }, []);
 
   if (!fontsLoaded && Platform.OS !== "web") {
-    return <View style={{ flex: 1, backgroundColor: "#fffaf2" }} />;
+    return <View style={{ flex: 1, backgroundColor: colors.background }} />;
   }
 
   return (

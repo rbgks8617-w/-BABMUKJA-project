@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import CartScreen from "../screens/CartScreen";
 import MenuDetailScreen from "../screens/MenuDetailScreen";
@@ -9,6 +9,7 @@ import RecommendationScreen from "../screens/RecommendationScreen";
 import RestaurantDetailScreen from "../screens/RestaurantDetailScreen";
 import RestaurantListScreen from "../screens/RestaurantListScreen";
 import SplashScreen from "../screens/SplashScreen";
+import { colors } from "../theme/colors";
 import { APP_FONT_FAMILY } from "../theme/typography";
 
 const Stack = createNativeStackNavigator();
@@ -27,7 +28,9 @@ function BackHeaderButton({ navigation, label = "뒤로" }) {
       style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
       onPress={() => navigation.goBack()}
     >
-      <Text style={styles.backIcon}>‹</Text>
+      <View style={styles.backIconCircle}>
+        <Text style={styles.backIcon}>‹</Text>
+      </View>
       <Text style={styles.backButtonText}>{label}</Text>
     </Pressable>
   );
@@ -37,13 +40,13 @@ function modalOptions(navigation, title, label = "뒤로") {
   return {
     animation: "slide_from_bottom",
     animationDuration: 420,
-    contentStyle: { backgroundColor: "#fffaf2" },
+    contentStyle: { backgroundColor: colors.background },
     customAnimationOnGesture: true,
     fullScreenGestureEnabled: true,
     gestureEnabled: true,
     headerLeft: () => <BackHeaderButton navigation={navigation} label={label} />,
     headerShadowVisible: false,
-    headerStyle: { backgroundColor: "#fffaf2" },
+    headerStyle: { backgroundColor: colors.background },
     headerTitleStyle,
     presentation: "modal",
     title,
@@ -56,10 +59,10 @@ export default function AppNavigator() {
       initialRouteName="Splash"
       screenOptions={{
         animation: "fade",
-        contentStyle: { backgroundColor: "#fffaf2" },
+        contentStyle: { backgroundColor: colors.background },
         gestureEnabled: true,
         headerShadowVisible: false,
-        headerStyle: { backgroundColor: "#fffaf2" },
+        headerStyle: { backgroundColor: colors.background },
         headerTitleStyle,
       }}
     >
@@ -95,31 +98,46 @@ const styles = StyleSheet.create({
   backButton: {
     flexDirection: "row",
     alignItems: "center",
-    minHeight: 32,
-    paddingLeft: 8,
-    paddingRight: 11,
+    minHeight: 36,
+    paddingLeft: 5,
+    paddingRight: 13,
     borderRadius: 999,
-    backgroundColor: "#fff4ec",
+    backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#f3d5c8",
+    borderColor: "#b8def1",
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 3,
   },
   backButtonPressed: {
     opacity: 0.72,
     transform: [{ scale: 0.98 }],
   },
+  backIconCircle: {
+    width: 26,
+    height: 26,
+    marginRight: 5,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 13,
+    backgroundColor: colors.surfaceWarm,
+    borderWidth: 1,
+    borderColor: "#d7edf7",
+  },
   backIcon: {
-    marginRight: 2,
-    color: "#c94a25",
+    color: colors.primary,
     fontFamily: APP_FONT_FAMILY,
-    fontSize: 20,
-    fontWeight: "500",
-    lineHeight: 22,
+    fontSize: 22,
+    fontWeight: "800",
+    lineHeight: 23,
   },
   backButtonText: {
-    color: "#c94a25",
+    color: colors.primaryDark,
     fontFamily: APP_FONT_FAMILY,
-    fontSize: 13,
-    fontWeight: "700",
-    lineHeight: 17,
+    fontSize: 14,
+    fontWeight: "800",
+    lineHeight: 18,
   },
 });
