@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import PriceSummary from "../components/PriceSummary";
 import QuantitySelector from "../components/QuantitySelector";
 import { useCart } from "../store/CartContext";
+import { APP_FONT_FAMILY } from "../theme/typography";
 import { formatPrice } from "../utils/formatPrice";
 
 export default function CartScreen({ navigation }) {
@@ -144,12 +145,17 @@ const styles = StyleSheet.create({
   primaryButton: {
     alignItems: "center",
     marginTop: 6,
+    minWidth: 132,
+    paddingHorizontal: 28,
     paddingVertical: 15,
-    borderRadius: 10,
+    borderRadius: 14,
     backgroundColor: "#d9532b",
   },
   primaryButtonText: {
     color: "#ffffff",
+    fontFamily: APP_FONT_FAMILY,
+    fontSize: 15,
     fontWeight: "900",
+    lineHeight: 20,
   },
 });
