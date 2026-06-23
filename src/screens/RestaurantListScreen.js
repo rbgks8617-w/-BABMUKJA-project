@@ -34,6 +34,7 @@ export default function RestaurantListScreen({ navigation }) {
   const isWideLayout = width >= 980;
   const carouselCardWidth = Math.min(width - 62, 282);
   const [liveTick, setLiveTick] = useState(0);
+  const [selectedBuildingId, setSelectedBuildingId] = useState("tip");
   const liveMotion = useRef(new Animated.Value(1)).current;
   const liveTranslateY = liveMotion.interpolate({
     inputRange: [0, 1],
@@ -101,6 +102,7 @@ export default function RestaurantListScreen({ navigation }) {
       crowdText: index === 1 ? "한산 · 대기 2분" : index === 2 ? "보통 · 대기 6분" : "혼잡 · 대기 8분",
     };
   });
+  const selectedBuilding = buildingCards.find((building) => building.id === selectedBuildingId) ?? buildingCards[0];
 
   const infoRail = (
     <View style={[styles.infoRail, isWideLayout && styles.infoRailDesktop]}>
@@ -175,7 +177,16 @@ export default function RestaurantListScreen({ navigation }) {
         contentContainerStyle={styles.restaurantCarousel}
       >
         {buildingCards.map((building) => (
-          <View key={building.id} style={[styles.restaurantSlide, { width: carouselCardWidth }]}>
+          <Pressable
+            key={building.id}
+            style={({ pressed }) => [
+              styles.restaurantSlide,
+              selectedBuildingId === building.id && styles.restaurantSlideSelected,
+              pressed && styles.restaurantSlidePressed,
+              { width: carouselCardWidth },
+            ]}
+            onPress={() => setSelectedBuildingId(building.id)}
+          >
             <ImageBackground source={{ uri: building.imageUrl }} style={styles.slideImage} imageStyle={styles.slideImageRadius}>
               <View style={styles.slideOverlay} />
               <View style={styles.slideTop}>
@@ -197,17 +208,49 @@ export default function RestaurantListScreen({ navigation }) {
               </View>
               <Pressable
                 style={styles.menuButton}
-                onPress={() =>
-                  building.firstRestaurantId &&
-                  navigation.navigate("RestaurantDetail", { restaurantId: building.firstRestaurantId })
-                }
+                onPress={() => setSelectedBuildingId(building.id)}
               >
-                <Text style={styles.menuButtonText}>메뉴 보기</Text>
+                <Text style={styles.menuButtonText}>식당 보기</Text>
               </Pressable>
             </View>
-          </View>
+          </Pressable>
         ))}
       </ScrollView>
+
+      {selectedBuilding ? (
+        <View style={styles.buildingPanel}>
+          <View style={styles.buildingPanelHeader}>
+            <View>
+              <Text style={styles.buildingPanelEyebrow}>선택한 건물</Text>
+              <Text style={styles.buildingPanelTitle}>{selectedBuilding.displayName} 안의 식당</Text>
+            </View>
+            <Text style={styles.buildingPanelCount}>{selectedBuilding.restaurants.length}곳</Text>
+          </View>
+
+          {selectedBuilding.restaurants.map((item) => {
+            const restaurant = findRestaurant(restaurants, item.restaurantId);
+
+            return (
+              <Pressable
+                key={item.restaurantId}
+                style={styles.buildingRestaurantRow}
+                onPress={() => navigation.navigate("RestaurantDetail", { restaurantId: item.restaurantId })}
+              >
+                <View style={styles.buildingRestaurantIcon}>
+                  <Text style={styles.buildingRestaurantIconText}>식</Text>
+                </View>
+                <View style={styles.buildingRestaurantCopy}>
+                  <Text style={styles.buildingRestaurantName}>{restaurant?.name ?? item.label}</Text>
+                  <Text style={styles.buildingRestaurantMeta}>
+                    {restaurant?.category ?? "식당"} · {item.hours}
+                  </Text>
+                </View>
+                <Text style={styles.buildingRestaurantAction}>보기</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
     </View>
   );
 
@@ -783,6 +826,14 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 3,
   },
+  restaurantSlideSelected: {
+    borderColor: colors.primary,
+    borderWidth: 2,
+  },
+  restaurantSlidePressed: {
+    opacity: 0.82,
+    transform: [{ scale: 0.98 }],
+  },
   slideImage: {
     height: 112,
     justifyContent: "space-between",
@@ -893,6 +944,94 @@ const styles = StyleSheet.create({
   menuButtonText: {
     color: colors.primary,
     fontSize: 13,
+    fontWeight: "900",
+  },
+  buildingPanel: {
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 24,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  buildingPanelHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 10,
+  },
+  buildingPanelEyebrow: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  buildingPanelTitle: {
+    marginTop: 4,
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: "900",
+    lineHeight: 23,
+  },
+  buildingPanelCount: {
+    overflow: "hidden",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: "#eaf7fc",
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  buildingRestaurantRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 11,
+    borderTopWidth: 1,
+    borderTopColor: "#edf3f7",
+  },
+  buildingRestaurantIcon: {
+    width: 34,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 17,
+    backgroundColor: "#e9f8ee",
+  },
+  buildingRestaurantIconText: {
+    color: colors.success,
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  buildingRestaurantCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  buildingRestaurantName: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  buildingRestaurantMeta: {
+    marginTop: 3,
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  buildingRestaurantAction: {
+    overflow: "hidden",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+    color: "#ffffff",
+    fontSize: 12,
     fontWeight: "900",
   },
   bottomDock: {
