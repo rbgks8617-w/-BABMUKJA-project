@@ -2,6 +2,7 @@ import React from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import CartScreen from "../screens/CartScreen";
+import CampusMapScreen from "../screens/CampusMapScreen";
 import MealMateScreen from "../screens/MealMateScreen";
 import MenuDetailScreen from "../screens/MenuDetailScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
@@ -105,6 +106,11 @@ export default function AppNavigator() {
         name="MenuDetail"
         component={MenuDetailScreen}
         options={({ navigation }) => modalOptions(navigation, "메뉴 상세", "메뉴")}
+      />
+      <Stack.Screen
+        name="CampusMap"
+        component={CampusMapScreen}
+        options={({ navigation }) => modalOptions(navigation, "식당 안내 지도", "홈")}
       />
       <Stack.Screen
         name="MealMate"

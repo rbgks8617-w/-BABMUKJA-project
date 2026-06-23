@@ -108,7 +108,9 @@ export default function RestaurantListScreen({ navigation }) {
     <View style={styles.mainColumn}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>학교 식당</Text>
-        <Text style={styles.sectionMeta}>{restaurants.length}곳</Text>
+        <Pressable style={styles.mapButton} onPress={() => navigation.navigate("CampusMap")}>
+          <Text style={styles.mapButtonText}>지도 보기</Text>
+        </Pressable>
       </View>
 
       <View style={styles.grid}>
@@ -540,6 +542,19 @@ const styles = StyleSheet.create({
   sectionMeta: {
     color: colors.textSoft,
     fontWeight: "800",
+  },
+  mapButton: {
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#ccebf7",
+  },
+  mapButtonText: {
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: "900",
   },
   grid: {
     gap: 12,
