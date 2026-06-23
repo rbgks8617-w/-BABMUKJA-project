@@ -29,7 +29,7 @@ function BackHeaderButton({ navigation, label = "뒤로" }) {
       onPress={() => navigation.goBack()}
     >
       <View style={styles.backIconCircle}>
-        <Text style={styles.backIcon}>‹</Text>
+        <View style={styles.backChevron} />
       </View>
       <Text style={styles.backButtonText}>{label}</Text>
     </Pressable>
@@ -98,17 +98,17 @@ const styles = StyleSheet.create({
   backButton: {
     flexDirection: "row",
     alignItems: "center",
-    minHeight: 36,
-    paddingLeft: 5,
-    paddingRight: 13,
+    minHeight: 38,
+    paddingLeft: 6,
+    paddingRight: 14,
     borderRadius: 999,
-    backgroundColor: "#ffffff",
+    backgroundColor: "rgba(255, 255, 255, 0.94)",
     borderWidth: 1,
-    borderColor: "#b8def1",
+    borderColor: "#b3dff2",
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 7 },
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
     elevation: 3,
   },
   backButtonPressed: {
@@ -116,29 +116,30 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   backIconCircle: {
-    width: 26,
-    height: 26,
-    marginRight: 5,
+    width: 28,
+    height: 28,
+    marginRight: 6,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 13,
-    backgroundColor: colors.surfaceWarm,
+    borderRadius: 14,
+    backgroundColor: "#f0fbff",
     borderWidth: 1,
-    borderColor: "#d7edf7",
+    borderColor: "#caedf8",
   },
-  backIcon: {
-    color: colors.primary,
-    fontFamily: APP_FONT_FAMILY,
-    fontSize: 24,
-    fontWeight: "900",
-    lineHeight: 24,
-    transform: [{ translateX: 1 }, { translateY: -1 }],
+  backChevron: {
+    width: 9,
+    height: 9,
+    borderLeftWidth: 3,
+    borderBottomWidth: 3,
+    borderColor: colors.primary,
+    borderRadius: 1.5,
+    transform: [{ rotate: "45deg" }, { translateX: 1 }],
   },
   backButtonText: {
     color: colors.primaryDark,
     fontFamily: APP_FONT_FAMILY,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "900",
     lineHeight: 18,
   },
 });
