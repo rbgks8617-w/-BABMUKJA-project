@@ -23,13 +23,15 @@ export default function RestaurantListScreen({ navigation }) {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerCopy}>
-          <Text style={styles.eyebrow}>{university.name}</Text>
-          <Text style={styles.title}>오늘 캠퍼스에서 뭐 먹지?</Text>
+        <View style={styles.heroRow}>
+          <View style={styles.headerCopy}>
+            <Text style={styles.eyebrow}>{university.name}</Text>
+            <Text style={styles.title}>오늘 캠퍼스에서 뭐 먹지?</Text>
+          </View>
+          <Pressable style={styles.cartButton} onPress={() => navigation.navigate("Cart")}>
+            <Text style={styles.cartText}>장바구니 {totalQuantity}</Text>
+          </Pressable>
         </View>
-        <Pressable style={styles.cartButton} onPress={() => navigation.navigate("Cart")}>
-          <Text style={styles.cartText}>장바구니 {totalQuantity}</Text>
-        </Pressable>
       </View>
 
       <RecommendationBanner onPress={() => navigation.navigate("Recommendation")} />
@@ -59,16 +61,19 @@ export default function RestaurantListScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 18,
+    paddingHorizontal: 18,
+    paddingTop: 24,
     paddingBottom: 28,
     backgroundColor: colors.background,
   },
   header: {
+    marginBottom: 20,
+  },
+  heroRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "flex-end",
     justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 16,
+    gap: 14,
   },
   headerCopy: {
     flex: 1,
@@ -86,6 +91,7 @@ const styles = StyleSheet.create({
     lineHeight: 32,
   },
   cartButton: {
+    marginBottom: 4,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 999,

@@ -36,6 +36,20 @@ function BackHeaderButton({ navigation, label = "뒤로" }) {
   );
 }
 
+function HomeHeaderTitle() {
+  return (
+    <View style={styles.homeLogo}>
+      <View style={styles.homeLogoMark}>
+        <Text style={styles.homeLogoMarkText}>밥</Text>
+      </View>
+      <View>
+        <Text style={styles.homeLogoName}>대학교 밥먹자</Text>
+        <Text style={styles.homeLogoSub}>campus meal order</Text>
+      </View>
+    </View>
+  );
+}
+
 function modalOptions(navigation, title, label = "뒤로") {
   return {
     animation: "slide_from_bottom",
@@ -67,7 +81,14 @@ export default function AppNavigator() {
       }}
     >
       <Stack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="RestaurantList" component={RestaurantListScreen} options={{ title: "대학교 밥먹자" }} />
+      <Stack.Screen
+        name="RestaurantList"
+        component={RestaurantListScreen}
+        options={{
+          headerTitle: () => <HomeHeaderTitle />,
+          headerTitleAlign: "left",
+        }}
+      />
       <Stack.Screen
         name="Recommendation"
         component={RecommendationScreen}
@@ -95,6 +116,49 @@ export default function AppNavigator() {
 }
 
 const styles = StyleSheet.create({
+  homeLogo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  homeLogoMark: {
+    width: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 15,
+    backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: "#dcf5ff",
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.14,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  homeLogoMarkText: {
+    color: "#ffffff",
+    fontFamily: APP_FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: "900",
+    lineHeight: 15,
+  },
+  homeLogoName: {
+    color: colors.ink,
+    fontFamily: APP_FONT_FAMILY,
+    fontSize: 15,
+    fontWeight: "900",
+    lineHeight: 18,
+  },
+  homeLogoSub: {
+    marginTop: 1,
+    color: colors.textSoft,
+    fontFamily: APP_FONT_FAMILY,
+    fontSize: 8,
+    fontWeight: "800",
+    lineHeight: 10,
+    textTransform: "uppercase",
+  },
   backButton: {
     flexDirection: "row",
     alignItems: "center",
