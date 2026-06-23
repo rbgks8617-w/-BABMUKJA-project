@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import CartScreen from "../screens/CartScreen";
 import MealMateScreen from "../screens/MealMateScreen";
 import MenuDetailScreen from "../screens/MenuDetailScreen";
+import NotificationsScreen from "../screens/NotificationsScreen";
 import OrderCompleteScreen from "../screens/OrderCompleteScreen";
 import PaymentScreen from "../screens/PaymentScreen";
 import RecommendationScreen from "../screens/RecommendationScreen";
@@ -109,6 +110,11 @@ export default function AppNavigator() {
         name="MealMate"
         component={MealMateScreen}
         options={({ navigation }) => modalOptions(navigation, "밥친구 게시판", "홈")}
+      />
+      <Stack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={({ navigation }) => modalOptions(navigation, "??", "?")}
       />
       <Stack.Screen name="Cart" component={CartScreen} options={({ navigation }) => modalOptions(navigation, "장바구니")} />
       <Stack.Screen name="Payment" component={PaymentScreen} options={({ navigation }) => modalOptions(navigation, "결제")} />

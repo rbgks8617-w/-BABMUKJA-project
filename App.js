@@ -5,6 +5,7 @@ import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
 import AppNavigator from "./src/navigation/AppNavigator";
 import { CartProvider } from "./src/store/CartContext";
+import { NotificationProvider } from "./src/store/NotificationContext";
 import { colors } from "./src/theme/colors";
 import { roundedTextStyle } from "./src/theme/typography";
 
@@ -50,11 +51,13 @@ export default function App() {
   }
 
   return (
-    <CartProvider>
-      <NavigationContainer>
-        <StatusBar style="dark" />
-        <AppNavigator />
-      </NavigationContainer>
-    </CartProvider>
+    <NotificationProvider>
+      <CartProvider>
+        <NavigationContainer>
+          <StatusBar style="dark" />
+          <AppNavigator />
+        </NavigationContainer>
+      </CartProvider>
+    </NotificationProvider>
   );
 }

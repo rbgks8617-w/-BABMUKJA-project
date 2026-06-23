@@ -9,6 +9,7 @@ import {
   getUniversity,
 } from "../services/restaurantService";
 import { useCart } from "../store/CartContext";
+import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
 import { formatPrice } from "../utils/formatPrice";
 
@@ -29,6 +30,7 @@ export default function RestaurantListScreen({ navigation }) {
   const friendCheckins = getFriendCheckins();
   const restaurantRows = chunkPairs(restaurants);
   const { totalQuantity } = useCart();
+  const { unreadCount } = useNotifications();
   const isWideLayout = width >= 900;
   const [liveTick, setLiveTick] = useState(0);
   const liveMotion = useRef(new Animated.Value(1)).current;
@@ -70,7 +72,7 @@ export default function RestaurantListScreen({ navigation }) {
     <View style={[styles.infoRail, isWideLayout && styles.infoRailDesktop]}>
       <View style={styles.railHeaderRow}>
         <Text style={styles.railLabel}>캠퍼스 LIVE</Text>
-        <Text style={styles.railRefresh}>10초마다 갱신</Text>
+        <Text style={styles.railRefresh}>실시간으로 10초마다 새로고침돼요</Text>
       </View>
       <Animated.View style={[styles.liveStack, { opacity: liveMotion, transform: [{ translateY: liveTranslateY }] }]}>
         <View style={styles.infoCard}>
@@ -135,9 +137,19 @@ export default function RestaurantListScreen({ navigation }) {
               <Text style={styles.eyebrow}>{university.name}</Text>
               <Text style={styles.title}>오늘 캠퍼스에서 뭐 먹지?</Text>
             </View>
-            <Pressable style={styles.cartButton} onPress={() => navigation.navigate("Cart")}>
-              <Text style={styles.cartText}>장바구니 {totalQuantity}</Text>
-            </Pressable>
+            <View style={styles.headerActions}>
+              <Pressable style={styles.alertButton} onPress={() => navigation.navigate("Notifications")}>
+                <Text style={styles.alertIcon}>알림</Text>
+                {unreadCount > 0 ? (
+                  <View style={styles.alertBadge}>
+                    <Text style={styles.alertBadgeText}>{unreadCount}</Text>
+                  </View>
+                ) : null}
+              </Pressable>
+              <Pressable style={styles.cartButton} onPress={() => navigation.navigate("Cart")}>
+                <Text style={styles.cartText}>장바구니 {totalQuantity}</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
 
@@ -225,6 +237,12 @@ const styles = StyleSheet.create({
   headerCopy: {
     flex: 1,
   },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
   eyebrow: {
     color: colors.sky,
     fontWeight: "800",
@@ -238,7 +256,6 @@ const styles = StyleSheet.create({
     lineHeight: 32,
   },
   cartButton: {
-    marginBottom: 4,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 999,
@@ -253,6 +270,40 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 13,
     fontWeight: "900",
+  },
+  alertButton: {
+    position: "relative",
+    minWidth: 48,
+    alignItems: "center",
+    paddingHorizontal: 11,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#ccebf7",
+  },
+  alertIcon: {
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  alertBadge: {
+    position: "absolute",
+    top: -6,
+    right: -5,
+    minWidth: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 5,
+    borderRadius: 9,
+    backgroundColor: colors.orange,
+  },
+  alertBadgeText: {
+    color: "#ffffff",
+    fontSize: 10,
+    fontWeight: "900",
+    lineHeight: 13,
   },
   todayCard: {
     marginBottom: 14,
@@ -385,7 +436,7 @@ const styles = StyleSheet.create({
   },
   railRefresh: {
     color: colors.textSoft,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "800",
   },
   liveStack: {

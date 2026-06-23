@@ -1,10 +1,20 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
 import { formatPrice } from "../utils/formatPrice";
 
 export default function OrderCompleteScreen({ route, navigation }) {
   const { order } = route.params;
+  const { addNotification } = useNotifications();
+
+  useEffect(() => {
+    addNotification({
+      type: "order",
+      title: "음식 준비 알림",
+      message: `주문번호 ${order.orderNumber} 음식이 약 ${order.estimatedMinutes}분 뒤 준비돼요.`,
+    });
+  }, [addNotification, order.estimatedMinutes, order.orderNumber]);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
