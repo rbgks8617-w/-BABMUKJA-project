@@ -129,9 +129,10 @@ const styles = StyleSheet.create({
   backIcon: {
     color: colors.primary,
     fontFamily: APP_FONT_FAMILY,
-    fontSize: 22,
-    fontWeight: "800",
-    lineHeight: 23,
+    fontSize: 24,
+    fontWeight: "900",
+    lineHeight: 24,
+    transform: [{ translateX: 1 }, { translateY: -1 }],
   },
   backButtonText: {
     color: colors.primaryDark,
