@@ -3,6 +3,8 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import CartScreen from "../screens/CartScreen";
 import CampusMapScreen from "../screens/CampusMapScreen";
+import CommunityScreen from "../screens/CommunityScreen";
+import MealMateChatScreen from "../screens/MealMateChatScreen";
 import MealMateScreen from "../screens/MealMateScreen";
 import MenuDetailScreen from "../screens/MenuDetailScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
@@ -53,10 +55,10 @@ function HomeHeaderTitle() {
   );
 }
 
-function modalOptions(navigation, title, label = "뒤로") {
+function pushOptions(navigation, title, label = "뒤로") {
   return {
-    animation: "slide_from_bottom",
-    animationDuration: 420,
+    animation: "slide_from_right",
+    animationDuration: 360,
     contentStyle: { backgroundColor: colors.background },
     customAnimationOnGesture: true,
     fullScreenGestureEnabled: true,
@@ -65,7 +67,7 @@ function modalOptions(navigation, title, label = "뒤로") {
     headerShadowVisible: false,
     headerStyle: { backgroundColor: colors.background },
     headerTitleStyle,
-    presentation: "modal",
+    presentation: "card",
     title,
   };
 }
@@ -75,8 +77,10 @@ export default function AppNavigator() {
     <Stack.Navigator
       initialRouteName="Splash"
       screenOptions={{
-        animation: "fade",
+        animation: "slide_from_right",
         contentStyle: { backgroundColor: colors.background },
+        customAnimationOnGesture: true,
+        fullScreenGestureEnabled: true,
         gestureEnabled: true,
         headerShadowVisible: false,
         headerStyle: { backgroundColor: colors.background },
@@ -93,44 +97,54 @@ export default function AppNavigator() {
         }}
       />
       <Stack.Screen
+        name="Community"
+        component={CommunityScreen}
+        options={({ navigation }) => pushOptions(navigation, "커뮤니티", "홈")}
+      />
+      <Stack.Screen
         name="Recommendation"
         component={RecommendationScreen}
-        options={({ navigation }) => modalOptions(navigation, "메뉴 추천", "메인")}
+        options={({ navigation }) => pushOptions(navigation, "메뉴 추천", "홈")}
       />
       <Stack.Screen
         name="RestaurantDetail"
         component={RestaurantDetailScreen}
-        options={({ navigation }) => modalOptions(navigation, "식당 상세", "식당")}
+        options={({ navigation }) => pushOptions(navigation, "식당 상세", "식당")}
       />
       <Stack.Screen
         name="MenuDetail"
         component={MenuDetailScreen}
-        options={({ navigation }) => modalOptions(navigation, "메뉴 상세", "메뉴")}
+        options={({ navigation }) => pushOptions(navigation, "메뉴 상세", "메뉴")}
       />
       <Stack.Screen
         name="CampusMap"
         component={CampusMapScreen}
         options={({ navigation }) => ({
-          ...modalOptions(navigation, "", "홈"),
+          ...pushOptions(navigation, "", "홈"),
           headerTitle: () => null,
         })}
       />
       <Stack.Screen
         name="MealMate"
         component={MealMateScreen}
-        options={({ navigation }) => modalOptions(navigation, "밥친구 게시판", "홈")}
+        options={({ navigation }) => pushOptions(navigation, "나랑 밥먹자", "커뮤니티")}
+      />
+      <Stack.Screen
+        name="MealMateChat"
+        component={MealMateChatScreen}
+        options={({ navigation }) => pushOptions(navigation, "익명 채팅", "모임")}
       />
       <Stack.Screen
         name="Notifications"
         component={NotificationsScreen}
-        options={({ navigation }) => modalOptions(navigation, "??", "?")}
+        options={({ navigation }) => pushOptions(navigation, "알림", "홈")}
       />
-      <Stack.Screen name="Cart" component={CartScreen} options={({ navigation }) => modalOptions(navigation, "장바구니")} />
-      <Stack.Screen name="Payment" component={PaymentScreen} options={({ navigation }) => modalOptions(navigation, "결제")} />
+      <Stack.Screen name="Cart" component={CartScreen} options={({ navigation }) => pushOptions(navigation, "장바구니")} />
+      <Stack.Screen name="Payment" component={PaymentScreen} options={({ navigation }) => pushOptions(navigation, "결제")} />
       <Stack.Screen
         name="OrderComplete"
         component={OrderCompleteScreen}
-        options={({ navigation }) => modalOptions(navigation, "주문 완료", "홈")}
+        options={({ navigation }) => pushOptions(navigation, "주문 완료", "홈")}
       />
     </Stack.Navigator>
   );

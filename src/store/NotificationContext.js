@@ -7,15 +7,15 @@ const initialNotifications = [
     id: "ready-1",
     type: "order",
     title: "음식 준비 알림",
-    message: "오늘의 한식 정식이 곧 준비돼요.",
+    message: "주문한 메뉴가 곧 준비돼요. 픽업 알림을 놓치지 마세요.",
     createdAt: "방금",
     isRead: false,
   },
   {
     id: "mate-1",
     type: "mate",
-    title: "밥친구 모집 알림",
-    message: "12:30 학생식당 모임에 새 참여자가 들어왔어요.",
+    title: "나랑 밥먹자 알림",
+    message: "12:30 라온식당 모임에 익명 학생이 참여했어요.",
     createdAt: "3분 전",
     isRead: false,
   },
@@ -27,9 +27,9 @@ export function NotificationProvider({ children }) {
   const addNotification = useCallback((notification) => {
     const nextNotification = {
       id: `${notification.type ?? "notice"}-${Date.now()}`,
-      createdAt: "방금",
       isRead: false,
       ...notification,
+      createdAt: notification.createdAt ?? "방금",
     };
 
     setNotifications((currentNotifications) => [nextNotification, ...currentNotifications]);

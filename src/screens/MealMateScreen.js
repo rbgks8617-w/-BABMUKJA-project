@@ -1,58 +1,54 @@
 import React, { useMemo, useRef, useState } from "react";
-import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { getMealMatePosts, getMealMateTopics, getRestaurants } from "../services/restaurantService";
+import { Animated, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { getRestaurants } from "../services/restaurantService";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
 
-const maxCountOptions = [2, 3, 4, 5, 6];
-const timeOptions = ["12:00", "12:30", "13:00", "17:30", "18:00"];
+const anonymousNames = ["익명 01", "익명 02", "익명 03", "익명 04", "익명 05"];
 
-function SelectorSection({ id, title, value, isOpen, options, onToggle, onSelect }) {
-  return (
-    <View style={styles.selectorBlock}>
-      <Pressable style={styles.selectorHeader} onPress={() => onToggle(id)}>
-        <View>
-          <Text style={styles.fieldLabel}>{title}</Text>
-          <Text style={styles.selectedValue}>{value}</Text>
-        </View>
-        <Text style={[styles.selectorChevron, isOpen && styles.selectorChevronOpen]}>⌄</Text>
-      </Pressable>
+function buildInitialPosts(restaurants) {
+  const first = restaurants[0];
+  const second = restaurants[1] ?? restaurants[0];
 
-      {isOpen ? (
-        <View style={styles.optionPanel}>
-          {options.map((option) => (
-            <Pressable
-              key={option.value}
-              style={[styles.optionChip, value === option.label && styles.optionChipSelected]}
-              onPress={() => onSelect(option.value)}
-            >
-              <Text style={[styles.optionText, value === option.label && styles.optionTextSelected]}>{option.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
-    </View>
-  );
+  return [
+    {
+      id: "mate-1",
+      restaurant: first,
+      time: "12:30",
+      topic: "공강 때 뭐 하고 지내는지",
+      currentCount: 2,
+      maxCount: 4,
+      note: "처음 보는 사람이어도 편하게 밥 먹고 흩어지는 모임이에요.",
+      createdBy: "익명 01",
+      joinedByMe: false,
+    },
+    {
+      id: "mate-2",
+      restaurant: second,
+      time: "18:10",
+      topic: "시험기간 버티는 법",
+      currentCount: 1,
+      maxCount: 3,
+      note: "저녁 먹으면서 과제랑 시험 얘기 가볍게 해요.",
+      createdBy: "익명 02",
+      joinedByMe: false,
+    },
+  ].filter((post) => post.restaurant);
 }
 
-export default function MealMateScreen() {
-  const topics = getMealMateTopics();
-  const restaurants = useMemo(() => getRestaurants().slice(0, 6), []);
-  const [posts, setPosts] = useState(getMealMatePosts);
-  const [topic, setTopic] = useState(topics[0]);
+export default function MealMateScreen({ navigation }) {
+  const restaurants = useMemo(() => getRestaurants().slice(0, 8), []);
+  const [posts, setPosts] = useState(() => buildInitialPosts(restaurants));
+  const [topic, setTopic] = useState("");
+  const [time, setTime] = useState("");
+  const [note, setNote] = useState("");
   const [maxCount, setMaxCount] = useState(3);
   const [restaurantId, setRestaurantId] = useState(restaurants[0]?.id);
-  const [time, setTime] = useState("12:30");
-  const [openSelector, setOpenSelector] = useState("topic");
   const [toastMessage, setToastMessage] = useState("");
   const toastMotion = useRef(new Animated.Value(0)).current;
   const { addNotification } = useNotifications();
 
   const selectedRestaurant = restaurants.find((restaurant) => restaurant.id === restaurantId) ?? restaurants[0];
-  const restaurantOptions = restaurants.map((restaurant) => ({
-    label: restaurant.name,
-    value: restaurant.id,
-  }));
 
   const showToast = (message) => {
     setToastMessage(message);
@@ -73,34 +69,49 @@ export default function MealMateScreen() {
     ]).start();
   };
 
-  const toggleSelector = (selectorId) => {
-    setOpenSelector((currentSelector) => (currentSelector === selectorId ? "" : selectorId));
-  };
-
   const createPost = () => {
     if (!selectedRestaurant) {
       return;
     }
 
+    const normalizedTopic = topic.trim() || "편하게 밥 먹기";
+    const normalizedTime = time.trim() || "시간 협의";
+    const normalizedNote = note.trim() || "부담 없이 와서 밥만 먹고 가도 좋아요.";
     const nextPost = {
       id: `local-${Date.now()}`,
-      restaurantId: selectedRestaurant.id,
       restaurant: selectedRestaurant,
-      time,
-      topic,
+      time: normalizedTime,
+      topic: normalizedTopic,
       currentCount: 1,
       maxCount,
-      note: `${topic} 주제로 편하게 밥 먹을 사람`,
-      createdBy: "나",
+      note: normalizedNote,
+      createdBy: "익명 방장",
+      joinedByMe: true,
     };
 
     setPosts((currentPosts) => [nextPost, ...currentPosts]);
+    setTopic("");
+    setTime("");
+    setNote("");
     addNotification({
       type: "mate",
-      title: "밥친구 모집 시작",
-      message: `${time} ${selectedRestaurant.name} 모임을 열었어요.`,
+      title: "나랑 밥먹자 모집 시작",
+      message: `${normalizedTime} ${selectedRestaurant.name} 모임이 만들어졌어요.`,
     });
-    showToast("모집글이 올라갔어요.");
+    showToast("나랑 밥먹자 모집글을 올렸어요");
+  };
+
+  const openChat = (post) => {
+    navigation.navigate("MealMateChat", {
+      room: {
+        id: post.id,
+        title: post.restaurant?.name ?? "나랑 밥먹자",
+        topic: post.topic,
+        time: post.time,
+        members: post.currentCount,
+        maxCount: post.maxCount,
+      },
+    });
   };
 
   const joinPost = (postId) => {
@@ -110,33 +121,31 @@ export default function MealMateScreen() {
       return;
     }
 
-    const nextCount = targetPost.currentCount + 1;
+    if (targetPost.joinedByMe || targetPost.currentCount >= targetPost.maxCount) {
+      openChat(targetPost);
+      return;
+    }
+
+    const nextCount = Math.min(targetPost.currentCount + 1, targetPost.maxCount);
     const isFull = nextCount >= targetPost.maxCount;
+    const updatedPost = {
+      ...targetPost,
+      currentCount: nextCount,
+      joinedByMe: true,
+    };
 
-    setPosts((currentPosts) =>
-      currentPosts
-        .map((post) => {
-          if (post.id !== postId) {
-            return post;
-          }
-
-          return {
-            ...post,
-            currentCount: nextCount,
-          };
-        })
-        .filter((post) => post.currentCount < post.maxCount),
-    );
+    setPosts((currentPosts) => currentPosts.map((post) => (post.id === postId ? updatedPost : post)));
 
     addNotification({
       type: "mate",
-      title: isFull ? "밥친구 모집 마감" : "밥친구 참여 알림",
+      title: isFull ? "나랑 밥먹자 모집 마감" : "나랑 밥먹자 참여 알림",
       message: isFull
         ? `${targetPost.time} ${targetPost.restaurant?.name ?? "식당"} 모임 인원이 다 찼어요.`
-        : `${targetPost.time} ${targetPost.restaurant?.name ?? "식당"} 모임에 누군가 참여했어요.`,
+        : `${targetPost.time} ${targetPost.restaurant?.name ?? "식당"} 모임에 익명 학생이 참여했어요.`,
     });
 
-    showToast(isFull ? "모집 인원이 다 차서 글이 내려갔어요." : "참여했어요.");
+    showToast(isFull ? "모집 인원이 다 찼어요" : "참여했어요. 채팅방이 열렸어요");
+    openChat(updatedPost);
   };
 
   const toastTranslateY = toastMotion.interpolate({
@@ -148,56 +157,69 @@ export default function MealMateScreen() {
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.hero}>
-          <Text style={styles.eyebrow}>혼밥이 걱정될 때</Text>
-          <Text style={styles.title}>밥 같이 먹을 사람 찾기</Text>
-          <Text style={styles.description}>대화 주제와 인원만 정하면 부담 없는 한 끼 모임을 바로 만들 수 있어요.</Text>
+          <Text style={styles.eyebrow}>나랑 밥먹자</Text>
+          <Text style={styles.title}>익명으로 편하게 밥 약속 잡기</Text>
+          <Text style={styles.description}>실명 없이 대화 주제와 시간을 직접 적고, 모임이 생기면 채팅방에서 장소를 맞춰요.</Text>
         </View>
 
         <View style={styles.formCard}>
-          <View style={styles.formHeader}>
-            <Text style={styles.sectionTitle}>모집글 만들기</Text>
-            <Text style={styles.formHint}>눌러서 고르기</Text>
+          <Text style={styles.sectionTitle}>모집글 만들기</Text>
+          <TextInput
+            style={styles.input}
+            value={topic}
+            onChangeText={setTopic}
+            placeholder="대화 주제 직접 입력"
+            placeholderTextColor={colors.textSoft}
+          />
+          <TextInput
+            style={styles.input}
+            value={time}
+            onChangeText={setTime}
+            placeholder="시간 직접 입력 예: 오늘 12:30"
+            placeholderTextColor={colors.textSoft}
+          />
+          <TextInput
+            style={[styles.input, styles.noteInput]}
+            value={note}
+            onChangeText={setNote}
+            placeholder="모임 설명을 적어주세요"
+            placeholderTextColor={colors.textSoft}
+            multiline
+          />
+
+          <View style={styles.countRow}>
+            <Text style={styles.fieldLabel}>모집 인원</Text>
+            <View style={styles.stepper}>
+              <Pressable style={styles.stepButton} onPress={() => setMaxCount((count) => Math.max(2, count - 1))}>
+                <Text style={styles.stepText}>-</Text>
+              </Pressable>
+              <Text style={styles.countValue}>{maxCount}명</Text>
+              <Pressable style={styles.stepButton} onPress={() => setMaxCount((count) => Math.min(6, count + 1))}>
+                <Text style={styles.stepText}>+</Text>
+              </Pressable>
+            </View>
           </View>
 
-          <SelectorSection
-            id="topic"
-            title="대화 주제"
-            value={topic}
-            isOpen={openSelector === "topic"}
-            options={topics.map((item) => ({ label: item, value: item }))}
-            onToggle={toggleSelector}
-            onSelect={setTopic}
-          />
-          <SelectorSection
-            id="count"
-            title="모집 인원"
-            value={`${maxCount}명까지`}
-            isOpen={openSelector === "count"}
-            options={maxCountOptions.map((count) => ({ label: `${count}명까지`, value: count }))}
-            onToggle={toggleSelector}
-            onSelect={setMaxCount}
-          />
-          <SelectorSection
-            id="restaurant"
-            title="식당"
-            value={selectedRestaurant?.name ?? "식당 선택"}
-            isOpen={openSelector === "restaurant"}
-            options={restaurantOptions}
-            onToggle={toggleSelector}
-            onSelect={setRestaurantId}
-          />
-          <SelectorSection
-            id="time"
-            title="시간"
-            value={time}
-            isOpen={openSelector === "time"}
-            options={timeOptions.map((item) => ({ label: item, value: item }))}
-            onToggle={toggleSelector}
-            onSelect={setTime}
-          />
+          <Text style={styles.fieldLabel}>식당 선택</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.restaurantChips}>
+            {restaurants.map((restaurant) => {
+              const isSelected = restaurant.id === restaurantId;
+              return (
+                <Pressable
+                  key={restaurant.id}
+                  style={[styles.restaurantChip, isSelected && styles.restaurantChipSelected]}
+                  onPress={() => setRestaurantId(restaurant.id)}
+                >
+                  <Text style={[styles.restaurantChipText, isSelected && styles.restaurantChipTextSelected]}>
+                    {restaurant.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
 
           <Pressable style={styles.createButton} onPress={createPost}>
-            <Text style={styles.createButtonText}>모집 글 올리기</Text>
+            <Text style={styles.createButtonText}>익명으로 모집 올리기</Text>
           </Pressable>
         </View>
 
@@ -206,13 +228,11 @@ export default function MealMateScreen() {
           <Text style={styles.boardMeta}>{posts.length}개</Text>
         </View>
 
-        {posts.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>모집 중인 밥친구가 없어요</Text>
-            <Text style={styles.emptyText}>새 모집글을 올리면 바로 여기에 떠요.</Text>
-          </View>
-        ) : (
-          posts.map((post) => (
+        {posts.map((post, index) => {
+          const isFull = post.currentCount >= post.maxCount;
+          const buttonLabel = post.joinedByMe || isFull ? "채팅방" : "참여하기";
+
+          return (
             <View key={post.id} style={styles.postCard}>
               <View style={styles.postTop}>
                 <View style={styles.postTitleBlock}>
@@ -221,22 +241,22 @@ export default function MealMateScreen() {
                     {post.time} · {post.topic}
                   </Text>
                 </View>
-                <View style={styles.countPill}>
-                  <Text style={styles.countText}>
+                <View style={[styles.countPill, isFull && styles.countPillFull]}>
+                  <Text style={[styles.countText, isFull && styles.countTextFull]}>
                     {post.currentCount}/{post.maxCount}
                   </Text>
                 </View>
               </View>
               <Text style={styles.postNote}>{post.note}</Text>
               <View style={styles.postFooter}>
-                <Text style={styles.creator}>{post.createdBy}</Text>
+                <Text style={styles.creator}>{post.createdBy ?? anonymousNames[index % anonymousNames.length]}</Text>
                 <Pressable style={styles.joinButton} onPress={() => joinPost(post.id)}>
-                  <Text style={styles.joinButtonText}>참여하기</Text>
+                  <Text style={styles.joinButtonText}>{buttonLabel}</Text>
                 </Pressable>
               </View>
             </View>
-          ))
-        )}
+          );
+        })}
       </ScrollView>
 
       {toastMessage ? (
@@ -308,90 +328,89 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 3,
   },
-  formHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-    marginBottom: 8,
-  },
-  formHint: {
-    color: colors.textSoft,
-    fontSize: 12,
-    fontWeight: "900",
-  },
   sectionTitle: {
     color: colors.text,
     fontSize: 19,
     fontWeight: "900",
   },
-  selectorBlock: {
-    overflow: "hidden",
+  input: {
     marginTop: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
     borderRadius: 18,
     backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
-  },
-  selectorHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-  },
-  fieldLabel: {
-    color: colors.textSoft,
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  selectedValue: {
-    marginTop: 4,
     color: colors.text,
     fontSize: 15,
     fontWeight: "900",
   },
-  selectorChevron: {
-    width: 28,
-    height: 28,
-    overflow: "hidden",
-    borderRadius: 14,
-    backgroundColor: "#ffffff",
-    color: colors.primaryDark,
-    fontSize: 21,
+  noteInput: {
+    minHeight: 80,
+    textAlignVertical: "top",
+  },
+  countRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 12,
+  },
+  fieldLabel: {
+    marginTop: 12,
+    color: colors.textSoft,
+    fontSize: 12,
     fontWeight: "900",
-    lineHeight: 25,
+  },
+  stepper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  stepButton: {
+    width: 34,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 17,
+    backgroundColor: colors.ink,
+  },
+  stepText: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "900",
+    lineHeight: 21,
+  },
+  countValue: {
+    minWidth: 34,
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: "900",
     textAlign: "center",
   },
-  selectorChevronOpen: {
-    transform: [{ rotate: "180deg" }],
-  },
-  optionPanel: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+  restaurantChips: {
     gap: 8,
-    paddingHorizontal: 12,
-    paddingBottom: 12,
+    paddingTop: 10,
+    paddingBottom: 2,
   },
-  optionChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+  restaurantChip: {
+    paddingHorizontal: 13,
+    paddingVertical: 10,
     borderRadius: 999,
     backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: colors.border,
   },
-  optionChipSelected: {
+  restaurantChipSelected: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
-  optionText: {
+  restaurantChipText: {
     color: colors.text,
     fontSize: 13,
     fontWeight: "900",
   },
-  optionTextSelected: {
+  restaurantChipTextSelected: {
     color: "#ffffff",
   },
   createButton: {
@@ -415,24 +434,6 @@ const styles = StyleSheet.create({
   boardMeta: {
     color: colors.textSoft,
     fontWeight: "900",
-  },
-  emptyCard: {
-    alignItems: "center",
-    padding: 28,
-    borderRadius: 24,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  emptyTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: "900",
-  },
-  emptyText: {
-    marginTop: 6,
-    color: colors.textMuted,
-    fontWeight: "800",
   },
   postCard: {
     marginBottom: 12,
@@ -469,10 +470,16 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "#eaf7fc",
   },
+  countPillFull: {
+    backgroundColor: "#fff1ed",
+  },
   countText: {
     color: colors.primaryDark,
     fontSize: 12,
     fontWeight: "900",
+  },
+  countTextFull: {
+    color: "#e34224",
   },
   postNote: {
     marginTop: 12,

@@ -13,4 +13,5 @@ export const colors = {
   borderStrong: "#7ec9e5",
   ink: "#102948",
   success: "#07966f",
+  orange: "#f26b3a",
 };

@@ -4,25 +4,30 @@ import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
 
 export default function NotificationsScreen() {
-  const { notifications, markAllRead } = useNotifications();
+  const { notifications, markAllRead, unreadCount } = useNotifications();
 
   useEffect(() => {
-    const timerId = setTimeout(markAllRead, 700);
+    const timerId = setTimeout(markAllRead, 900);
     return () => clearTimeout(timerId);
   }, [markAllRead]);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.hero}>
-        <Text style={styles.eyebrow}>캠퍼스 알림</Text>
+        <View style={styles.heroTop}>
+          <Text style={styles.eyebrow}>캠퍼스 알림</Text>
+          <View style={styles.countBadge}>
+            <Text style={styles.countBadgeText}>{unreadCount}</Text>
+          </View>
+        </View>
         <Text style={styles.title}>놓치면 아쉬운 소식만 모았어요</Text>
-        <Text style={styles.description}>음식 준비, 밥친구 참여, 모집 마감 같은 중요한 알림이 여기에 쌓여요.</Text>
+        <Text style={styles.description}>음식 준비, 모임 참여, 모집 마감 같은 중요한 알림을 여기에서 확인해요.</Text>
       </View>
 
       {notifications.length === 0 ? (
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>아직 알림이 없어요</Text>
-          <Text style={styles.emptyText}>주문이나 밥친구 활동이 생기면 바로 알려줄게요.</Text>
+          <Text style={styles.emptyText}>주문이나 나랑 밥먹자 활동이 생기면 바로 알려줄게요.</Text>
         </View>
       ) : (
         notifications.map((notification) => (
@@ -55,8 +60,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ccebf7",
   },
+  heroTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
   eyebrow: {
     color: colors.primary,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  countBadge: {
+    minWidth: 25,
+    height: 25,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    borderRadius: 13,
+    backgroundColor: "#ff3b30",
+  },
+  countBadgeText: {
+    color: "#ffffff",
     fontSize: 12,
     fontWeight: "900",
   },
@@ -98,7 +123,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   noticeDotOrder: {
-    backgroundColor: colors.orange,
+    backgroundColor: colors.orange ?? "#f26b3a",
   },
   noticeTitle: {
     flex: 1,

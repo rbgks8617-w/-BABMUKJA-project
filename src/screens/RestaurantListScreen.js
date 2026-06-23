@@ -1,28 +1,33 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Animated, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, ImageBackground, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import {
   campusMapBuildings,
   getFriendCheckins,
   getPopularRestaurants,
-  getRestaurantById,
+  getRestaurants,
   getTodayCafeteria,
-  getUniversity,
 } from "../services/restaurantService";
 import { useCart } from "../store/CartContext";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
 import { formatPrice } from "../utils/formatPrice";
 
+const categoryTabs = ["전체", "한식", "중식", "분식", "양식", "카페", "가성비", "혼밥"];
+
+function findRestaurant(restaurants, restaurantId) {
+  return restaurants.find((restaurant) => restaurant.id === restaurantId);
+}
+
 export default function RestaurantListScreen({ navigation }) {
   const { width } = useWindowDimensions();
-  const university = getUniversity();
+  const restaurants = useMemo(() => getRestaurants(), []);
   const todayCafeteria = getTodayCafeteria();
   const popularRestaurants = getPopularRestaurants();
   const friendCheckins = getFriendCheckins();
   const { totalQuantity } = useCart();
   const { unreadCount } = useNotifications();
-  const isWideLayout = width >= 900;
-  const [expandedBuildingId, setExpandedBuildingId] = useState("tip");
+  const isWideLayout = width >= 980;
+  const carouselCardWidth = Math.min(width - 62, 282);
   const [liveTick, setLiveTick] = useState(0);
   const liveMotion = useRef(new Animated.Value(1)).current;
   const liveTranslateY = liveMotion.interpolate({
@@ -59,12 +64,43 @@ export default function RestaurantListScreen({ navigation }) {
     studentCount: Math.max(1, item.studentCount + ((liveTick + index * 2) % 5) - 1),
   }));
   const restaurantCount = campusMapBuildings.reduce((count, building) => count + building.restaurants.length, 0);
+  const todayImage = restaurants[0]?.imageUrl;
+  const fastPicks = [
+    {
+      restaurant: findRestaurant(restaurants, "tomato-gimbap"),
+      wait: "대기 3분",
+      reason: "김밥, 라면처럼 회전이 빨라요",
+    },
+    {
+      restaurant: findRestaurant(restaurants, "tomato-dosirak"),
+      wait: "대기 4분",
+      reason: "포장해서 바로 이동하기 좋아요",
+    },
+    {
+      restaurant: findRestaurant(restaurants, "raon-restaurant"),
+      wait: "대기 6분",
+      reason: "종합교육관 수업 전후 동선이 짧아요",
+    },
+  ].filter((item) => item.restaurant);
+  const buildingCards = campusMapBuildings.map((building, index) => {
+    const firstRestaurant = findRestaurant(restaurants, building.restaurants[0]?.restaurantId);
+
+    return {
+      ...building,
+      index: index + 1,
+      imageUrl: firstRestaurant?.imageUrl,
+      menuPreview: building.restaurants.map((item) => item.label).slice(0, 3).join(", "),
+      firstRestaurantId: firstRestaurant?.id,
+      walkText: index === 0 ? "도보 5분" : index === 1 ? "도보 3분" : "도보 7분",
+      crowdText: index === 1 ? "한산 · 대기 2분" : index === 2 ? "보통 · 대기 6분" : "혼잡 · 대기 8분",
+    };
+  });
 
   const infoRail = (
     <View style={[styles.infoRail, isWideLayout && styles.infoRailDesktop]}>
       <View style={styles.railHeaderRow}>
         <Text style={styles.railLabel}>캠퍼스 LIVE</Text>
-        <Text style={styles.railRefresh}>실시간으로 10초마다 새로고침돼요</Text>
+        <Text style={styles.railRefresh}>10초마다 새로고침돼요</Text>
       </View>
       <Animated.View style={[styles.liveStack, { opacity: liveMotion, transform: [{ translateY: liveTranslateY }] }]}>
         <View style={styles.infoCard}>
@@ -81,10 +117,27 @@ export default function RestaurantListScreen({ navigation }) {
         </View>
 
         <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>시간 없을 때</Text>
+          {fastPicks.map((item) => (
+            <Pressable
+              key={item.restaurant.id}
+              style={styles.fastRow}
+              onPress={() => navigation.navigate("RestaurantDetail", { restaurantId: item.restaurant.id })}
+            >
+              <View style={styles.fastCopy}>
+                <Text style={styles.fastName}>{item.restaurant.name}</Text>
+                <Text style={styles.fastReason}>{item.reason}</Text>
+              </View>
+              <Text style={styles.fastWait}>{item.wait}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>지금 학생들이 가는 곳</Text>
           {liveFriendCheckins.map((item) => (
             <View key={item.restaurantId} style={styles.checkinRow}>
-              <Text style={styles.checkinDot}>●</Text>
+              <Text style={styles.checkinDot}>•</Text>
               <Text style={styles.checkinName} numberOfLines={1}>
                 {item.restaurant?.name ?? "식당"}
               </Text>
@@ -99,62 +152,53 @@ export default function RestaurantListScreen({ navigation }) {
   const restaurantSection = (
     <View style={styles.mainColumn}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>학교 식당</Text>
+        <View>
+          <Text style={styles.sectionTitle}>학교 식당</Text>
+          <Text style={styles.sectionDescription}>건물 3곳 · 식당 {restaurantCount}곳</Text>
+        </View>
         <Pressable style={styles.mapButton} onPress={() => navigation.navigate("CampusMap")}>
           <Text style={styles.mapButtonText}>지도 보기</Text>
         </Pressable>
       </View>
 
-      <Text style={styles.archiveSummary}>건물 3곳 · 식당 {restaurantCount}곳</Text>
-
-      <View style={styles.archiveList}>
-        {campusMapBuildings.map((building) => {
-          const isExpanded = expandedBuildingId === building.id;
-          return (
-            <View key={building.id} style={styles.archiveCard}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={carouselCardWidth + 14}
+        decelerationRate="fast"
+        contentContainerStyle={styles.restaurantCarousel}
+      >
+        {buildingCards.map((building) => (
+          <View key={building.id} style={[styles.restaurantSlide, { width: carouselCardWidth }]}>
+            <ImageBackground source={{ uri: building.imageUrl }} style={styles.slideImage} imageStyle={styles.slideImageRadius}>
+              <View style={styles.slideOverlay} />
+              <View style={styles.slideTop}>
+                <Text style={styles.slideRank}>{building.index}</Text>
+                <Text style={styles.heartBadge}>♡</Text>
+              </View>
+            </ImageBackground>
+            <View style={styles.slideBody}>
+              <Text style={styles.slideTitle}>{building.name} 식당</Text>
+              <Text style={styles.slideMenu} numberOfLines={1}>
+                {building.menuPreview}
+              </Text>
+              <View style={styles.slideMetaRow}>
+                <Text style={styles.slideMeta}>{building.walkText}</Text>
+                <Text style={styles.slideCrowd}>{building.crowdText}</Text>
+              </View>
               <Pressable
-                style={styles.archiveHeader}
-                onPress={() => setExpandedBuildingId(isExpanded ? "" : building.id)}
+                style={styles.menuButton}
+                onPress={() =>
+                  building.firstRestaurantId &&
+                  navigation.navigate("RestaurantDetail", { restaurantId: building.firstRestaurantId })
+                }
               >
-                <View>
-                  <Text style={styles.archiveEyebrow}>건물별 식당</Text>
-                  <Text style={styles.archiveTitle}>{building.name}</Text>
-                </View>
-                <View style={styles.archiveRight}>
-                  <Text style={styles.archiveCount}>{building.restaurants.length}곳</Text>
-                  <Text style={[styles.archiveChevron, isExpanded && styles.archiveChevronOpen]}>⌄</Text>
-                </View>
+                <Text style={styles.menuButtonText}>메뉴 보기</Text>
               </Pressable>
-
-              {isExpanded ? (
-                <View style={styles.archiveBody}>
-                  {building.restaurants.map((item) => {
-                    const restaurant = getRestaurantById(item.restaurantId);
-                    return (
-                      <Pressable
-                        key={item.restaurantId}
-                        style={styles.archiveRestaurant}
-                        onPress={() => navigation.navigate("RestaurantDetail", { restaurantId: item.restaurantId })}
-                      >
-                        <View style={styles.archiveRestaurantIcon}>
-                          <Text style={styles.archiveRestaurantIconText}>식</Text>
-                        </View>
-                        <View style={styles.archiveRestaurantCopy}>
-                          <Text style={styles.archiveRestaurantName}>{item.label}</Text>
-                          <Text style={styles.archiveRestaurantMeta}>
-                            {restaurant?.category ?? "식당"} · {item.hours}
-                          </Text>
-                        </View>
-                        <Text style={styles.archiveRestaurantAction}>보기</Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              ) : null}
             </View>
-          );
-        })}
-      </View>
+          </View>
+        ))}
+      </ScrollView>
     </View>
   );
 
@@ -164,7 +208,7 @@ export default function RestaurantListScreen({ navigation }) {
         <View style={styles.header}>
           <View style={styles.heroRow}>
             <View style={styles.headerCopy}>
-              <Text style={styles.eyebrow}>{university.name}</Text>
+              <Text style={styles.eyebrow}>한국공학대학교</Text>
               <Text style={styles.title}>오늘 캠퍼스에서 뭐 먹지?</Text>
             </View>
             <View style={styles.headerActions}>
@@ -183,28 +227,47 @@ export default function RestaurantListScreen({ navigation }) {
           </View>
         </View>
 
-        <View style={styles.todayCard}>
-          <View style={styles.todayTopRow}>
-            <Text style={styles.cardEyebrow}>오늘 학식</Text>
-            <Text style={styles.statusPill}>{todayCafeteria.statusText}</Text>
-          </View>
-          <Text style={styles.todayTitle}>{todayCafeteria.menuItems[0]}</Text>
-          <Text style={styles.todayMenu}>{todayCafeteria.menuItems.slice(1).join(" · ")}</Text>
-          <View style={styles.todayFooter}>
-            <Text style={styles.todayPrice}>{formatPrice(todayCafeteria.price)}</Text>
-            <Text style={styles.todayTime}>{todayCafeteria.servingTime}</Text>
-          </View>
+        <View style={styles.searchBar}>
+          <Text style={styles.searchPlaceholder}>메뉴, 식당, 음식 이름으로 검색해보세요</Text>
+          <Text style={styles.searchIcon}>⌕</Text>
         </View>
 
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
+          {categoryTabs.map((tab, index) => (
+            <Pressable key={tab} style={[styles.categoryChip, index === 0 && styles.categoryChipActive]}>
+              <Text style={[styles.categoryText, index === 0 && styles.categoryTextActive]}>{tab}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
 
-        <Pressable style={styles.mateBanner} onPress={() => navigation.navigate("MealMate")}>
+        <View style={styles.todayCard}>
+          <View style={styles.todayCopy}>
+            <View style={styles.todayTopRow}>
+              <Text style={styles.cardEyebrow}>오늘 학식</Text>
+              <Text style={styles.statusPill}>{todayCafeteria.statusText}</Text>
+            </View>
+            <Text style={styles.todayTitle}>{todayCafeteria.menuItems[0]}</Text>
+            <Text style={styles.todayMenu}>{todayCafeteria.menuItems.slice(1).join(" · ")}</Text>
+            <View style={styles.todayFooter}>
+              <Text style={styles.todayPrice}>{formatPrice(todayCafeteria.price)}</Text>
+              <Text style={styles.todayTime}>{todayCafeteria.servingTime}</Text>
+            </View>
+          </View>
+          {todayImage ? (
+            <ImageBackground source={{ uri: todayImage }} style={styles.todayImage} imageStyle={styles.todayImageRadius}>
+              <View style={styles.todayImageGloss} />
+            </ImageBackground>
+          ) : null}
+        </View>
+
+        <Pressable style={styles.mateBanner} onPress={() => navigation.navigate("Community")}>
           <View style={styles.mateIcon}>
-            <Text style={styles.mateIconText}>같</Text>
+            <Text style={styles.mateIconText}>밥</Text>
           </View>
           <View style={styles.mateCopy}>
-            <Text style={styles.mateEyebrow}>혼밥이 걱정될 땐</Text>
-            <Text style={styles.mateTitle}>밥 같이 먹을 사람 찾기</Text>
-            <Text style={styles.mateDescription}>대화 주제와 인원수를 정해서 모집해요</Text>
+            <Text style={styles.mateEyebrow}>혼밥이 걱정될 땐?</Text>
+            <Text style={styles.mateTitle}>나랑 밥먹자 게시판 열기</Text>
+            <Text style={styles.mateDescription}>음식 후기, 자유게시판, 익명 밥 약속까지 한 번에 봐요</Text>
           </View>
           <Text style={styles.mateAction}>열기</Text>
         </Pressable>
@@ -227,11 +290,11 @@ export default function RestaurantListScreen({ navigation }) {
         onPress={() => navigation.navigate("Recommendation")}
       >
         <View style={styles.dockIcon}>
-          <Text style={styles.dockIconText}>🍱</Text>
+          <Text style={styles.dockIconText}>?</Text>
         </View>
         <View style={styles.dockCopy}>
           <Text style={styles.dockTitle}>뭐 먹을지 고민될 땐?</Text>
-          <Text style={styles.dockDescription}>취향만 고르면 오늘 메뉴 추천</Text>
+          <Text style={styles.dockDescription}>취향 기반으로 오늘 메뉴 추천</Text>
         </View>
         <Text style={styles.dockAction}>추천</Text>
       </Pressable>
@@ -246,7 +309,7 @@ const styles = StyleSheet.create({
   },
   container: {
     paddingHorizontal: 18,
-    paddingTop: 24,
+    paddingTop: 18,
     paddingBottom: 118,
     backgroundColor: colors.background,
   },
@@ -256,7 +319,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   header: {
-    marginBottom: 20,
+    marginBottom: 14,
   },
   heroRow: {
     flexDirection: "row",
@@ -275,18 +338,18 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     color: colors.sky,
-    fontWeight: "800",
+    fontWeight: "900",
   },
   title: {
-    maxWidth: 230,
-    marginTop: 6,
+    maxWidth: 250,
+    marginTop: 7,
     color: colors.text,
-    fontSize: 26,
-    fontWeight: "800",
-    lineHeight: 32,
+    fontSize: 27,
+    fontWeight: "900",
+    lineHeight: 34,
   },
   cartButton: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 999,
     backgroundColor: colors.primary,
@@ -305,7 +368,7 @@ const styles = StyleSheet.create({
     position: "relative",
     minWidth: 48,
     alignItems: "center",
-    paddingHorizontal: 11,
+    paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 999,
     backgroundColor: "#ffffff",
@@ -321,13 +384,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -6,
     right: -5,
-    minWidth: 18,
-    height: 18,
+    minWidth: 19,
+    height: 19,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 5,
-    borderRadius: 9,
-    backgroundColor: colors.orange,
+    borderRadius: 10,
+    backgroundColor: "#ff3b30",
   },
   alertBadgeText: {
     color: "#ffffff",
@@ -335,10 +398,61 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     lineHeight: 13,
   },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    borderRadius: 999,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#cdeaf7",
+  },
+  searchPlaceholder: {
+    flex: 1,
+    color: colors.textSoft,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  searchIcon: {
+    color: colors.primaryDark,
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  categoryRow: {
+    gap: 8,
+    paddingBottom: 14,
+  },
+  categoryChip: {
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  categoryChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  categoryText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  categoryTextActive: {
+    color: "#ffffff",
+  },
   todayCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     marginBottom: 14,
     padding: 16,
-    borderRadius: 18,
+    borderRadius: 24,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.borderStrong,
@@ -348,15 +462,18 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 3,
   },
+  todayCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
   todayTopRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
+    gap: 8,
   },
   cardEyebrow: {
-    color: colors.primary,
-    fontSize: 13,
+    color: colors.text,
+    fontSize: 16,
     fontWeight: "900",
   },
   statusPill: {
@@ -370,33 +487,51 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   todayTitle: {
-    marginTop: 12,
+    marginTop: 13,
     color: colors.text,
-    fontSize: 23,
+    fontSize: 27,
     fontWeight: "900",
   },
   todayMenu: {
     marginTop: 7,
     color: colors.textMuted,
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "800",
     lineHeight: 20,
   },
   todayFooter: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 10,
     marginTop: 14,
   },
   todayPrice: {
     color: colors.primary,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "900",
   },
   todayTime: {
-    color: colors.textSoft,
+    overflow: "hidden",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: "#eef7fb",
+    color: colors.textMuted,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "900",
+  },
+  todayImage: {
+    width: 124,
+    height: 104,
+    overflow: "hidden",
+    borderRadius: 24,
+  },
+  todayImageRadius: {
+    borderRadius: 24,
+  },
+  todayImageGloss: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
   mateBanner: {
     flexDirection: "row",
@@ -424,7 +559,7 @@ const styles = StyleSheet.create({
   },
   mateIconText: {
     color: colors.primaryDark,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "900",
   },
   mateCopy: {
@@ -541,6 +676,37 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
   },
+  fastRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 7,
+  },
+  fastCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  fastName: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  fastReason: {
+    marginTop: 3,
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  fastWait: {
+    overflow: "hidden",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: "#e9f8ee",
+    color: colors.success,
+    fontSize: 11,
+    fontWeight: "900",
+  },
   checkinRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -549,7 +715,7 @@ const styles = StyleSheet.create({
   },
   checkinDot: {
     color: colors.mint,
-    fontSize: 12,
+    fontSize: 15,
   },
   checkinName: {
     flex: 1,
@@ -558,18 +724,20 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-end",
     justifyContent: "space-between",
     marginBottom: 12,
   },
   sectionTitle: {
     color: colors.text,
-    fontSize: 21,
-    fontWeight: "800",
+    fontSize: 22,
+    fontWeight: "900",
   },
-  sectionMeta: {
+  sectionDescription: {
+    marginTop: 4,
     color: colors.textSoft,
-    fontWeight: "800",
+    fontSize: 12,
+    fontWeight: "900",
   },
   mapButton: {
     paddingHorizontal: 13,
@@ -584,125 +752,115 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "900",
   },
-  archiveSummary: {
-    marginTop: -4,
-    marginBottom: 12,
-    color: colors.textSoft,
-    fontSize: 12,
-    fontWeight: "900",
+  restaurantCarousel: {
+    gap: 14,
+    paddingRight: 18,
+    paddingBottom: 4,
   },
-  archiveList: {
-    gap: 10,
-  },
-  archiveCard: {
+  restaurantSlide: {
     overflow: "hidden",
-    borderRadius: 22,
+    borderRadius: 24,
     backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: "#ccebf7",
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
     elevation: 3,
   },
-  archiveHeader: {
+  slideImage: {
+    height: 112,
+    justifyContent: "space-between",
+  },
+  slideImageRadius: {
+    borderTopLeftRadius: 23,
+    borderTopRightRadius: 23,
+  },
+  slideOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(8, 32, 65, 0.18)",
+  },
+  slideTop: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
-    padding: 14,
+    padding: 10,
   },
-  archiveEyebrow: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  archiveTitle: {
-    marginTop: 4,
-    color: colors.text,
-    fontSize: 19,
-    fontWeight: "900",
-  },
-  archiveRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  archiveCount: {
+  slideRank: {
+    width: 30,
+    height: 30,
     overflow: "hidden",
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 999,
-    backgroundColor: "#eaf7fc",
-    color: colors.primaryDark,
-    fontSize: 12,
+    borderRadius: 15,
+    backgroundColor: colors.primary,
+    color: "#ffffff",
+    fontSize: 15,
     fontWeight: "900",
-  },
-  archiveChevron: {
-    width: 28,
-    height: 28,
-    overflow: "hidden",
-    borderRadius: 14,
-    backgroundColor: colors.background,
-    color: colors.primaryDark,
-    fontSize: 20,
-    fontWeight: "900",
-    lineHeight: 26,
+    lineHeight: 30,
     textAlign: "center",
   },
-  archiveChevronOpen: {
-    transform: [{ rotate: "180deg" }],
+  heartBadge: {
+    width: 30,
+    height: 30,
+    overflow: "hidden",
+    borderRadius: 15,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    color: colors.textSoft,
+    fontSize: 19,
+    fontWeight: "900",
+    lineHeight: 30,
+    textAlign: "center",
   },
-  archiveBody: {
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingBottom: 12,
+  slideBody: {
+    padding: 14,
   },
-  archiveRestaurant: {
+  slideTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  slideMenu: {
+    marginTop: 6,
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  slideMetaRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    padding: 11,
-    borderRadius: 16,
-    backgroundColor: colors.background,
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 11,
   },
-  archiveRestaurantIcon: {
-    width: 34,
-    height: 34,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 17,
-    backgroundColor: "#e9f8ee",
-  },
-  archiveRestaurantIconText: {
-    color: colors.mint,
+  slideMeta: {
+    overflow: "hidden",
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "#eef7fb",
+    color: colors.textMuted,
     fontSize: 11,
     fontWeight: "900",
   },
-  archiveRestaurantCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  archiveRestaurantName: {
-    color: colors.text,
-    fontSize: 15,
+  slideCrowd: {
+    overflow: "hidden",
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "#e9f8ee",
+    color: colors.success,
+    fontSize: 11,
     fontWeight: "900",
   },
-  archiveRestaurantMeta: {
-    marginTop: 3,
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "800",
+  menuButton: {
+    alignItems: "center",
+    marginTop: 13,
+    paddingVertical: 11,
+    borderRadius: 16,
+    backgroundColor: "#edf6fc",
   },
-  archiveRestaurantAction: {
-    overflow: "hidden",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
-    backgroundColor: colors.primary,
-    color: "#ffffff",
-    fontSize: 12,
+  menuButtonText: {
+    color: colors.primary,
+    fontSize: 13,
     fontWeight: "900",
   },
   bottomDock: {
@@ -736,7 +894,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceWarm,
   },
   dockIconText: {
+    color: colors.primary,
     fontSize: 23,
+    fontWeight: "900",
   },
   dockCopy: {
     flex: 1,
