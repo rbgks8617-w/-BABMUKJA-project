@@ -26,6 +26,48 @@ export const friendCheckins = [
   { restaurantId: "shin-bukgyeong", studentCount: 8 },
 ];
 
+export const mealMateTopics = [
+  "수업 이야기",
+  "취업/진로",
+  "동아리",
+  "게임/취미",
+  "새내기 환영",
+  "조용히 밥만",
+];
+
+export const mealMatePosts = [
+  {
+    id: "mate-1",
+    restaurantId: "student-cafeteria",
+    time: "12:30",
+    topic: "수업 이야기",
+    currentCount: 2,
+    maxCount: 4,
+    note: "자료구조 끝나고 같이 학식 먹을 사람",
+    createdBy: "컴퓨터공학과 23학번",
+  },
+  {
+    id: "mate-2",
+    restaurantId: "moms-touch",
+    time: "13:00",
+    topic: "취업/진로",
+    currentCount: 1,
+    maxCount: 3,
+    note: "공모전이랑 인턴 얘기하면서 먹어요",
+    createdBy: "소프트웨어학부 24학번",
+  },
+  {
+    id: "mate-3",
+    restaurantId: "cafe-ing",
+    time: "17:30",
+    topic: "조용히 밥만",
+    currentCount: 1,
+    maxCount: 2,
+    note: "부담 없이 간단히 먹고 도서관 갈 사람",
+    createdBy: "기계공학과 22학번",
+  },
+];
+
 export const recommendationTree = [
   {
     id: "situation",

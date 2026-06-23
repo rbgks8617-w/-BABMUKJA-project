@@ -1,5 +1,5 @@
-import React from "react";
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { Animated, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import RestaurantCard from "../components/RestaurantCard";
 import {
   getFriendCheckins,
@@ -30,35 +30,75 @@ export default function RestaurantListScreen({ navigation }) {
   const restaurantRows = chunkPairs(restaurants);
   const { totalQuantity } = useCart();
   const isWideLayout = width >= 900;
+  const [liveTick, setLiveTick] = useState(0);
+  const liveMotion = useRef(new Animated.Value(1)).current;
+  const liveTranslateY = liveMotion.interpolate({
+    inputRange: [0, 1],
+    outputRange: [12, 0],
+  });
+
+  useEffect(() => {
+    const refreshLiveData = () => {
+      Animated.timing(liveMotion, {
+        toValue: 0,
+        duration: 420,
+        useNativeDriver: true,
+      }).start(() => {
+        setLiveTick((currentTick) => currentTick + 1);
+        Animated.timing(liveMotion, {
+          toValue: 1,
+          duration: 660,
+          useNativeDriver: true,
+        }).start();
+      });
+    };
+
+    const timerId = setInterval(refreshLiveData, 10000);
+    return () => clearInterval(timerId);
+  }, [liveMotion]);
+
+  const livePopularRestaurants = popularRestaurants.map((item, index) => ({
+    ...item,
+    selectedCount: item.selectedCount + ((liveTick + index * 3) % 8),
+  }));
+  const liveFriendCheckins = friendCheckins.map((item, index) => ({
+    ...item,
+    studentCount: Math.max(1, item.studentCount + ((liveTick + index * 2) % 5) - 1),
+  }));
 
   const infoRail = (
     <View style={[styles.infoRail, isWideLayout && styles.infoRailDesktop]}>
-      <Text style={styles.railLabel}>캠퍼스 LIVE</Text>
-      <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>실시간 인기</Text>
-        {popularRestaurants.map((item) => (
-          <View key={item.restaurantId} style={styles.rankRow}>
-            <Text style={styles.rankNumber}>{item.rank}</Text>
-            <Text style={styles.rankName} numberOfLines={1}>
-              {item.restaurant?.name ?? "식당"}
-            </Text>
-            <Text style={styles.rankCount}>{item.selectedCount}명</Text>
-          </View>
-        ))}
+      <View style={styles.railHeaderRow}>
+        <Text style={styles.railLabel}>캠퍼스 LIVE</Text>
+        <Text style={styles.railRefresh}>10초마다 갱신</Text>
       </View>
+      <Animated.View style={[styles.liveStack, { opacity: liveMotion, transform: [{ translateY: liveTranslateY }] }]}>
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>실시간 인기</Text>
+          {livePopularRestaurants.map((item) => (
+            <View key={item.restaurantId} style={styles.rankRow}>
+              <Text style={styles.rankNumber}>{item.rank}</Text>
+              <Text style={styles.rankName} numberOfLines={1}>
+                {item.restaurant?.name ?? "식당"}
+              </Text>
+              <Text style={styles.rankCount}>{item.selectedCount}명</Text>
+            </View>
+          ))}
+        </View>
 
-      <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>지금 학생들이 가는 곳</Text>
-        {friendCheckins.map((item) => (
-          <View key={item.restaurantId} style={styles.checkinRow}>
-            <Text style={styles.checkinDot}>●</Text>
-            <Text style={styles.checkinName} numberOfLines={1}>
-              {item.restaurant?.name ?? "식당"}
-            </Text>
-            <Text style={styles.rankCount}>{item.studentCount}명</Text>
-          </View>
-        ))}
-      </View>
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>지금 학생들이 가는 곳</Text>
+          {liveFriendCheckins.map((item) => (
+            <View key={item.restaurantId} style={styles.checkinRow}>
+              <Text style={styles.checkinDot}>●</Text>
+              <Text style={styles.checkinName} numberOfLines={1}>
+                {item.restaurant?.name ?? "식당"}
+              </Text>
+              <Text style={styles.rankCount}>{item.studentCount}명</Text>
+            </View>
+          ))}
+        </View>
+      </Animated.View>
     </View>
   );
 
@@ -113,6 +153,19 @@ export default function RestaurantListScreen({ navigation }) {
             <Text style={styles.todayTime}>{todayCafeteria.servingTime}</Text>
           </View>
         </View>
+
+
+        <Pressable style={styles.mateBanner} onPress={() => navigation.navigate("MealMate")}>
+          <View style={styles.mateIcon}>
+            <Text style={styles.mateIconText}>같</Text>
+          </View>
+          <View style={styles.mateCopy}>
+            <Text style={styles.mateEyebrow}>혼밥이 걱정될 땐</Text>
+            <Text style={styles.mateTitle}>밥 같이 먹을 사람 찾기</Text>
+            <Text style={styles.mateDescription}>대화 주제와 인원수를 정해서 모집해요</Text>
+          </View>
+          <Text style={styles.mateAction}>열기</Text>
+        </Pressable>
 
         {isWideLayout ? (
           <View style={styles.contentLayout}>
@@ -263,6 +316,80 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
     fontSize: 12,
     fontWeight: "800",
+  },
+  mateBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 16,
+    padding: 14,
+    borderRadius: 24,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#ccebf7",
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    elevation: 3,
+  },
+  mateIcon: {
+    width: 46,
+    height: 46,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 23,
+    backgroundColor: "#eaf7fc",
+  },
+  mateIconText: {
+    color: colors.primaryDark,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  mateCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  mateEyebrow: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  mateTitle: {
+    marginTop: 3,
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: "900",
+  },
+  mateDescription: {
+    marginTop: 3,
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  mateAction: {
+    overflow: "hidden",
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: colors.ink,
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  railHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  railRefresh: {
+    color: colors.textSoft,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  liveStack: {
+    gap: 12,
   },
   contentLayout: {
     flexDirection: "row",

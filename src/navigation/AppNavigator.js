@@ -2,6 +2,7 @@ import React from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import CartScreen from "../screens/CartScreen";
+import MealMateScreen from "../screens/MealMateScreen";
 import MenuDetailScreen from "../screens/MenuDetailScreen";
 import OrderCompleteScreen from "../screens/OrderCompleteScreen";
 import PaymentScreen from "../screens/PaymentScreen";
@@ -104,6 +105,11 @@ export default function AppNavigator() {
         component={MenuDetailScreen}
         options={({ navigation }) => modalOptions(navigation, "메뉴 상세", "메뉴")}
       />
+      <Stack.Screen
+        name="MealMate"
+        component={MealMateScreen}
+        options={({ navigation }) => modalOptions(navigation, "밥친구 게시판", "홈")}
+      />
       <Stack.Screen name="Cart" component={CartScreen} options={({ navigation }) => modalOptions(navigation, "장바구니")} />
       <Stack.Screen name="Payment" component={PaymentScreen} options={({ navigation }) => modalOptions(navigation, "결제")} />
       <Stack.Screen
@@ -127,18 +133,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 15,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#cbeaf7",
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.14,
-    shadowRadius: 8,
-    elevation: 3,
+    backgroundColor: "transparent",
   },
   homeLogoImage: {
-    width: 24,
-    height: 24,
+    width: 29,
+    height: 29,
     resizeMode: "contain",
   },
   homeLogoName: {

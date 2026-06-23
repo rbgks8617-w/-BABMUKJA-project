@@ -1,5 +1,7 @@
 import {
   friendCheckins,
+  mealMatePosts,
+  mealMateTopics,
   menus,
   popularRestaurants,
   recommendationTree,
@@ -32,6 +34,19 @@ export function getFriendCheckins() {
     ...item,
     restaurant: getRestaurantById(item.restaurantId),
   }));
+}
+
+export function getMealMateTopics() {
+  return mealMateTopics;
+}
+
+export function getMealMatePosts() {
+  return mealMatePosts
+    .filter((post) => post.currentCount < post.maxCount)
+    .map((post) => ({
+      ...post,
+      restaurant: getRestaurantById(post.restaurantId),
+    }));
 }
 
 export function getRecommendationTree() {
