@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
-  Animated,
   Image,
   ImageBackground,
   Pressable,
@@ -15,23 +14,22 @@ import { colors } from "../theme/colors";
 
 const campusMapImage = require("../../assets/tuk-campus-map.png");
 const tukSymbol = require("../../assets/tuk-symbol.png");
-const mapAspectRatio = 1536 / 1190;
+const mapAspectRatio = 1608 / 978;
 
 const filters = [
   { id: "open", label: "식당 있음" },
-  { id: "none", label: "식당 없음" },
 ];
 
 const cardAnchors = {
-  tip: { left: "14%", top: "24%", width: 210 },
-  education: { left: "39%", top: "15%", width: 230 },
-  industry: { right: "8%", top: "30%", width: 220 },
+  tip: { left: "12%", top: "23%", width: 158 },
+  education: { left: "40%", top: "14%", width: 172 },
+  industry: { right: "9%", top: "29%", width: 164 },
 };
 
 const buildingTouchAreas = {
-  tip: { left: "7%", top: "28%", width: "31%", height: "34%" },
-  education: { left: "38%", top: "20%", width: "25%", height: "31%" },
-  industry: { right: "8%", top: "33%", width: "24%", height: "25%" },
+  tip: { left: "6%", top: "27%", width: "29%", height: "35%" },
+  education: { left: "38%", top: "20%", width: "25%", height: "30%" },
+  industry: { right: "8%", top: "31%", width: "25%", height: "28%" },
 };
 
 export default function CampusMapScreen({ navigation }) {
@@ -40,27 +38,6 @@ export default function CampusMapScreen({ navigation }) {
   const [filter, setFilter] = useState("open");
   const [showList, setShowList] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const floatMotion = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(floatMotion, {
-          toValue: 1,
-          duration: 1450,
-          useNativeDriver: true,
-        }),
-        Animated.timing(floatMotion, {
-          toValue: 0,
-          duration: 1450,
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-
-    animation.start();
-    return () => animation.stop();
-  }, [floatMotion]);
 
   const selectedBuilding = campusMapBuildings.find((building) => building.id === selectedBuildingId) ?? campusMapBuildings[0];
   const restaurants = getRestaurants();
@@ -68,12 +45,8 @@ export default function CampusMapScreen({ navigation }) {
   const mapWidth = Math.min(Math.max(width - 20, 360), 1180);
 
   const visibleRestaurants = useMemo(() => {
-    if (filter === "none") {
-      return [];
-    }
-
     return restaurants.filter((restaurant) => restaurant.isOpen);
-  }, [filter, restaurants]);
+  }, [restaurants]);
 
   const openRestaurantDetail = (restaurantId) => {
     navigation.navigate("RestaurantDetail", { restaurantId });
@@ -84,26 +57,10 @@ export default function CampusMapScreen({ navigation }) {
     setShowList(false);
   };
 
-  const getFloatingCardStyle = (buildingId, index) => {
-    const translateY = floatMotion.interpolate({
-      inputRange: [0, 1],
-      outputRange: index % 2 === 0 ? [-4, -14] : [-12, -3],
-    });
-
-    return [
-      styles.infoBubbleWrap,
-      cardAnchors[buildingId],
-      {
-        width: isCompact ? 160 : cardAnchors[buildingId].width,
-        transform: [{ translateY }],
-      },
-    ];
-  };
-
   return (
     <View style={styles.screen}>
       <View style={styles.mapStage}>
-        <Animated.View style={[styles.mapCanvas, { width: mapWidth, aspectRatio: mapAspectRatio, transform: [{ scale: zoom }] }]}>
+        <View style={[styles.mapCanvas, { width: mapWidth, aspectRatio: mapAspectRatio, transform: [{ scale: zoom }] }]}>
           <ImageBackground source={campusMapImage} resizeMode="contain" style={styles.mapImage}>
             <View style={styles.topHeader}>
               <View style={styles.brandRow}>
@@ -126,7 +83,7 @@ export default function CampusMapScreen({ navigation }) {
                   style={[styles.filterItem, filter === item.id && styles.filterItemActive]}
                   onPress={() => setFilter(item.id)}
                 >
-                  <View style={[styles.filterIcon, item.id === "none" && styles.filterIconMuted]}>
+                  <View style={styles.filterIcon}>
                     <Text style={styles.filterIconText}>식</Text>
                   </View>
                   <Text style={styles.filterLabel}>{item.label}</Text>
@@ -142,12 +99,23 @@ export default function CampusMapScreen({ navigation }) {
               />
             ))}
 
-            {campusMapBuildings.map((building, index) => {
+            {campusMapBuildings.map((building) => {
               const isSelected = selectedBuilding.id === building.id;
-              const visibleItems = building.restaurants.slice(0, isCompact ? 2 : building.restaurants.length);
+              const visibleItems = building.restaurants.slice(0, isCompact ? 1 : Math.min(3, building.restaurants.length));
+              const anchor = cardAnchors[building.id];
 
               return (
-                <Animated.View key={building.id} pointerEvents="box-none" style={getFloatingCardStyle(building.id, index)}>
+                <View
+                  key={building.id}
+                  pointerEvents="box-none"
+                  style={[
+                    styles.infoBubbleWrap,
+                    anchor,
+                    {
+                      width: isCompact ? 132 : anchor.width,
+                    },
+                  ]}
+                >
                   <Pressable
                     style={[styles.infoBubble, isSelected && styles.infoBubbleSelected]}
                     onPress={() => selectBuilding(building.id)}
@@ -180,7 +148,7 @@ export default function CampusMapScreen({ navigation }) {
                       <Text style={styles.statusText}>식당 있음</Text>
                     </View>
                   </Pressable>
-                </Animated.View>
+                </View>
               );
             })}
 
@@ -204,7 +172,7 @@ export default function CampusMapScreen({ navigation }) {
               <Text style={styles.helpText}>건물을 클릭하면 식당 정보를 확인할 수 있어요.</Text>
             </View>
           </ImageBackground>
-        </Animated.View>
+        </View>
       </View>
 
       {selectedBuilding ? (
@@ -239,26 +207,19 @@ export default function CampusMapScreen({ navigation }) {
       {showList ? (
         <View style={styles.listPanel}>
           <View style={styles.listPanelTop}>
-            <Text style={styles.listTitle}>{filter === "none" ? "식당 없는 건물" : "식당 목록"}</Text>
+            <Text style={styles.listTitle}>식당 목록</Text>
             <Pressable style={styles.closeButton} onPress={() => setShowList(false)}>
               <Text style={styles.closeText}>닫기</Text>
             </Pressable>
           </View>
-          {visibleRestaurants.length === 0 ? (
-            <View style={styles.emptyBox}>
-              <Text style={styles.emptyTitle}>현재 표시할 식당이 없어요</Text>
-              <Text style={styles.emptyText}>식당 있음 필터를 누르면 목록이 다시 보여요.</Text>
-            </View>
-          ) : (
-            <ScrollView style={styles.listScroll}>
-              {visibleRestaurants.map((restaurant) => (
-                <Pressable key={restaurant.id} style={styles.listRestaurant} onPress={() => openRestaurantDetail(restaurant.id)}>
-                  <Text style={styles.listRestaurantName}>{restaurant.name}</Text>
-                  <Text style={styles.listRestaurantMeta}>{restaurant.location}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          )}
+          <ScrollView style={styles.listScroll}>
+            {visibleRestaurants.map((restaurant) => (
+              <Pressable key={restaurant.id} style={styles.listRestaurant} onPress={() => openRestaurantDetail(restaurant.id)}>
+                <Text style={styles.listRestaurantName}>{restaurant.name}</Text>
+                <Text style={styles.listRestaurantMeta}>{restaurant.location}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
       ) : null}
     </View>
@@ -380,9 +341,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "#2ea455",
   },
-  filterIconMuted: {
-    backgroundColor: "#9d9d9d",
-  },
   filterIconText: {
     color: "#ffffff",
     fontSize: 10,
@@ -402,14 +360,14 @@ const styles = StyleSheet.create({
     zIndex: 4,
   },
   infoBubble: {
-    padding: 13,
-    borderRadius: 16,
+    padding: 9,
+    borderRadius: 13,
     backgroundColor: "rgba(255,255,255,0.96)",
     shadowColor: "#4d6070",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.17,
-    shadowRadius: 18,
-    elevation: 7,
+    shadowOffset: { width: 0, height: 7 },
+    shadowOpacity: 0.14,
+    shadowRadius: 13,
+    elevation: 5,
   },
   infoBubbleSelected: {
     borderWidth: 1,
@@ -418,57 +376,10 @@ const styles = StyleSheet.create({
   infoTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 7,
+    gap: 6,
+    marginBottom: 5,
   },
   restaurantIcon: {
-    width: 25,
-    height: 25,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 13,
-    backgroundColor: "#2ea455",
-  },
-  restaurantIconText: {
-    color: "#ffffff",
-    fontSize: 10,
-    fontWeight: "900",
-  },
-  infoTitle: {
-    flex: 1,
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: 2,
-  },
-  infoBullet: {
-    color: colors.ink,
-    fontSize: 15,
-    fontWeight: "900",
-  },
-  infoName: {
-    flex: 1,
-    color: colors.text,
-    fontSize: 11,
-    fontWeight: "900",
-  },
-  infoTime: {
-    color: colors.textMuted,
-    fontSize: 10,
-    fontWeight: "800",
-  },
-  statusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    marginTop: 7,
-  },
-  statusIcon: {
     width: 21,
     height: 21,
     alignItems: "center",
@@ -476,14 +387,61 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     backgroundColor: "#2ea455",
   },
-  statusIconText: {
+  restaurantIconText: {
     color: "#ffffff",
     fontSize: 9,
     fontWeight: "900",
   },
+  infoTitle: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 1,
+  },
+  infoBullet: {
+    color: colors.ink,
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  infoName: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  infoTime: {
+    color: colors.textMuted,
+    fontSize: 9,
+    fontWeight: "800",
+  },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 5,
+  },
+  statusIcon: {
+    width: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 9,
+    backgroundColor: "#2ea455",
+  },
+  statusIconText: {
+    color: "#ffffff",
+    fontSize: 8,
+    fontWeight: "900",
+  },
   statusText: {
     color: "#2a9a50",
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "900",
   },
   zoomControl: {

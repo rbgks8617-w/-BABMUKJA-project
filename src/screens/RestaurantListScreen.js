@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Animated, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
-import RestaurantCard from "../components/RestaurantCard";
 import {
+  campusMapBuildings,
   getFriendCheckins,
   getPopularRestaurants,
-  getRestaurants,
+  getRestaurantById,
   getTodayCafeteria,
   getUniversity,
 } from "../services/restaurantService";
@@ -13,25 +13,16 @@ import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
 import { formatPrice } from "../utils/formatPrice";
 
-function chunkPairs(items) {
-  const rows = [];
-  for (let index = 0; index < items.length; index += 2) {
-    rows.push(items.slice(index, index + 2));
-  }
-  return rows;
-}
-
 export default function RestaurantListScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const university = getUniversity();
-  const restaurants = getRestaurants();
   const todayCafeteria = getTodayCafeteria();
   const popularRestaurants = getPopularRestaurants();
   const friendCheckins = getFriendCheckins();
-  const restaurantRows = chunkPairs(restaurants);
   const { totalQuantity } = useCart();
   const { unreadCount } = useNotifications();
   const isWideLayout = width >= 900;
+  const [expandedBuildingId, setExpandedBuildingId] = useState("tip");
   const [liveTick, setLiveTick] = useState(0);
   const liveMotion = useRef(new Animated.Value(1)).current;
   const liveTranslateY = liveMotion.interpolate({
@@ -67,6 +58,7 @@ export default function RestaurantListScreen({ navigation }) {
     ...item,
     studentCount: Math.max(1, item.studentCount + ((liveTick + index * 2) % 5) - 1),
   }));
+  const restaurantCount = campusMapBuildings.reduce((count, building) => count + building.restaurants.length, 0);
 
   const infoRail = (
     <View style={[styles.infoRail, isWideLayout && styles.infoRailDesktop]}>
@@ -113,19 +105,55 @@ export default function RestaurantListScreen({ navigation }) {
         </Pressable>
       </View>
 
-      <View style={styles.grid}>
-        {restaurantRows.map((row) => (
-          <View key={row.map((restaurant) => restaurant.id).join("-")} style={styles.gridRow}>
-            {row.map((restaurant) => (
-              <RestaurantCard
-                key={restaurant.id}
-                restaurant={restaurant}
-                onPress={() => navigation.navigate("RestaurantDetail", { restaurantId: restaurant.id })}
-              />
-            ))}
-            {row.length === 1 && <View style={styles.emptyCell} />}
-          </View>
-        ))}
+      <Text style={styles.archiveSummary}>건물 3곳 · 식당 {restaurantCount}곳</Text>
+
+      <View style={styles.archiveList}>
+        {campusMapBuildings.map((building) => {
+          const isExpanded = expandedBuildingId === building.id;
+          return (
+            <View key={building.id} style={styles.archiveCard}>
+              <Pressable
+                style={styles.archiveHeader}
+                onPress={() => setExpandedBuildingId(isExpanded ? "" : building.id)}
+              >
+                <View>
+                  <Text style={styles.archiveEyebrow}>건물별 식당</Text>
+                  <Text style={styles.archiveTitle}>{building.name}</Text>
+                </View>
+                <View style={styles.archiveRight}>
+                  <Text style={styles.archiveCount}>{building.restaurants.length}곳</Text>
+                  <Text style={[styles.archiveChevron, isExpanded && styles.archiveChevronOpen]}>⌄</Text>
+                </View>
+              </Pressable>
+
+              {isExpanded ? (
+                <View style={styles.archiveBody}>
+                  {building.restaurants.map((item) => {
+                    const restaurant = getRestaurantById(item.restaurantId);
+                    return (
+                      <Pressable
+                        key={item.restaurantId}
+                        style={styles.archiveRestaurant}
+                        onPress={() => navigation.navigate("RestaurantDetail", { restaurantId: item.restaurantId })}
+                      >
+                        <View style={styles.archiveRestaurantIcon}>
+                          <Text style={styles.archiveRestaurantIconText}>식</Text>
+                        </View>
+                        <View style={styles.archiveRestaurantCopy}>
+                          <Text style={styles.archiveRestaurantName}>{item.label}</Text>
+                          <Text style={styles.archiveRestaurantMeta}>
+                            {restaurant?.category ?? "식당"} · {item.hours}
+                          </Text>
+                        </View>
+                        <Text style={styles.archiveRestaurantAction}>보기</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : null}
+            </View>
+          );
+        })}
       </View>
     </View>
   );
@@ -556,15 +584,126 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "900",
   },
-  grid: {
-    gap: 12,
+  archiveSummary: {
+    marginTop: -4,
+    marginBottom: 12,
+    color: colors.textSoft,
+    fontSize: 12,
+    fontWeight: "900",
   },
-  gridRow: {
+  archiveList: {
+    gap: 10,
+  },
+  archiveCard: {
+    overflow: "hidden",
+    borderRadius: 22,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#ccebf7",
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  archiveHeader: {
     flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
+    padding: 14,
   },
-  emptyCell: {
+  archiveEyebrow: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  archiveTitle: {
+    marginTop: 4,
+    color: colors.text,
+    fontSize: 19,
+    fontWeight: "900",
+  },
+  archiveRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  archiveCount: {
+    overflow: "hidden",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: "#eaf7fc",
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  archiveChevron: {
+    width: 28,
+    height: 28,
+    overflow: "hidden",
+    borderRadius: 14,
+    backgroundColor: colors.background,
+    color: colors.primaryDark,
+    fontSize: 20,
+    fontWeight: "900",
+    lineHeight: 26,
+    textAlign: "center",
+  },
+  archiveChevronOpen: {
+    transform: [{ rotate: "180deg" }],
+  },
+  archiveBody: {
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+  },
+  archiveRestaurant: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 11,
+    borderRadius: 16,
+    backgroundColor: colors.background,
+  },
+  archiveRestaurantIcon: {
+    width: 34,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 17,
+    backgroundColor: "#e9f8ee",
+  },
+  archiveRestaurantIconText: {
+    color: colors.mint,
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  archiveRestaurantCopy: {
     flex: 1,
+    minWidth: 0,
+  },
+  archiveRestaurantName: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  archiveRestaurantMeta: {
+    marginTop: 3,
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  archiveRestaurantAction: {
+    overflow: "hidden",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "900",
   },
   bottomDock: {
     position: "absolute",
