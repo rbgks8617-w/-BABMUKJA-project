@@ -11,13 +11,6 @@ import {
 } from "../data/dummyData";
 
 const restaurantOverrides = {
-  "student-cafeteria": {
-    name: "학생식당",
-    category: "학식",
-    location: "기술혁신파크(TIP) B1층",
-    openingHours: "08:00 - 19:00",
-    description: "TIP 지하에 있는 대표 학식 공간입니다. 빠르게 한 끼 해결하기 좋아요.",
-  },
   "tomato-gimbap": {
     name: "토마토김밥",
     category: "분식",
@@ -38,50 +31,112 @@ const restaurantOverrides = {
     category: "패스트푸드",
     location: "기술혁신파크(TIP) 푸드코트",
   },
-  "suho-restaurant": {
-    name: "수호식당",
-    category: "한식",
-    location: "종합교육관 1층",
-  },
   "raon-restaurant": {
     name: "라온식당",
     category: "한식",
     location: "종합교육관 1층",
     description: "종합교육관 근처에서 찌개, 덮밥, 분식류를 먹기 좋은 식당입니다.",
   },
-  "cafe-ing": {
-    name: "cafe ing",
-    category: "카페",
-    location: "기술혁신파크(TIP) 1층",
-  },
-  tospia: {
-    name: "토스피아(Tospia)",
-    category: "토스트/카페",
-    location: "기술혁신파크(TIP) 1층",
-  },
-  "coffee-bay": {
-    name: "커피베이",
-    category: "카페",
-    location: "산학융합본부 1층",
-  },
   "tomato-dosirak": {
     name: "토마토도시락",
     category: "도시락",
-    location: "산학융합본부 푸드코트",
+    location: "산학융합관 푸드코트",
   },
 };
 
-const hiddenRestaurantIds = new Set();
+const extraRestaurants = [
+  {
+    id: "shin-bukgyeong-maratang",
+    name: "신북경마라탕",
+    category: "마라탕",
+    rating: 4.4,
+    tasteScore: 4.5,
+    portionScore: 4.3,
+    valueScore: 4.2,
+    imageUrl: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80",
+    location: "기술혁신파크(TIP) 푸드코트",
+    phone: "031-000-0018",
+    openingHours: "10:30 - 19:30",
+    isOpen: true,
+    reviewSummary: "매운 국물과 원하는 재료를 고르는 재미가 있는 TIP 인기 메뉴입니다.",
+    description: "신북경 계열의 마라탕 매장입니다. 수업 사이 든든하게 먹기 좋아요.",
+  },
+  {
+    id: "nadri-gimbap",
+    name: "나드리김밥",
+    category: "분식",
+    rating: 4.2,
+    tasteScore: 4.1,
+    portionScore: 4.2,
+    valueScore: 4.4,
+    imageUrl: "https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?auto=format&fit=crop&w=900&q=80",
+    location: "산학융합관 푸드코트",
+    phone: "031-000-0019",
+    openingHours: "10:00 - 19:00",
+    isOpen: true,
+    reviewSummary: "김밥, 라면, 분식류를 빠르게 먹기 좋은 산학융합관 식당입니다.",
+    description: "간단한 한 끼나 수업 전후 빠른 식사를 찾을 때 좋은 분식 매장입니다.",
+  },
+];
+
+const extraMenus = [
+  {
+    id: "menu-maratang-1",
+    restaurantId: "shin-bukgyeong-maratang",
+    name: "마라탕 기본",
+    imageUrl: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80",
+    price: 8500,
+    category: "중식",
+    tags: ["매워", "국물", "든든", "공유"],
+    description: "원하는 재료와 매운맛을 골라 먹는 마라탕 메뉴입니다.",
+    recommendationText: "얼큰한 국물이 당길 때 신북경마라탕이 잘 맞아요.",
+    options: [
+      { id: "maratang-option-1", name: "매운맛 1단계", price: 0 },
+      { id: "maratang-option-2", name: "고기 추가", price: 2000 },
+    ],
+  },
+  {
+    id: "menu-nadri-1",
+    restaurantId: "nadri-gimbap",
+    name: "나드리김밥",
+    imageUrl: "https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?auto=format&fit=crop&w=900&q=80",
+    price: 4500,
+    category: "분식",
+    tags: ["빠른", "가벼운", "밥", "가성비"],
+    description: "수업 사이 빠르게 먹기 좋은 기본 김밥입니다.",
+    recommendationText: "가볍고 빠른 한 끼가 필요하면 나드리김밥이 좋아요.",
+    options: [
+      { id: "nadri-option-1", name: "단무지 추가", price: 300 },
+      { id: "nadri-option-2", name: "라면 세트", price: 3000 },
+    ],
+  },
+];
+
+const hiddenRestaurantIds = new Set(["student-cafeteria", "suho-restaurant", "cafe-ing", "tospia", "coffee-bay"]);
+
+const livePopularRestaurants = [
+  { restaurantId: "moms-touch", rank: 1, selectedCount: 42 },
+  { restaurantId: "shin-bukgyeong-maratang", rank: 2, selectedCount: 38 },
+  { restaurantId: "tomato-gimbap", rank: 3, selectedCount: 31 },
+];
+
+const liveFriendCheckins = [
+  { restaurantId: "moms-touch", studentCount: 18 },
+  { restaurantId: "raon-restaurant", studentCount: 13 },
+  { restaurantId: "tomato-dosirak", studentCount: 9 },
+];
 
 export const campusMapBuildings = [
   {
     id: "tip",
-    name: "기술혁신파크(TIP)",
+    name: "TIP",
     position: { left: "14%", top: "30%" },
     restaurants: [
-      { restaurantId: "student-cafeteria", label: "학생식당", hours: "08:00 - 19:00" },
+      { restaurantId: "shin-bukgyeong-maratang", label: "신북경마라탕", hours: "10:30 - 19:30" },
       { restaurantId: "tomato-gimbap", label: "토마토김밥", hours: "10:00 - 19:00" },
+      { restaurantId: "hans-omelet", label: "한스오믈렛", hours: "10:30 - 19:00" },
       { restaurantId: "moms-touch", label: "맘스터치", hours: "10:00 - 20:00" },
+      { restaurantId: "shin-bukgyeong", label: "신북경", hours: "10:30 - 19:30" },
     ],
   },
   {
@@ -89,19 +144,16 @@ export const campusMapBuildings = [
     name: "종합교육관",
     position: { left: "42%", top: "20%" },
     restaurants: [
-      { restaurantId: "suho-restaurant", label: "수호식당", hours: "11:30 - 14:00" },
-      { restaurantId: "raon-restaurant", label: "라온식당", hours: "11:00 - 19:00" },
-      { restaurantId: "cafe-ing", label: "cafe ing", hours: "09:00 - 20:00" },
+      { restaurantId: "raon-restaurant", label: "라온 식당", hours: "11:00 - 19:00" },
     ],
   },
   {
     id: "industry",
-    name: "산학융합본부",
+    name: "산학융합관",
     position: { left: "73%", top: "34%" },
     restaurants: [
-      { restaurantId: "coffee-bay", label: "커피베이", hours: "09:00 - 20:00" },
       { restaurantId: "tomato-dosirak", label: "토마토도시락", hours: "10:00 - 19:00" },
-      { restaurantId: "shin-bukgyeong", label: "신북경", hours: "10:30 - 19:30" },
+      { restaurantId: "nadri-gimbap", label: "나드리김밥", hours: "10:00 - 19:00" },
     ],
   },
 ];
@@ -116,7 +168,7 @@ function normalizeRestaurant(restaurant) {
 }
 
 function getVisibleMenus() {
-  return menus.filter((menu) => !hiddenRestaurantIds.has(menu.restaurantId));
+  return [...menus, ...extraMenus].filter((menu) => !hiddenRestaurantIds.has(menu.restaurantId));
 }
 
 export function getUniversity() {
@@ -124,7 +176,7 @@ export function getUniversity() {
 }
 
 export function getRestaurants() {
-  return restaurants.filter((restaurant) => !hiddenRestaurantIds.has(restaurant.id)).map(normalizeRestaurant);
+  return [...restaurants, ...extraRestaurants].filter((restaurant) => !hiddenRestaurantIds.has(restaurant.id)).map(normalizeRestaurant);
 }
 
 export function getTodayCafeteria() {
@@ -132,14 +184,14 @@ export function getTodayCafeteria() {
 }
 
 export function getPopularRestaurants() {
-  return popularRestaurants.map((item) => ({
+  return livePopularRestaurants.map((item) => ({
     ...item,
     restaurant: getRestaurantById(item.restaurantId),
   }));
 }
 
 export function getFriendCheckins() {
-  return friendCheckins.map((item) => ({
+  return liveFriendCheckins.map((item) => ({
     ...item,
     restaurant: getRestaurantById(item.restaurantId),
   }));
@@ -155,7 +207,8 @@ export function getMealMatePosts() {
     .map((post) => ({
       ...post,
       restaurant: getRestaurantById(post.restaurantId),
-    }));
+    }))
+    .filter((post) => post.restaurant);
 }
 
 export function getRecommendationTree() {
@@ -163,7 +216,7 @@ export function getRecommendationTree() {
 }
 
 export function getRestaurantById(restaurantId) {
-  const restaurant = restaurants.find((item) => item.id === restaurantId);
+  const restaurant = [...restaurants, ...extraRestaurants].find((item) => item.id === restaurantId);
 
   if (!restaurant || hiddenRestaurantIds.has(restaurant.id)) {
     return undefined;
@@ -181,11 +234,11 @@ export function getMenusByRestaurantId(restaurantId) {
     return [];
   }
 
-  return menus.filter((menu) => menu.restaurantId === restaurantId);
+  return getVisibleMenus().filter((menu) => menu.restaurantId === restaurantId);
 }
 
 export function getMenuById(menuId) {
-  const menu = menus.find((item) => item.id === menuId);
+  const menu = getVisibleMenus().find((item) => item.id === menuId);
 
   if (!menu || hiddenRestaurantIds.has(menu.restaurantId)) {
     return undefined;
