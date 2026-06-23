@@ -10,6 +10,11 @@ export default function MenuCard({ menu, onPress }) {
       <View style={styles.content}>
         <Text style={styles.name}>{menu.name}</Text>
         <Text style={styles.description}>{menu.description}</Text>
+        <View style={styles.scoreRow}>
+          <Text style={styles.scoreText}>맛 {menu.tasteScore ?? "4.3"}</Text>
+          <Text style={styles.scoreText}>양 {menu.portionScore ?? "4.4"}</Text>
+          <Text style={styles.scoreText}>가성비 {menu.valueScore ?? "4.5"}</Text>
+        </View>
         <Text style={styles.price}>{formatPrice(menu.price)}</Text>
       </View>
     </Pressable>
@@ -50,5 +55,21 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 16,
     fontWeight: "800",
+  },
+  scoreRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 8,
+  },
+  scoreText: {
+    overflow: "hidden",
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceWarm,
+    color: colors.primaryDark,
+    fontSize: 11,
+    fontWeight: "900",
   },
 });

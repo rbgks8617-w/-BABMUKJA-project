@@ -2,6 +2,7 @@ import React from "react";
 import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import MenuCard from "../components/MenuCard";
 import { getMenusByRestaurantId, getRestaurantById } from "../services/restaurantService";
+import { colors } from "../theme/colors";
 
 export default function RestaurantDetailScreen({ route, navigation }) {
   const { restaurantId } = route.params;
@@ -20,8 +21,19 @@ export default function RestaurantDetailScreen({ route, navigation }) {
     <ScrollView contentContainerStyle={styles.container}>
       <Image source={{ uri: restaurant.imageUrl }} style={styles.heroImage} />
       <Text style={styles.name}>{restaurant.name}</Text>
-      <Text style={styles.location}>{restaurant.location}</Text>
+      <View style={styles.scoreRow}>
+        <Text style={styles.scorePill}>★ {restaurant.rating ?? "4.2"}</Text>
+        <Text style={styles.scorePill}>맛 {restaurant.tasteScore ?? "4.2"}</Text>
+        <Text style={styles.scorePill}>양 {restaurant.portionScore ?? "4.2"}</Text>
+        <Text style={styles.scorePill}>가성비 {restaurant.valueScore ?? "4.3"}</Text>
+      </View>
+      <View style={styles.infoBox}>
+        <Text style={styles.infoLine}>위치: {restaurant.location}</Text>
+        <Text style={styles.infoLine}>영업시간: {restaurant.openingHours ?? "운영시간 준비중"}</Text>
+        <Text style={styles.infoLine}>전화번호: {restaurant.phone ?? "등록 예정"}</Text>
+      </View>
       <Text style={styles.description}>{restaurant.description}</Text>
+      <Text style={styles.reviewSummary}>{restaurant.reviewSummary ?? "학생 리뷰가 곧 추가될 예정이에요."}</Text>
       <Text style={styles.sectionTitle}>메뉴</Text>
 
       {menus.map((menu) => (
@@ -57,13 +69,49 @@ const styles = StyleSheet.create({
   },
   location: {
     marginTop: 6,
-    color: "#d9532b",
+    color: colors.primary,
     fontWeight: "800",
   },
+  scoreRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
+  },
+  scorePill: {
+    overflow: "hidden",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceWarm,
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  infoBox: {
+    gap: 6,
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  infoLine: {
+    color: colors.text,
+    fontWeight: "800",
+    lineHeight: 19,
+  },
   description: {
-    marginTop: 10,
+    marginTop: 14,
     color: "#666666",
     lineHeight: 21,
+  },
+  reviewSummary: {
+    marginTop: 10,
+    color: colors.textMuted,
+    fontWeight: "800",
+    lineHeight: 20,
   },
   sectionTitle: {
     marginTop: 24,

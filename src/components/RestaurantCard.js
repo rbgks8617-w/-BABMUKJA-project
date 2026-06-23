@@ -16,6 +16,12 @@ export default function RestaurantCard({ restaurant, onPress }) {
           <Text style={styles.name} numberOfLines={2}>
             {restaurant.name}
           </Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.metaText}>{restaurant.category ?? "캠퍼스 식당"}</Text>
+            <Text style={styles.metaDivider}>·</Text>
+            <Text style={styles.metaText}>★ {restaurant.rating ?? "4.2"}</Text>
+          </View>
+          <Text style={styles.valueText}>가성비 {restaurant.valueScore ?? "4.3"}</Text>
           <Text style={styles.location} numberOfLines={1}>
             {restaurant.location}
           </Text>
@@ -89,5 +95,27 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.88)",
     fontSize: 12,
     fontWeight: "800",
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 7,
+  },
+  metaText: {
+    color: "rgba(255, 255, 255, 0.9)",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  metaDivider: {
+    color: "rgba(255, 255, 255, 0.7)",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  valueText: {
+    marginTop: 4,
+    color: "#d9f8ff",
+    fontSize: 11,
+    fontWeight: "900",
   },
 });

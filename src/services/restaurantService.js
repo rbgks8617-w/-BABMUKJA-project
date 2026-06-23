@@ -1,4 +1,12 @@
-import { menus, recommendationTree, restaurants, university } from "../data/dummyData";
+import {
+  friendCheckins,
+  menus,
+  popularRestaurants,
+  recommendationTree,
+  restaurants,
+  todayCafeteria,
+  university,
+} from "../data/dummyData";
 
 export function getUniversity() {
   return university;
@@ -6,6 +14,24 @@ export function getUniversity() {
 
 export function getRestaurants() {
   return restaurants;
+}
+
+export function getTodayCafeteria() {
+  return todayCafeteria;
+}
+
+export function getPopularRestaurants() {
+  return popularRestaurants.map((item) => ({
+    ...item,
+    restaurant: getRestaurantById(item.restaurantId),
+  }));
+}
+
+export function getFriendCheckins() {
+  return friendCheckins.map((item) => ({
+    ...item,
+    restaurant: getRestaurantById(item.restaurantId),
+  }));
 }
 
 export function getRecommendationTree() {
