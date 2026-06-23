@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import {
-  Image,
   ImageBackground,
   Pressable,
   ScrollView,
@@ -13,17 +12,12 @@ import { campusMapBuildings, getRestaurantById, getRestaurants } from "../servic
 import { colors } from "../theme/colors";
 
 const campusMapImage = require("../../assets/tuk-campus-map.png");
-const tukSymbol = require("../../assets/tuk-symbol.png");
 const mapAspectRatio = 1608 / 978;
 
-const filters = [
-  { id: "open", label: "식당 있음" },
-];
-
 const cardAnchors = {
-  tip: { left: "12%", top: "23%", width: 158 },
-  education: { left: "40%", top: "14%", width: 172 },
-  industry: { right: "9%", top: "29%", width: 164 },
+  tip: { left: "15%", top: "30%", width: 76 },
+  education: { left: "43%", top: "23%", width: 104 },
+  industry: { right: "15%", top: "31%", width: 100 },
 };
 
 const buildingTouchAreas = {
@@ -35,13 +29,11 @@ const buildingTouchAreas = {
 export default function CampusMapScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const [selectedBuildingId, setSelectedBuildingId] = useState("education");
-  const [filter, setFilter] = useState("open");
   const [showList, setShowList] = useState(false);
   const [zoom, setZoom] = useState(1);
 
   const selectedBuilding = campusMapBuildings.find((building) => building.id === selectedBuildingId) ?? campusMapBuildings[0];
   const restaurants = getRestaurants();
-  const isCompact = width < 620;
   const mapWidth = Math.min(Math.max(width - 20, 360), 1180);
 
   const visibleRestaurants = useMemo(() => {
@@ -62,35 +54,6 @@ export default function CampusMapScreen({ navigation }) {
       <View style={styles.mapStage}>
         <View style={[styles.mapCanvas, { width: mapWidth, aspectRatio: mapAspectRatio, transform: [{ scale: zoom }] }]}>
           <ImageBackground source={campusMapImage} resizeMode="contain" style={styles.mapImage}>
-            <View style={styles.topHeader}>
-              <View style={styles.brandRow}>
-                <Image source={tukSymbol} style={styles.logo} />
-                <View>
-                  <Text style={styles.brandName}>한국공학대학교</Text>
-                  <Text style={styles.mapTitle}>식당 안내 지도</Text>
-                </View>
-              </View>
-              <Pressable style={styles.searchBox} onPress={() => setShowList(true)}>
-                <Text style={styles.searchIcon}>⌕</Text>
-                <Text style={styles.searchText}>건물 또는 식당 검색</Text>
-              </Pressable>
-            </View>
-
-            <View style={styles.filterCard}>
-              {filters.map((item) => (
-                <Pressable
-                  key={item.id}
-                  style={[styles.filterItem, filter === item.id && styles.filterItemActive]}
-                  onPress={() => setFilter(item.id)}
-                >
-                  <View style={styles.filterIcon}>
-                    <Text style={styles.filterIconText}>식</Text>
-                  </View>
-                  <Text style={styles.filterLabel}>{item.label}</Text>
-                </Pressable>
-              ))}
-            </View>
-
             {campusMapBuildings.map((building) => (
               <Pressable
                 key={`${building.id}-touch`}
@@ -101,7 +64,6 @@ export default function CampusMapScreen({ navigation }) {
 
             {campusMapBuildings.map((building) => {
               const isSelected = selectedBuilding.id === building.id;
-              const visibleItems = building.restaurants.slice(0, isCompact ? 1 : Math.min(3, building.restaurants.length));
               const anchor = cardAnchors[building.id];
 
               return (
@@ -112,7 +74,7 @@ export default function CampusMapScreen({ navigation }) {
                     styles.infoBubbleWrap,
                     anchor,
                     {
-                      width: isCompact ? 132 : anchor.width,
+                      width: anchor.width,
                     },
                   ]}
                 >
@@ -121,31 +83,10 @@ export default function CampusMapScreen({ navigation }) {
                     onPress={() => selectBuilding(building.id)}
                   >
                     <View style={styles.infoTitleRow}>
-                      <View style={styles.restaurantIcon}>
-                        <Text style={styles.restaurantIconText}>식</Text>
-                      </View>
                       <Text style={styles.infoTitle} numberOfLines={1}>
                         {building.name}
                       </Text>
-                    </View>
-                    {visibleItems.map((item) => (
-                      <Pressable
-                        key={item.restaurantId}
-                        style={styles.infoRow}
-                        onPress={() => openRestaurantDetail(item.restaurantId)}
-                      >
-                        <Text style={styles.infoBullet}>·</Text>
-                        <Text style={styles.infoName} numberOfLines={1}>
-                          {item.label}
-                        </Text>
-                        {!isCompact ? <Text style={styles.infoTime}>{item.hours}</Text> : null}
-                      </Pressable>
-                    ))}
-                    <View style={styles.statusRow}>
-                      <View style={styles.statusIcon}>
-                        <Text style={styles.statusIconText}>식</Text>
-                      </View>
-                      <Text style={styles.statusText}>식당 있음</Text>
+                      <Text style={styles.infoCount}>{building.restaurants.length}</Text>
                     </View>
                   </Pressable>
                 </View>
@@ -161,17 +102,19 @@ export default function CampusMapScreen({ navigation }) {
                 <Text style={styles.zoomText}>－</Text>
               </Pressable>
             </View>
-
-            <Pressable style={styles.listButton} onPress={() => setShowList(true)}>
-              <Text style={styles.listIcon}>☰</Text>
-              <Text style={styles.listButtonText}>목록 보기</Text>
-            </Pressable>
-
-            <View style={styles.helpCard}>
-              <Text style={styles.helpIcon}>!</Text>
-              <Text style={styles.helpText}>건물을 클릭하면 식당 정보를 확인할 수 있어요.</Text>
-            </View>
           </ImageBackground>
+        </View>
+      </View>
+
+      <View style={styles.mapTools}>
+        <Pressable style={styles.listButton} onPress={() => setShowList(true)}>
+          <Text style={styles.listIcon}>☰</Text>
+          <Text style={styles.listButtonText}>목록 보기</Text>
+        </Pressable>
+
+        <View style={styles.helpCard}>
+          <Text style={styles.helpIcon}>!</Text>
+          <Text style={styles.helpText}>건물을 클릭하면 식당 정보를 확인할 수 있어요.</Text>
         </View>
       </View>
 
@@ -249,108 +192,6 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  topHeader: {
-    position: "absolute",
-    left: "2%",
-    right: "2%",
-    top: "2%",
-    zIndex: 3,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  brandRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  logo: {
-    width: 38,
-    height: 38,
-    resizeMode: "contain",
-  },
-  brandName: {
-    color: colors.primary,
-    fontSize: 19,
-    fontWeight: "900",
-    lineHeight: 23,
-  },
-  mapTitle: {
-    marginTop: 2,
-    color: colors.primaryDark,
-    fontSize: 15,
-    fontWeight: "900",
-  },
-  searchBox: {
-    width: "30%",
-    minWidth: 190,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 9,
-    paddingHorizontal: 17,
-    paddingVertical: 12,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.95)",
-    shadowColor: "#4d6070",
-    shadowOffset: { width: 0, height: 9 },
-    shadowOpacity: 0.14,
-    shadowRadius: 18,
-    elevation: 6,
-  },
-  searchIcon: {
-    color: colors.ink,
-    fontSize: 20,
-    fontWeight: "900",
-  },
-  searchText: {
-    color: colors.textSoft,
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  filterCard: {
-    position: "absolute",
-    left: "2%",
-    top: "12%",
-    zIndex: 3,
-    flexDirection: "row",
-    gap: 12,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.96)",
-    shadowColor: "#4d6070",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.13,
-    shadowRadius: 16,
-    elevation: 5,
-  },
-  filterItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    opacity: 0.72,
-  },
-  filterItemActive: {
-    opacity: 1,
-  },
-  filterIcon: {
-    width: 24,
-    height: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 12,
-    backgroundColor: "#2ea455",
-  },
-  filterIconText: {
-    color: "#ffffff",
-    fontSize: 10,
-    fontWeight: "900",
-  },
-  filterLabel: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: "900",
-  },
   touchArea: {
     position: "absolute",
     borderRadius: 16,
@@ -360,14 +201,15 @@ const styles = StyleSheet.create({
     zIndex: 4,
   },
   infoBubble: {
-    padding: 9,
-    borderRadius: 13,
-    backgroundColor: "rgba(255,255,255,0.96)",
+    paddingHorizontal: 7,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.9)",
     shadowColor: "#4d6070",
-    shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.14,
-    shadowRadius: 13,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.11,
+    shadowRadius: 9,
+    elevation: 3,
   },
   infoBubbleSelected: {
     borderWidth: 1,
@@ -376,27 +218,26 @@ const styles = StyleSheet.create({
   infoTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginBottom: 5,
-  },
-  restaurantIcon: {
-    width: 21,
-    height: 21,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 11,
-    backgroundColor: "#2ea455",
-  },
-  restaurantIconText: {
-    color: "#ffffff",
-    fontSize: 9,
-    fontWeight: "900",
+    gap: 4,
+    marginBottom: 2,
   },
   infoTitle: {
     flex: 1,
     color: colors.text,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "900",
+  },
+  infoCount: {
+    minWidth: 17,
+    height: 17,
+    overflow: "hidden",
+    borderRadius: 9,
+    backgroundColor: colors.primary,
+    color: "#ffffff",
+    fontSize: 9,
+    fontWeight: "900",
+    lineHeight: 17,
+    textAlign: "center",
   },
   infoRow: {
     flexDirection: "row",
@@ -406,42 +247,13 @@ const styles = StyleSheet.create({
   },
   infoBullet: {
     color: colors.ink,
-    fontSize: 13,
+    fontSize: 10,
     fontWeight: "900",
   },
   infoName: {
     flex: 1,
     color: colors.text,
-    fontSize: 10,
-    fontWeight: "900",
-  },
-  infoTime: {
-    color: colors.textMuted,
     fontSize: 9,
-    fontWeight: "800",
-  },
-  statusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginTop: 5,
-  },
-  statusIcon: {
-    width: 18,
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 9,
-    backgroundColor: "#2ea455",
-  },
-  statusIconText: {
-    color: "#ffffff",
-    fontSize: 8,
-    fontWeight: "900",
-  },
-  statusText: {
-    color: "#2a9a50",
-    fontSize: 10,
     fontWeight: "900",
   },
   zoomControl: {
@@ -473,23 +285,28 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#e4edf3",
   },
+  mapTools: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 8,
+    marginTop: 8,
+  },
   listButton: {
-    position: "absolute",
-    left: "2%",
-    bottom: "5%",
-    zIndex: 5,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 9,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.96)",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 16,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#d7e9f1",
     shadowColor: "#4d6070",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.14,
-    shadowRadius: 16,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 2,
   },
   listIcon: {
     color: colors.ink,
@@ -502,41 +319,40 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   helpCard: {
-    position: "absolute",
-    right: "2%",
-    bottom: "5%",
-    zIndex: 5,
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 11,
-    maxWidth: 260,
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.96)",
+    gap: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 16,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#d7e9f1",
     shadowColor: "#4d6070",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.14,
-    shadowRadius: 16,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 2,
   },
   helpIcon: {
-    width: 32,
-    height: 32,
+    width: 24,
+    height: 24,
     overflow: "hidden",
-    borderRadius: 16,
+    borderRadius: 12,
     backgroundColor: "#fff2d3",
     color: "#e89b22",
-    fontSize: 20,
+    fontSize: 15,
     fontWeight: "900",
-    lineHeight: 32,
+    lineHeight: 24,
     textAlign: "center",
   },
   helpText: {
     flex: 1,
     color: colors.text,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "900",
-    lineHeight: 17,
+    lineHeight: 15,
   },
   bottomSheet: {
     marginTop: 9,

@@ -110,7 +110,10 @@ export default function AppNavigator() {
       <Stack.Screen
         name="CampusMap"
         component={CampusMapScreen}
-        options={({ navigation }) => modalOptions(navigation, "식당 안내 지도", "홈")}
+        options={({ navigation }) => ({
+          ...modalOptions(navigation, "", "홈"),
+          headerTitle: () => null,
+        })}
       />
       <Stack.Screen
         name="MealMate"
