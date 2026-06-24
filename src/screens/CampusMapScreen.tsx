@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   bottomSheet: {
-    marginTop: 8,
+    marginTop: 4,
     padding: 13,
     borderRadius: 20,
     backgroundColor: "#ffffff",
