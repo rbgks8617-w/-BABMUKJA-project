@@ -228,12 +228,6 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.hero}>
-          <Text style={styles.eyebrow}>캠퍼스 커뮤니티</Text>
-          <Text style={styles.title}>학교 밥 얘기는 여기서 끝내요</Text>
-          <Text style={styles.description}>모든 글과 댓글은 익명으로 표시돼요. 글쓴이가 댓글을 달면 글쓴이로만 보여요.</Text>
-        </View>
-
         <View style={styles.tabRow}>
           {tabs.map((tab) => (
             <Pressable key={tab} style={[styles.tab, activeTab === tab && styles.tabActive]} onPress={() => setActiveTab(tab)}>
@@ -356,33 +350,6 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 138,
     backgroundColor: colors.background,
-  },
-  hero: {
-    marginBottom: 14,
-    padding: 18,
-    borderRadius: 24,
-    backgroundColor: "#eaf7fc",
-    borderWidth: 1,
-    borderColor: "#ccebf7",
-  },
-  eyebrow: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  title: {
-    marginTop: 8,
-    color: colors.ink,
-    fontSize: 24,
-    fontWeight: "900",
-    lineHeight: 31,
-  },
-  description: {
-    marginTop: 7,
-    color: colors.textMuted,
-    fontSize: 14,
-    fontWeight: "800",
-    lineHeight: 21,
   },
   tabRow: {
     flexDirection: "row",
