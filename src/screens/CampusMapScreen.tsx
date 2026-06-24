@@ -32,9 +32,9 @@ type TouchAreaStyle = {
 };
 
 const cardAnchors: Record<string, FloatingStyle> = {
-  tip: { left: "15%", top: "30%", width: 76 },
-  education: { left: "43%", top: "23%", width: 104 },
-  industry: { right: "15%", top: "31%", width: 100 },
+  tip: { left: "16%", top: "20%", width: 76 },
+  education: { left: "46%", top: "16%", width: 104 },
+  industry: { right: "12%", top: "25%", width: 100 },
 };
 
 const buildingTouchAreas: Record<string, TouchAreaStyle> = {
@@ -69,6 +69,9 @@ export default function CampusMapScreen({ route, navigation }: AppScreenProps<"C
 
   return (
     <View style={styles.screen}>
+      <View pointerEvents="none" style={styles.skyGlowTop} />
+      <View pointerEvents="none" style={styles.skyGlowMiddle} />
+      <View pointerEvents="none" style={styles.skyGlowFade} />
       <View style={styles.mapStage}>
         <View style={[styles.mapCanvas, { width: mapWidth, aspectRatio: mapAspectRatio }]}>
           <ImageBackground source={campusMapImage} resizeMode="contain" style={styles.mapImage}>
@@ -153,25 +156,49 @@ export default function CampusMapScreen({ route, navigation }: AppScreenProps<"C
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#eef5f9",
+    backgroundColor: "#f8fcff",
     paddingHorizontal: 8,
     paddingTop: 0,
     paddingBottom: 8,
+  },
+  skyGlowTop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 92,
+    backgroundColor: "#dff4ff",
+  },
+  skyGlowMiddle: {
+    position: "absolute",
+    top: 72,
+    left: 0,
+    right: 0,
+    height: 72,
+    backgroundColor: "#eef9ff",
+  },
+  skyGlowFade: {
+    position: "absolute",
+    top: 128,
+    left: 0,
+    right: 0,
+    height: 86,
+    backgroundColor: "#ffffff",
   },
   mapStage: {
     height: 302,
     alignItems: "center",
     justifyContent: "flex-start",
     overflow: "hidden",
-    marginTop: 0,
+    marginTop: 16,
     borderRadius: 22,
-    backgroundColor: "#f7fbfe",
+    backgroundColor: "rgba(255, 255, 255, 0.78)",
     borderWidth: 1,
     borderColor: "#dcebf2",
   },
   mapCanvas: {
     maxHeight: "100%",
-    marginTop: -18,
+    marginTop: 10,
   },
   mapImage: {
     width: "100%",

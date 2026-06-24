@@ -161,9 +161,6 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
           <Text style={styles.sectionTitle}>학교 식당</Text>
           <Text style={styles.sectionDescription}>건물 3곳 · 식당 {restaurantCount}곳</Text>
         </View>
-        <Pressable style={styles.mapButton} onPress={() => navigation.navigate("CampusMap", { buildingId: selectedBuildingId })}>
-          <Text style={styles.mapButtonText}>지도 보기</Text>
-        </Pressable>
       </View>
 
       <ScrollView
@@ -1065,19 +1062,6 @@ const styles = StyleSheet.create({
   sectionDescription: {
     marginTop: 4,
     color: colors.textSoft,
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  mapButton: {
-    paddingHorizontal: 13,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#ccebf7",
-  },
-  mapButtonText: {
-    color: colors.primaryDark,
     fontSize: 12,
     fontWeight: "900",
   },
