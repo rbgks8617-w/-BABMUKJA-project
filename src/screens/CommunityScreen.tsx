@@ -4,6 +4,7 @@ import { colors } from "../theme/colors";
 import type { AppScreenProps } from "../types/app";
 
 type CommunityTab = "음식 후기" | "자유게시판" | "나랑 밥먹자";
+type WritableCommunityTab = Exclude<CommunityTab, "나랑 밥먹자">;
 
 type CommunityComment = {
   id: string;
@@ -24,6 +25,7 @@ type CommunityPostItem = {
 };
 
 const tabs: CommunityTab[] = ["음식 후기", "자유게시판", "나랑 밥먹자"];
+const writableTabs: WritableCommunityTab[] = ["음식 후기", "자유게시판"];
 
 const initialPosts: CommunityPostItem[] = [
   {
@@ -143,7 +145,7 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
   const [posts, setPosts] = useState<CommunityPostItem[]>(initialPosts);
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [writerOpen, setWriterOpen] = useState(false);
-  const [writeTopic, setWriteTopic] = useState<CommunityTab>("음식 후기");
+  const [writeTopic, setWriteTopic] = useState<WritableCommunityTab>("음식 후기");
   const [writeTitle, setWriteTitle] = useState("");
   const [writeBody, setWriteBody] = useState("");
 
@@ -153,7 +155,7 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
   );
 
   function openWriter() {
-    setWriteTopic(activeTab);
+    setWriteTopic(activeTab === "자유게시판" ? "자유게시판" : "음식 후기");
     setWriterOpen(true);
   }
 
@@ -242,10 +244,23 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
 
         {activeTab === "나랑 밥먹자" ? (
           <View style={styles.matePanel}>
-            <Text style={styles.panelTitle}>나랑 밥먹자 모임</Text>
-            <Text style={styles.panelDescription}>모집글은 커뮤니티에 남기고, 실제 모임 생성과 채팅은 전용 화면에서 이어갈 수 있어요.</Text>
+            <View style={styles.matePanelTop}>
+              <View style={styles.mateSymbol}>
+                <Text style={styles.mateSymbolText}>밥</Text>
+              </View>
+              <View style={styles.matePanelCopy}>
+                <Text style={styles.mateEyebrow}>익명 식사 매칭</Text>
+                <Text style={styles.panelTitle}>오늘 같이 먹을 사람 찾기</Text>
+                <Text style={styles.panelDescription}>시간, 식당, 대화 주제를 정해서 부담 없는 한 끼 모임을 열 수 있어요.</Text>
+              </View>
+            </View>
+            <View style={styles.mateFeatureRow}>
+              <Text style={styles.mateFeature}>실명 없음</Text>
+              <Text style={styles.mateFeature}>채팅방 연결</Text>
+              <Text style={styles.mateFeature}>인원 마감</Text>
+            </View>
             <Pressable style={styles.primaryButton} onPress={() => navigation.navigate("MealMate")}>
-              <Text style={styles.primaryButtonText}>모임 만들러 가기</Text>
+              <Text style={styles.primaryButtonText}>나랑 밥먹자 열기</Text>
             </Pressable>
           </View>
         ) : null}
@@ -281,7 +296,7 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
 
           <Text style={styles.inputLabel}>글쓰기 주제</Text>
           <View style={styles.topicRow}>
-            {tabs.map((topic) => (
+            {writableTabs.map((topic) => (
               <Pressable
                 key={topic}
                 style={[styles.topicChip, writeTopic === topic && styles.topicChipActive]}
@@ -402,25 +417,82 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: colors.border,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 3,
+  },
+  matePanelTop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 14,
+  },
+  mateSymbol: {
+    width: 48,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    borderRadius: 18,
+    backgroundColor: "#edf6fc",
+    borderWidth: 1,
+    borderColor: "#d5edf8",
+  },
+  mateSymbolText: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  matePanelCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  mateEyebrow: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: "900",
   },
   panelTitle: {
     color: colors.text,
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: "900",
+    lineHeight: 27,
   },
   panelDescription: {
-    marginTop: 7,
+    marginTop: 6,
     color: colors.textMuted,
     fontSize: 13,
     fontWeight: "800",
     lineHeight: 20,
   },
+  mateFeatureRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+    marginTop: 14,
+  },
+  mateFeature: {
+    overflow: "hidden",
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "#f4fbfe",
+    color: colors.primaryDark,
+    fontSize: 11,
+    fontWeight: "900",
+  },
   primaryButton: {
     alignItems: "center",
     marginTop: 14,
-    paddingVertical: 13,
+    paddingVertical: 14,
     borderRadius: 18,
     backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    elevation: 3,
   },
   primaryButtonText: {
     color: "#ffffff",
