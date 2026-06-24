@@ -54,6 +54,7 @@ export default function CampusMapScreen({ route, navigation }: AppScreenProps<"C
 
   const selectedBuilding = campusMapBuildings.find((building) => building.id === selectedBuildingId) ?? campusMapBuildings[0];
   const mapWidth = Math.min(Math.max(width - 18, 360), 1180);
+  const mapStageHeight = Math.min(260, mapWidth / mapAspectRatio + 14);
 
   useEffect(() => {
     setSelectedBuildingId(getInitialBuildingId(route));
@@ -72,7 +73,7 @@ export default function CampusMapScreen({ route, navigation }: AppScreenProps<"C
       <View pointerEvents="none" style={styles.skyGlowTop} />
       <View pointerEvents="none" style={styles.skyGlowMiddle} />
       <View pointerEvents="none" style={styles.skyGlowFade} />
-      <View style={styles.mapStage}>
+      <View style={[styles.mapStage, { height: mapStageHeight }]}>
         <View style={[styles.mapCanvas, { width: mapWidth, aspectRatio: mapAspectRatio }]}>
           <ImageBackground source={campusMapImage} resizeMode="contain" style={styles.mapImage}>
             {campusMapBuildings.map((building) => (
@@ -186,7 +187,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
   },
   mapStage: {
-    height: 302,
     alignItems: "center",
     justifyContent: "flex-start",
     overflow: "hidden",
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
   },
   mapCanvas: {
     maxHeight: "100%",
-    marginTop: 10,
+    marginTop: 8,
   },
   mapImage: {
     width: "100%",
