@@ -1,11 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, ImageBackground, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { Animated, Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import {
-  campusMapBuildings,
-  getFriendCheckins,
+  getBuildingCards,
+  getCrowdPicks,
+  getCrowdStatus,
+  getMenusByCategory,
+  getPopularMenus,
   getPopularRestaurants,
-  getRestaurants,
+  getRestaurantById,
+  getRestaurantCount,
   getTodayCafeteria,
+  searchCampusFood,
 } from "../services/restaurantService";
 import { useCart } from "../store/CartContext";
 import { useNotifications } from "../store/NotificationContext";
@@ -13,28 +18,23 @@ import { colors } from "../theme/colors";
 import { formatPrice } from "../utils/formatPrice";
 
 const categoryTabs = ["전체", "한식", "중식", "분식", "양식", "카페", "가성비", "혼밥"];
-const buildingDisplayNames = {
-  tip: "TIP",
-  education: "종합교육관",
-  industry: "산학융합관",
-};
-
-function findRestaurant(restaurants, restaurantId) {
-  return restaurants.find((restaurant) => restaurant.id === restaurantId);
-}
 
 export default function RestaurantListScreen({ navigation }) {
   const { width } = useWindowDimensions();
-  const restaurants = useMemo(() => getRestaurants(), []);
   const todayCafeteria = getTodayCafeteria();
   const popularRestaurants = getPopularRestaurants();
-  const friendCheckins = getFriendCheckins();
+  const popularMenus = getPopularMenus();
+  const restaurantCount = getRestaurantCount();
+  const crowdPicks = useMemo(() => getCrowdPicks(), []);
+  const buildingCards = useMemo(() => getBuildingCards(), []);
   const { totalQuantity } = useCart();
   const { unreadCount } = useNotifications();
   const isWideLayout = width >= 980;
   const carouselCardWidth = Math.min(width - 62, 282);
   const [liveTick, setLiveTick] = useState(0);
   const [selectedBuildingId, setSelectedBuildingId] = useState("tip");
+  const [activeCategory, setActiveCategory] = useState("전체");
+  const [searchQuery, setSearchQuery] = useState("");
   const liveMotion = useRef(new Animated.Value(1)).current;
   const liveTranslateY = liveMotion.interpolate({
     inputRange: [0, 1],
@@ -65,44 +65,27 @@ export default function RestaurantListScreen({ navigation }) {
     ...item,
     selectedCount: item.selectedCount + ((liveTick + index * 3) % 8),
   }));
-  const liveFriendCheckins = friendCheckins.map((item, index) => ({
-    ...item,
-    studentCount: Math.max(1, item.studentCount + ((liveTick + index * 2) % 5) - 1),
-  }));
-  const restaurantCount = campusMapBuildings.reduce((count, building) => count + building.restaurants.length, 0);
-  const todayImage = restaurants[0]?.imageUrl;
-  const fastPicks = [
-    {
-      restaurant: findRestaurant(restaurants, "tomato-gimbap"),
-      wait: "대기 3분",
-      reason: "김밥, 라면처럼 회전이 빨라요",
-    },
-    {
-      restaurant: findRestaurant(restaurants, "tomato-dosirak"),
-      wait: "대기 4분",
-      reason: "포장해서 바로 이동하기 좋아요",
-    },
-    {
-      restaurant: findRestaurant(restaurants, "raon-restaurant"),
-      wait: "대기 6분",
-      reason: "종합교육관 수업 전후 동선이 짧아요",
-    },
-  ].filter((item) => item.restaurant);
-  const buildingCards = campusMapBuildings.map((building, index) => {
-    const firstRestaurant = findRestaurant(restaurants, building.restaurants[0]?.restaurantId);
-
+  const liveCrowdPicks = crowdPicks.map((item, index) => {
+    const recentUsers = Math.max(1, item.recentUsers + ((liveTick + index * 4) % 7) - 2);
     return {
-      ...building,
-      index: index + 1,
-      displayName: buildingDisplayNames[building.id] ?? building.name,
-      imageUrl: firstRestaurant?.imageUrl,
-      menuPreview: building.restaurants.map((item) => item.label).slice(0, 3).join(", "),
-      firstRestaurantId: firstRestaurant?.id,
-      walkText: index === 0 ? "도보 5분" : index === 1 ? "도보 3분" : "도보 7분",
-      crowdText: index === 1 ? "한산 · 대기 2분" : index === 2 ? "보통 · 대기 6분" : "혼잡 · 대기 8분",
+      ...item,
+      recentUsers,
+      status: getCrowdStatus(recentUsers),
     };
   });
-  const selectedBuilding = buildingCards.find((building) => building.id === selectedBuildingId) ?? buildingCards[0];
+  const todayImage = getRestaurantById(todayCafeteria.restaurantId)?.imageUrl ?? buildingCards[0]?.imageUrl;
+  const categoryMenus = useMemo(() => getMenusByCategory(activeCategory), [activeCategory]);
+  const searchResults = useMemo(() => searchCampusFood(searchQuery), [searchQuery]);
+  const trimmedSearchQuery = searchQuery.trim();
+
+  function openSearchResult(result) {
+    if (result.type === "menu") {
+      navigation.navigate("MenuDetail", { menuId: result.targetId });
+      return;
+    }
+
+    navigation.navigate("RestaurantDetail", { restaurantId: result.targetId });
+  }
 
   const infoRail = (
     <View style={[styles.infoRail, isWideLayout && styles.infoRailDesktop]}>
@@ -125,32 +108,45 @@ export default function RestaurantListScreen({ navigation }) {
         </View>
 
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>시간 없을 때</Text>
-          {fastPicks.map((item) => (
+          <Text style={styles.infoTitle}>최근 10분 혼잡도</Text>
+          {liveCrowdPicks.map((item) => (
             <Pressable
               key={item.restaurant.id}
-              style={styles.fastRow}
+              style={styles.crowdRow}
               onPress={() => navigation.navigate("RestaurantDetail", { restaurantId: item.restaurant.id })}
             >
-              <View style={styles.fastCopy}>
-                <Text style={styles.fastName}>{item.restaurant.name}</Text>
-                <Text style={styles.fastReason}>{item.reason}</Text>
+              <View style={styles.crowdCopy}>
+                <Text style={styles.crowdName}>{item.restaurant.name}</Text>
+                <Text style={styles.crowdReason}>최근 10분 {item.recentUsers}명 이용 중</Text>
               </View>
-              <Text style={styles.fastWait}>{item.wait}</Text>
+              <Text
+                style={[
+                  styles.crowdPill,
+                  item.status === "혼잡" && styles.crowdPillBusy,
+                  item.status === "보통" && styles.crowdPillNormal,
+                  item.status === "원활" && styles.crowdPillSmooth,
+                ]}
+              >
+                {item.status}
+              </Text>
             </Pressable>
           ))}
         </View>
 
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>지금 학생들이 가는 곳</Text>
-          {liveFriendCheckins.map((item) => (
-            <View key={item.restaurantId} style={styles.checkinRow}>
-              <Text style={styles.checkinDot}>•</Text>
-              <Text style={styles.checkinName} numberOfLines={1}>
-                {item.restaurant?.name ?? "식당"}
-              </Text>
-              <Text style={styles.rankCount}>{item.studentCount}명</Text>
-            </View>
+          <Text style={styles.infoTitle}>인기 메뉴</Text>
+          {popularMenus.map((item) => (
+            <Pressable
+              key={item.menu.id}
+              style={styles.menuRankRow}
+              onPress={() => navigation.navigate("MenuDetail", { menuId: item.menu.id })}
+            >
+              <Text style={styles.rankNumber}>{item.rank}</Text>
+              <View style={styles.menuRankCopy}>
+                <Text style={styles.menuRankName} numberOfLines={1}>{item.menu.name}</Text>
+                <Text style={styles.menuRankMeta} numberOfLines={1}>{item.restaurant.name}</Text>
+              </View>
+            </Pressable>
           ))}
         </View>
       </Animated.View>
@@ -164,7 +160,7 @@ export default function RestaurantListScreen({ navigation }) {
           <Text style={styles.sectionTitle}>학교 식당</Text>
           <Text style={styles.sectionDescription}>건물 3곳 · 식당 {restaurantCount}곳</Text>
         </View>
-        <Pressable style={styles.mapButton} onPress={() => navigation.navigate("CampusMap")}>
+        <Pressable style={styles.mapButton} onPress={() => navigation.navigate("CampusMap", { buildingId: selectedBuildingId })}>
           <Text style={styles.mapButtonText}>지도 보기</Text>
         </Pressable>
       </View>
@@ -208,7 +204,7 @@ export default function RestaurantListScreen({ navigation }) {
               </View>
               <Pressable
                 style={styles.menuButton}
-                onPress={() => setSelectedBuildingId(building.id)}
+                onPress={() => navigation.navigate("CampusMap", { buildingId: building.id })}
               >
                 <Text style={styles.menuButtonText}>식당 보기</Text>
               </Pressable>
@@ -216,41 +212,6 @@ export default function RestaurantListScreen({ navigation }) {
           </Pressable>
         ))}
       </ScrollView>
-
-      {selectedBuilding ? (
-        <View style={styles.buildingPanel}>
-          <View style={styles.buildingPanelHeader}>
-            <View>
-              <Text style={styles.buildingPanelEyebrow}>선택한 건물</Text>
-              <Text style={styles.buildingPanelTitle}>{selectedBuilding.displayName} 안의 식당</Text>
-            </View>
-            <Text style={styles.buildingPanelCount}>{selectedBuilding.restaurants.length}곳</Text>
-          </View>
-
-          {selectedBuilding.restaurants.map((item) => {
-            const restaurant = findRestaurant(restaurants, item.restaurantId);
-
-            return (
-              <Pressable
-                key={item.restaurantId}
-                style={styles.buildingRestaurantRow}
-                onPress={() => navigation.navigate("RestaurantDetail", { restaurantId: item.restaurantId })}
-              >
-                <View style={styles.buildingRestaurantIcon}>
-                  <Text style={styles.buildingRestaurantIconText}>식</Text>
-                </View>
-                <View style={styles.buildingRestaurantCopy}>
-                  <Text style={styles.buildingRestaurantName}>{restaurant?.name ?? item.label}</Text>
-                  <Text style={styles.buildingRestaurantMeta}>
-                    {restaurant?.category ?? "식당"} · {item.hours}
-                  </Text>
-                </View>
-                <Text style={styles.buildingRestaurantAction}>보기</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      ) : null}
     </View>
   );
 
@@ -261,7 +222,7 @@ export default function RestaurantListScreen({ navigation }) {
           <View style={styles.heroRow}>
             <View style={styles.headerCopy}>
               <Text style={styles.eyebrow}>한국공학대학교</Text>
-              <Text style={styles.title}>오늘 캠퍼스에서 뭐 먹지?</Text>
+              <Text style={styles.title}>오늘 뭐 먹지?</Text>
             </View>
             <View style={styles.headerActions}>
               <Pressable style={styles.alertButton} onPress={() => navigation.navigate("Notifications")}>
@@ -280,17 +241,104 @@ export default function RestaurantListScreen({ navigation }) {
         </View>
 
         <View style={styles.searchBar}>
-          <Text style={styles.searchPlaceholder}>메뉴, 식당, 음식 이름으로 검색해보세요</Text>
-          <Text style={styles.searchIcon}>⌕</Text>
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="메뉴, 식당, 음식 이름으로 검색해보세요"
+            placeholderTextColor={colors.textSoft}
+            returnKeyType="search"
+            style={styles.searchInput}
+          />
+          {trimmedSearchQuery ? (
+            <Pressable hitSlop={8} onPress={() => setSearchQuery("")}>
+              <Text style={styles.searchClear}>×</Text>
+            </Pressable>
+          ) : (
+            <Text style={styles.searchIcon}>⌕</Text>
+          )}
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
+        {trimmedSearchQuery ? (
+          <View style={styles.searchPanel}>
+            <View style={styles.searchPanelHeader}>
+              <Text style={styles.searchPanelTitle}>검색 결과</Text>
+              <Text style={styles.searchPanelCount}>{searchResults.length}개</Text>
+            </View>
+            {searchResults.length > 0 ? (
+              searchResults.map((result) => (
+                <Pressable key={result.id} style={styles.searchResultRow} onPress={() => openSearchResult(result)}>
+                  <Image source={{ uri: result.imageUrl }} style={styles.searchResultImage} />
+                  <View style={styles.searchResultCopy}>
+                    <Text numberOfLines={1} style={styles.searchResultTitle}>{result.title}</Text>
+                    <Text numberOfLines={1} style={styles.searchResultSubtitle}>{result.subtitle}</Text>
+                  </View>
+                  <Text style={styles.searchResultType}>{result.type === "menu" ? "메뉴" : "식당"}</Text>
+                </Pressable>
+              ))
+            ) : (
+              <View style={styles.searchEmpty}>
+                <Text style={styles.searchEmptyText}>검색 결과가 없어요.</Text>
+              </View>
+            )}
+          </View>
+        ) : null}
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryScroller}
+          contentContainerStyle={styles.categoryRow}
+        >
           {categoryTabs.map((tab, index) => (
-            <Pressable key={tab} style={[styles.categoryChip, index === 0 && styles.categoryChipActive]}>
-              <Text numberOfLines={1} style={[styles.categoryText, index === 0 && styles.categoryTextActive]}>{tab}</Text>
+            <Pressable
+              key={tab}
+              style={[styles.categoryChip, activeCategory === tab && styles.categoryChipActive]}
+              onPress={() => setActiveCategory(tab)}
+            >
+              <Text numberOfLines={1} style={[styles.categoryText, activeCategory === tab && styles.categoryTextActive]}>
+                {tab}
+              </Text>
             </Pressable>
           ))}
         </ScrollView>
+
+        <View style={styles.categoryMenuPanel}>
+          <View style={styles.categoryMenuHeader}>
+            <View>
+              <Text style={styles.categoryMenuEyebrow}>{activeCategory === "전체" ? "바로 고르기" : `${activeCategory} 메뉴`}</Text>
+              <Text style={styles.categoryMenuTitle}>
+                {activeCategory === "전체" ? "지금 먹기 좋은 메뉴" : `${activeCategory} 땡길 때`}
+              </Text>
+            </View>
+            <Text style={styles.categoryMenuCount}>{categoryMenus.length}개</Text>
+          </View>
+
+          {categoryMenus.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryMenuList}>
+              {categoryMenus.map((menu) => (
+                <Pressable
+                  key={menu.id}
+                  style={({ pressed }) => [styles.categoryMenuCard, pressed && styles.categoryMenuCardPressed]}
+                  onPress={() => navigation.navigate("MenuDetail", { menuId: menu.id })}
+                >
+                  <ImageBackground source={{ uri: menu.imageUrl }} style={styles.categoryMenuImage} imageStyle={styles.categoryMenuImageRadius}>
+                    <View style={styles.categoryMenuImageDim} />
+                    <Text style={styles.categoryMenuBadge}>{menu.category}</Text>
+                  </ImageBackground>
+                  <Text numberOfLines={1} style={styles.categoryMenuName}>{menu.name}</Text>
+                  <Text numberOfLines={1} style={styles.categoryMenuRestaurant}>
+                    {menu.restaurant?.name ?? "학교 식당"}
+                  </Text>
+                  <Text style={styles.categoryMenuPrice}>{formatPrice(menu.price)}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.categoryEmpty}>
+              <Text style={styles.categoryEmptyText}>이 카테고리 메뉴를 곧 채울게요.</Text>
+            </View>
+          )}
+        </View>
 
         <View style={styles.todayCard}>
           <View style={styles.todayCopy}>
@@ -342,7 +390,7 @@ export default function RestaurantListScreen({ navigation }) {
         onPress={() => navigation.navigate("Recommendation")}
       >
         <View style={styles.dockIcon}>
-          <Text style={styles.dockIconText}>?</Text>
+          <Image source={require("../../assets/lunchbox-recommendation.png")} style={styles.dockImage} />
         </View>
         <View style={styles.dockCopy}>
           <Text style={styles.dockTitle}>뭐 먹을지 고민될 땐?</Text>
@@ -463,20 +511,126 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#cdeaf7",
   },
-  searchPlaceholder: {
+  searchInput: {
     flex: 1,
-    color: colors.textSoft,
+    minWidth: 0,
+    color: colors.text,
     fontSize: 13,
     fontWeight: "800",
+    padding: 0,
+    outlineStyle: "none",
   },
   searchIcon: {
     color: colors.primaryDark,
     fontSize: 20,
     fontWeight: "900",
   },
+  searchClear: {
+    width: 24,
+    height: 24,
+    overflow: "hidden",
+    borderRadius: 12,
+    backgroundColor: "#eef8fc",
+    color: colors.primaryDark,
+    fontSize: 20,
+    fontWeight: "900",
+    lineHeight: 22,
+    textAlign: "center",
+  },
+  searchPanel: {
+    marginTop: -4,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 22,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#cdeaf7",
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 3,
+  },
+  searchPanelHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  searchPanelTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  searchPanelCount: {
+    overflow: "hidden",
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#eef8fc",
+    color: colors.primaryDark,
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  searchResultRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#edf3f7",
+  },
+  searchResultImage: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: "#e7eef4",
+  },
+  searchResultCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  searchResultTitle: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  searchResultSubtitle: {
+    marginTop: 3,
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  searchResultType: {
+    overflow: "hidden",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+    color: "#ffffff",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  searchEmpty: {
+    alignItems: "center",
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#edf3f7",
+  },
+  searchEmptyText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "800",
+  },
   categoryRow: {
+    alignItems: "center",
     gap: 8,
-    paddingBottom: 10,
+    paddingBottom: 0,
+  },
+  categoryScroller: {
+    flexGrow: 0,
+    height: 34,
+    marginBottom: 10,
   },
   categoryChip: {
     height: 32,
@@ -502,6 +656,114 @@ const styles = StyleSheet.create({
   },
   categoryTextActive: {
     color: "#ffffff",
+  },
+  categoryMenuPanel: {
+    marginBottom: 14,
+    paddingVertical: 13,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.72)",
+    borderWidth: 1,
+    borderColor: "#cdeaf7",
+  },
+  categoryMenuHeader: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+  },
+  categoryMenuEyebrow: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  categoryMenuTitle: {
+    marginTop: 3,
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  categoryMenuCount: {
+    overflow: "hidden",
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: "#eef8fc",
+    color: colors.primaryDark,
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  categoryMenuList: {
+    gap: 10,
+    paddingHorizontal: 14,
+  },
+  categoryMenuCard: {
+    width: 132,
+    padding: 8,
+    borderRadius: 18,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  categoryMenuCardPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.88,
+  },
+  categoryMenuImage: {
+    height: 88,
+    justifyContent: "flex-start",
+    alignItems: "flex-start",
+    overflow: "hidden",
+    borderRadius: 14,
+  },
+  categoryMenuImageRadius: {
+    borderRadius: 14,
+  },
+  categoryMenuImageDim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(7, 26, 43, 0.12)",
+  },
+  categoryMenuBadge: {
+    overflow: "hidden",
+    margin: 7,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "rgba(255, 255, 255, 0.88)",
+    color: colors.primaryDark,
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  categoryMenuName: {
+    marginTop: 8,
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  categoryMenuRestaurant: {
+    marginTop: 3,
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  categoryMenuPrice: {
+    marginTop: 5,
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  categoryEmpty: {
+    marginHorizontal: 14,
+    paddingVertical: 18,
+    alignItems: "center",
+    borderRadius: 18,
+    backgroundColor: "#f5fbfe",
+  },
+  categoryEmptyText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "800",
   },
   todayCard: {
     flexDirection: "row",
@@ -733,51 +995,68 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
   },
-  fastRow: {
+  crowdRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     paddingVertical: 7,
   },
-  fastCopy: {
+  crowdCopy: {
     flex: 1,
     minWidth: 0,
   },
-  fastName: {
+  crowdName: {
     color: colors.text,
     fontSize: 14,
     fontWeight: "900",
   },
-  fastReason: {
+  crowdReason: {
     marginTop: 3,
     color: colors.textMuted,
     fontSize: 11,
     fontWeight: "800",
   },
-  fastWait: {
+  crowdPill: {
     overflow: "hidden",
-    paddingHorizontal: 8,
+    minWidth: 44,
+    paddingHorizontal: 9,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: "#e9f8ee",
-    color: colors.success,
     fontSize: 11,
     fontWeight: "900",
+    textAlign: "center",
   },
-  checkinRow: {
+  crowdPillSmooth: {
+    backgroundColor: "#e9f8ee",
+    color: colors.success,
+  },
+  crowdPillNormal: {
+    backgroundColor: "#fff6dc",
+    color: "#b7791f",
+  },
+  crowdPillBusy: {
+    backgroundColor: "#ffede5",
+    color: colors.orange,
+  },
+  menuRankRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     paddingVertical: 5,
   },
-  checkinDot: {
-    color: colors.mint,
-    fontSize: 15,
-  },
-  checkinName: {
+  menuRankCopy: {
     flex: 1,
+    minWidth: 0,
+  },
+  menuRankName: {
     color: colors.text,
     fontWeight: "900",
+  },
+  menuRankMeta: {
+    marginTop: 2,
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "800",
   },
   sectionHeader: {
     flexDirection: "row",
@@ -946,94 +1225,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "900",
   },
-  buildingPanel: {
-    marginTop: 14,
-    padding: 14,
-    borderRadius: 24,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 3,
-  },
-  buildingPanelHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 10,
-  },
-  buildingPanelEyebrow: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  buildingPanelTitle: {
-    marginTop: 4,
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: "900",
-    lineHeight: 23,
-  },
-  buildingPanelCount: {
-    overflow: "hidden",
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 999,
-    backgroundColor: "#eaf7fc",
-    color: colors.primaryDark,
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  buildingRestaurantRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 11,
-    borderTopWidth: 1,
-    borderTopColor: "#edf3f7",
-  },
-  buildingRestaurantIcon: {
-    width: 34,
-    height: 34,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 17,
-    backgroundColor: "#e9f8ee",
-  },
-  buildingRestaurantIconText: {
-    color: colors.success,
-    fontSize: 11,
-    fontWeight: "900",
-  },
-  buildingRestaurantCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  buildingRestaurantName: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: "900",
-  },
-  buildingRestaurantMeta: {
-    marginTop: 3,
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  buildingRestaurantAction: {
-    overflow: "hidden",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
-    backgroundColor: colors.primary,
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "900",
-  },
   bottomDock: {
     position: "absolute",
     left: 18,
@@ -1057,17 +1248,18 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   dockIcon: {
-    width: 42,
-    height: 42,
+    width: 50,
+    height: 50,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 21,
-    backgroundColor: colors.surfaceWarm,
+    overflow: "hidden",
+    borderRadius: 25,
+    backgroundColor: "#ffffff",
   },
-  dockIconText: {
-    color: colors.primary,
-    fontSize: 23,
-    fontWeight: "900",
+  dockImage: {
+    width: 54,
+    height: 42,
+    resizeMode: "contain",
   },
   dockCopy: {
     flex: 1,

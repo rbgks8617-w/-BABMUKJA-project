@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ImageBackground,
   Pressable,
@@ -8,7 +8,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { campusMapBuildings, getRestaurantById, getRestaurants } from "../services/restaurantService";
+import { campusMapBuildings, getRestaurantById } from "../services/restaurantService";
 import { colors } from "../theme/colors";
 
 const campusMapImage = require("../../assets/tuk-campus-map.png");
@@ -26,19 +26,21 @@ const buildingTouchAreas = {
   industry: { right: "8%", top: "31%", width: "25%", height: "28%" },
 };
 
-export default function CampusMapScreen({ navigation }) {
+function getInitialBuildingId(route) {
+  const buildingId = route?.params?.buildingId;
+  return campusMapBuildings.some((building) => building.id === buildingId) ? buildingId : "education";
+}
+
+export default function CampusMapScreen({ route, navigation }) {
   const { width } = useWindowDimensions();
-  const [selectedBuildingId, setSelectedBuildingId] = useState("education");
-  const [showList, setShowList] = useState(false);
-  const [zoom, setZoom] = useState(1);
+  const [selectedBuildingId, setSelectedBuildingId] = useState(() => getInitialBuildingId(route));
 
   const selectedBuilding = campusMapBuildings.find((building) => building.id === selectedBuildingId) ?? campusMapBuildings[0];
-  const restaurants = getRestaurants();
-  const mapWidth = Math.min(Math.max(width - 20, 360), 1180);
+  const mapWidth = Math.min(Math.max(width - 18, 360), 1180);
 
-  const visibleRestaurants = useMemo(() => {
-    return restaurants.filter((restaurant) => restaurant.isOpen);
-  }, [restaurants]);
+  useEffect(() => {
+    setSelectedBuildingId(getInitialBuildingId(route));
+  }, [route]);
 
   const openRestaurantDetail = (restaurantId) => {
     navigation.navigate("RestaurantDetail", { restaurantId });
@@ -46,13 +48,12 @@ export default function CampusMapScreen({ navigation }) {
 
   const selectBuilding = (buildingId) => {
     setSelectedBuildingId(buildingId);
-    setShowList(false);
   };
 
   return (
     <View style={styles.screen}>
       <View style={styles.mapStage}>
-        <View style={[styles.mapCanvas, { width: mapWidth, aspectRatio: mapAspectRatio, transform: [{ scale: zoom }] }]}>
+        <View style={[styles.mapCanvas, { width: mapWidth, aspectRatio: mapAspectRatio }]}>
           <ImageBackground source={campusMapImage} resizeMode="contain" style={styles.mapImage}>
             {campusMapBuildings.map((building) => (
               <Pressable
@@ -92,29 +93,7 @@ export default function CampusMapScreen({ navigation }) {
                 </View>
               );
             })}
-
-            <View style={styles.zoomControl}>
-              <Pressable style={styles.zoomButton} onPress={() => setZoom((current) => Math.min(1.1, current + 0.04))}>
-                <Text style={styles.zoomText}>＋</Text>
-              </Pressable>
-              <View style={styles.zoomDivider} />
-              <Pressable style={styles.zoomButton} onPress={() => setZoom((current) => Math.max(0.92, current - 0.04))}>
-                <Text style={styles.zoomText}>－</Text>
-              </Pressable>
-            </View>
           </ImageBackground>
-        </View>
-      </View>
-
-      <View style={styles.mapTools}>
-        <Pressable style={styles.listButton} onPress={() => setShowList(true)}>
-          <Text style={styles.listIcon}>☰</Text>
-          <Text style={styles.listButtonText}>목록 보기</Text>
-        </Pressable>
-
-        <View style={styles.helpCard}>
-          <Text style={styles.helpIcon}>!</Text>
-          <Text style={styles.helpText}>건물을 클릭하면 식당 정보를 확인할 수 있어요.</Text>
         </View>
       </View>
 
@@ -130,39 +109,24 @@ export default function CampusMapScreen({ navigation }) {
           {selectedBuilding.restaurants.map((item) => {
             const restaurant = getRestaurantById(item.restaurantId);
             return (
-              <Pressable key={item.restaurantId} style={styles.sheetRow} onPress={() => openRestaurantDetail(item.restaurantId)}>
-                <View style={styles.sheetIcon}>
-                  <Text style={styles.sheetIconText}>식</Text>
-                </View>
+              <Pressable key={item.restaurantId} style={styles.restaurantCard} onPress={() => openRestaurantDetail(item.restaurantId)}>
+                <ImageBackground
+                  source={{ uri: restaurant?.imageUrl }}
+                  style={styles.restaurantImage}
+                  imageStyle={styles.restaurantImageRadius}
+                >
+                  <View style={styles.restaurantImageDim} />
+                </ImageBackground>
                 <View style={styles.sheetCopy}>
                   <Text style={styles.sheetName}>{item.label}</Text>
                   <Text style={styles.sheetMeta}>
                     {restaurant?.category ?? "식당"} · {item.hours}
                   </Text>
                 </View>
-                <Text style={styles.sheetAction}>보기</Text>
+                <Text style={styles.cardArrow}>›</Text>
               </Pressable>
             );
           })}
-        </View>
-      ) : null}
-
-      {showList ? (
-        <View style={styles.listPanel}>
-          <View style={styles.listPanelTop}>
-            <Text style={styles.listTitle}>식당 목록</Text>
-            <Pressable style={styles.closeButton} onPress={() => setShowList(false)}>
-              <Text style={styles.closeText}>닫기</Text>
-            </Pressable>
-          </View>
-          <ScrollView style={styles.listScroll}>
-            {visibleRestaurants.map((restaurant) => (
-              <Pressable key={restaurant.id} style={styles.listRestaurant} onPress={() => openRestaurantDetail(restaurant.id)}>
-                <Text style={styles.listRestaurantName}>{restaurant.name}</Text>
-                <Text style={styles.listRestaurantMeta}>{restaurant.location}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
         </View>
       ) : null}
     </View>
@@ -173,20 +137,24 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "#eef5f9",
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingTop: 0,
+    paddingBottom: 8,
   },
   mapStage: {
-    flex: 1,
+    height: 302,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
     overflow: "hidden",
-    borderRadius: 26,
+    marginTop: 0,
+    borderRadius: 22,
     backgroundColor: "#f7fbfe",
     borderWidth: 1,
     borderColor: "#dcebf2",
   },
   mapCanvas: {
     maxHeight: "100%",
+    marginTop: -18,
   },
   mapImage: {
     width: "100%",
@@ -239,123 +207,8 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     textAlign: "center",
   },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 1,
-  },
-  infoBullet: {
-    color: colors.ink,
-    fontSize: 10,
-    fontWeight: "900",
-  },
-  infoName: {
-    flex: 1,
-    color: colors.text,
-    fontSize: 9,
-    fontWeight: "900",
-  },
-  zoomControl: {
-    position: "absolute",
-    right: "2%",
-    top: "10%",
-    zIndex: 5,
-    overflow: "hidden",
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.96)",
-    shadowColor: "#4d6070",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.14,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  zoomButton: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  zoomText: {
-    color: colors.ink,
-    fontSize: 22,
-    fontWeight: "900",
-  },
-  zoomDivider: {
-    height: 1,
-    backgroundColor: "#e4edf3",
-  },
-  mapTools: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    gap: 8,
-    marginTop: 8,
-  },
-  listButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 9,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 16,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#d7e9f1",
-    shadowColor: "#4d6070",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  listIcon: {
-    color: colors.ink,
-    fontSize: 17,
-    fontWeight: "900",
-  },
-  listButtonText: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  helpCard: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 9,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 16,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#d7e9f1",
-    shadowColor: "#4d6070",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  helpIcon: {
-    width: 24,
-    height: 24,
-    overflow: "hidden",
-    borderRadius: 12,
-    backgroundColor: "#fff2d3",
-    color: "#e89b22",
-    fontSize: 15,
-    fontWeight: "900",
-    lineHeight: 24,
-    textAlign: "center",
-  },
-  helpText: {
-    flex: 1,
-    color: colors.text,
-    fontSize: 11,
-    fontWeight: "900",
-    lineHeight: 15,
-  },
   bottomSheet: {
-    marginTop: 9,
+    marginTop: 8,
     padding: 13,
     borderRadius: 20,
     backgroundColor: "#ffffff",
@@ -390,24 +243,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "900",
   },
-  sheetRow: {
+  restaurantCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 9,
-    paddingVertical: 7,
+    gap: 11,
+    marginTop: 8,
+    padding: 9,
+    borderRadius: 18,
+    backgroundColor: "#f7fbfe",
+    borderWidth: 1,
+    borderColor: "#d9ecf4",
   },
-  sheetIcon: {
-    width: 31,
-    height: 31,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 16,
-    backgroundColor: "#e9f8ee",
+  restaurantImage: {
+    width: 66,
+    height: 54,
+    overflow: "hidden",
+    borderRadius: 14,
   },
-  sheetIconText: {
-    color: colors.mint,
-    fontSize: 11,
-    fontWeight: "900",
+  restaurantImageRadius: {
+    borderRadius: 14,
+  },
+  restaurantImageDim: {
+    flex: 1,
+    backgroundColor: "rgba(8, 36, 56, 0.04)",
   },
   sheetCopy: {
     flex: 1,
@@ -424,70 +282,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
   },
-  sheetAction: {
+  cardArrow: {
+    width: 28,
+    height: 28,
     overflow: "hidden",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
+    borderRadius: 14,
     backgroundColor: colors.primary,
     color: "#ffffff",
-    fontSize: 12,
+    fontSize: 24,
     fontWeight: "900",
-  },
-  listPanel: {
-    position: "absolute",
-    left: 14,
-    right: 14,
-    top: 82,
-    bottom: 14,
-    zIndex: 10,
-    padding: 14,
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.98)",
-    borderWidth: 1,
-    borderColor: "#d7e9f1",
-  },
-  listPanelTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 10,
-  },
-  listTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: "900",
-  },
-  closeButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "#eaf7fc",
-  },
-  closeText: {
-    color: colors.primaryDark,
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  listScroll: {
-    flex: 1,
-  },
-  listRestaurant: {
-    paddingVertical: 11,
-    borderBottomWidth: 1,
-    borderBottomColor: "#edf3f7",
-  },
-  listRestaurantName: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: "900",
-  },
-  listRestaurantMeta: {
-    marginTop: 4,
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "800",
+    lineHeight: 26,
+    textAlign: "center",
   },
   emptyBox: {
     alignItems: "center",

@@ -1,182 +1,52 @@
 import {
-  friendCheckins,
+  campusMapBuildings,
   mealMatePosts,
-  mealMateTopics,
   menus,
   popularRestaurants,
   recommendationTree,
   restaurants,
   todayCafeteria,
-  university,
-} from "../data/dummyData";
+} from "../data/campusData";
 
-const restaurantOverrides = {
-  "tomato-gimbap": {
-    name: "토마토김밥",
-    category: "분식",
-    location: "기술혁신파크(TIP) 푸드코트",
-  },
-  "hans-omelet": {
-    name: "한스오믈렛",
-    category: "양식",
-    location: "기술혁신파크(TIP) 푸드코트",
-  },
-  "shin-bukgyeong": {
-    name: "신북경",
-    category: "중식",
-    location: "기술혁신파크(TIP) 푸드코트",
-  },
-  "moms-touch": {
-    name: "맘스터치",
-    category: "패스트푸드",
-    location: "기술혁신파크(TIP) 푸드코트",
-  },
-  "raon-restaurant": {
-    name: "라온식당",
-    category: "한식",
-    location: "종합교육관 1층",
-    description: "종합교육관 근처에서 찌개, 덮밥, 분식류를 먹기 좋은 식당입니다.",
-  },
-  "tomato-dosirak": {
-    name: "토마토도시락",
-    category: "도시락",
-    location: "산학융합관 푸드코트",
-  },
-};
+export { campusMapBuildings };
 
-const extraRestaurants = [
+const restaurantById = new Map(restaurants.map((restaurant) => [restaurant.id, restaurant]));
+const menuById = new Map(menus.map((menu) => [menu.id, menu]));
+
+const quickPickConfigs = [
   {
-    id: "shin-bukgyeong-maratang",
-    name: "신북경마라탕",
-    category: "마라탕",
-    rating: 4.4,
-    tasteScore: 4.5,
-    portionScore: 4.3,
-    valueScore: 4.2,
-    imageUrl: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80",
-    location: "기술혁신파크(TIP) 푸드코트",
-    phone: "031-000-0018",
-    openingHours: "10:30 - 19:30",
-    isOpen: true,
-    reviewSummary: "매운 국물과 원하는 재료를 고르는 재미가 있는 TIP 인기 메뉴입니다.",
-    description: "신북경 계열의 마라탕 매장입니다. 수업 사이 든든하게 먹기 좋아요.",
+    restaurantId: "tomato-gimbap",
+    recentUsers: 11,
+    reason: "김밥, 라면처럼 회전이 빠른 메뉴가 많아요.",
   },
   {
-    id: "nadri-gimbap",
-    name: "나드리김밥",
-    category: "분식",
-    rating: 4.2,
-    tasteScore: 4.1,
-    portionScore: 4.2,
-    valueScore: 4.4,
-    imageUrl: "https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?auto=format&fit=crop&w=900&q=80",
-    location: "산학융합관 푸드코트",
-    phone: "031-000-0019",
-    openingHours: "10:00 - 19:00",
-    isOpen: true,
-    reviewSummary: "김밥, 라면, 분식류를 빠르게 먹기 좋은 산학융합관 식당입니다.",
-    description: "간단한 한 끼나 수업 전후 빠른 식사를 찾을 때 좋은 분식 매장입니다.",
+    restaurantId: "tomato-dosirak",
+    recentUsers: 16,
+    reason: "포장해서 바로 이동하기 좋아요.",
+  },
+  {
+    restaurantId: "raon-restaurant",
+    recentUsers: 28,
+    reason: "종합교육관 수업 전후 동선이 짧아요.",
   },
 ];
 
-const extraMenus = [
-  {
-    id: "menu-maratang-1",
-    restaurantId: "shin-bukgyeong-maratang",
-    name: "마라탕 기본",
-    imageUrl: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80",
-    price: 8500,
-    category: "중식",
-    tags: ["매워", "국물", "든든", "공유"],
-    description: "원하는 재료와 매운맛을 골라 먹는 마라탕 메뉴입니다.",
-    recommendationText: "얼큰한 국물이 당길 때 신북경마라탕이 잘 맞아요.",
-    options: [
-      { id: "maratang-option-1", name: "매운맛 1단계", price: 0 },
-      { id: "maratang-option-2", name: "고기 추가", price: 2000 },
-    ],
-  },
-  {
-    id: "menu-nadri-1",
-    restaurantId: "nadri-gimbap",
-    name: "나드리김밥",
-    imageUrl: "https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?auto=format&fit=crop&w=900&q=80",
-    price: 4500,
-    category: "분식",
-    tags: ["빠른", "가벼운", "밥", "가성비"],
-    description: "수업 사이 빠르게 먹기 좋은 기본 김밥입니다.",
-    recommendationText: "가볍고 빠른 한 끼가 필요하면 나드리김밥이 좋아요.",
-    options: [
-      { id: "nadri-option-1", name: "단무지 추가", price: 300 },
-      { id: "nadri-option-2", name: "라면 세트", price: 3000 },
-    ],
-  },
+const popularMenuConfigs = [
+  { menuId: "menu-cyburger", rank: 1 },
+  { menuId: "menu-maratang", rank: 2 },
+  { menuId: "menu-tomato-gimbap", rank: 3 },
 ];
-
-const hiddenRestaurantIds = new Set(["student-cafeteria", "suho-restaurant", "cafe-ing", "tospia", "coffee-bay"]);
-
-const livePopularRestaurants = [
-  { restaurantId: "moms-touch", rank: 1, selectedCount: 42 },
-  { restaurantId: "shin-bukgyeong-maratang", rank: 2, selectedCount: 38 },
-  { restaurantId: "tomato-gimbap", rank: 3, selectedCount: 31 },
-];
-
-const liveFriendCheckins = [
-  { restaurantId: "moms-touch", studentCount: 18 },
-  { restaurantId: "raon-restaurant", studentCount: 13 },
-  { restaurantId: "tomato-dosirak", studentCount: 9 },
-];
-
-export const campusMapBuildings = [
-  {
-    id: "tip",
-    name: "TIP",
-    position: { left: "14%", top: "30%" },
-    restaurants: [
-      { restaurantId: "shin-bukgyeong-maratang", label: "신북경마라탕", hours: "10:30 - 19:30" },
-      { restaurantId: "tomato-gimbap", label: "토마토김밥", hours: "10:00 - 19:00" },
-      { restaurantId: "hans-omelet", label: "한스오믈렛", hours: "10:30 - 19:00" },
-      { restaurantId: "moms-touch", label: "맘스터치", hours: "10:00 - 20:00" },
-      { restaurantId: "shin-bukgyeong", label: "신북경", hours: "10:30 - 19:30" },
-    ],
-  },
-  {
-    id: "education",
-    name: "종합교육관",
-    position: { left: "42%", top: "20%" },
-    restaurants: [
-      { restaurantId: "raon-restaurant", label: "라온 식당", hours: "11:00 - 19:00" },
-    ],
-  },
-  {
-    id: "industry",
-    name: "산학융합관",
-    position: { left: "73%", top: "34%" },
-    restaurants: [
-      { restaurantId: "tomato-dosirak", label: "토마토도시락", hours: "10:00 - 19:00" },
-      { restaurantId: "nadri-gimbap", label: "나드리김밥", hours: "10:00 - 19:00" },
-    ],
-  },
-];
-
-function normalizeRestaurant(restaurant) {
-  const override = restaurantOverrides[restaurant.id] ?? {};
-
-  return {
-    ...restaurant,
-    ...override,
-  };
-}
-
-function getVisibleMenus() {
-  return [...menus, ...extraMenus].filter((menu) => !hiddenRestaurantIds.has(menu.restaurantId));
-}
-
-export function getUniversity() {
-  return university;
-}
 
 export function getRestaurants() {
-  return [...restaurants, ...extraRestaurants].filter((restaurant) => !hiddenRestaurantIds.has(restaurant.id)).map(normalizeRestaurant);
+  return restaurants;
+}
+
+export function getRestaurantById(restaurantId) {
+  return restaurantById.get(restaurantId);
+}
+
+export function getRestaurantNameById(restaurantId) {
+  return getRestaurantById(restaurantId)?.name ?? "알 수 없는 식당";
 }
 
 export function getTodayCafeteria() {
@@ -184,21 +54,30 @@ export function getTodayCafeteria() {
 }
 
 export function getPopularRestaurants() {
-  return livePopularRestaurants.map((item) => ({
-    ...item,
-    restaurant: getRestaurantById(item.restaurantId),
-  }));
+  return attachRestaurants(popularRestaurants);
 }
 
-export function getFriendCheckins() {
-  return liveFriendCheckins.map((item) => ({
-    ...item,
-    restaurant: getRestaurantById(item.restaurantId),
-  }));
+export function getCrowdPicks() {
+  return quickPickConfigs
+    .map((item) => ({
+      ...item,
+      restaurant: getRestaurantById(item.restaurantId),
+      status: getCrowdStatus(item.recentUsers),
+    }))
+    .filter((item) => item.restaurant);
 }
 
-export function getMealMateTopics() {
-  return mealMateTopics;
+export function getPopularMenus() {
+  return popularMenuConfigs
+    .map((item) => {
+      const menu = getMenuById(item.menuId);
+      return {
+        ...item,
+        menu,
+        restaurant: menu ? getRestaurantById(menu.restaurantId) : undefined,
+      };
+    })
+    .filter((item) => item.menu && item.restaurant);
 }
 
 export function getMealMatePosts() {
@@ -215,36 +94,92 @@ export function getRecommendationTree() {
   return recommendationTree;
 }
 
-export function getRestaurantById(restaurantId) {
-  const restaurant = [...restaurants, ...extraRestaurants].find((item) => item.id === restaurantId);
-
-  if (!restaurant || hiddenRestaurantIds.has(restaurant.id)) {
-    return undefined;
-  }
-
-  return normalizeRestaurant(restaurant);
-}
-
-export function getRestaurantNameById(restaurantId) {
-  return getRestaurantById(restaurantId)?.name ?? "알 수 없는 식당";
+export function getMenuById(menuId) {
+  return menuById.get(menuId);
 }
 
 export function getMenusByRestaurantId(restaurantId) {
-  if (hiddenRestaurantIds.has(restaurantId)) {
+  return menus.filter((menu) => menu.restaurantId === restaurantId);
+}
+
+export function getMenusByCategory(category) {
+  return menus
+    .filter((menu) => matchesCategory(menu, category))
+    .slice(0, 8)
+    .map((menu) => ({
+      ...menu,
+      restaurant: getRestaurantById(menu.restaurantId),
+    }));
+}
+
+export function searchCampusFood(query) {
+  const keyword = normalizeKeyword(query);
+
+  if (!keyword) {
     return [];
   }
 
-  return getVisibleMenus().filter((menu) => menu.restaurantId === restaurantId);
+  const restaurantResults = restaurants
+    .filter((restaurant) => {
+      return [restaurant.name, restaurant.category, restaurant.location, restaurant.description]
+        .filter(Boolean)
+        .some((value) => normalizeKeyword(value).includes(keyword));
+    })
+    .map((restaurant) => ({
+      id: `restaurant-${restaurant.id}`,
+      type: "restaurant",
+      title: restaurant.name,
+      subtitle: `${restaurant.category} · ${restaurant.location}`,
+      imageUrl: restaurant.imageUrl,
+      targetId: restaurant.id,
+    }));
+
+  const menuResults = menus
+    .filter((menu) => {
+      const restaurant = getRestaurantById(menu.restaurantId);
+      return [menu.name, menu.category, menu.description, restaurant?.name, ...(menu.tags ?? [])]
+        .filter(Boolean)
+        .some((value) => normalizeKeyword(value).includes(keyword));
+    })
+    .map((menu) => {
+      const restaurant = getRestaurantById(menu.restaurantId);
+      return {
+        id: `menu-${menu.id}`,
+        type: "menu",
+        title: menu.name,
+        subtitle: `${restaurant?.name ?? "학교 식당"} · ${menu.category}`,
+        imageUrl: menu.imageUrl,
+        price: menu.price,
+        targetId: menu.id,
+      };
+    });
+
+  return [...restaurantResults, ...menuResults].slice(0, 8);
 }
 
-export function getMenuById(menuId) {
-  const menu = getVisibleMenus().find((item) => item.id === menuId);
+export function getRestaurantCount() {
+  return campusMapBuildings.reduce((count, building) => count + building.restaurants.length, 0);
+}
 
-  if (!menu || hiddenRestaurantIds.has(menu.restaurantId)) {
-    return undefined;
-  }
+export function getBuildingCards() {
+  return campusMapBuildings.map((building, index) => {
+    const buildingRestaurants = building.restaurants.map((item) => ({
+      ...item,
+      restaurant: getRestaurantById(item.restaurantId),
+    }));
+    const firstRestaurant = buildingRestaurants.find((item) => item.restaurant)?.restaurant;
 
-  return menu;
+    return {
+      ...building,
+      index: index + 1,
+      displayName: building.name,
+      imageUrl: firstRestaurant?.imageUrl,
+      menuPreview: buildingRestaurants.map((item) => item.label).slice(0, 3).join(", "),
+      walkText: index === 0 ? "도보 5분" : index === 1 ? "도보 3분" : "도보 7분",
+      crowdText: index === 1 ? "원활 · 최근 8명" : index === 2 ? "보통 · 최근 16명" : "혼잡 · 최근 28명",
+      restaurants: buildingRestaurants,
+    };
+  });
 }
 
 export function getRecommendedMenuByTags(selectedTags) {
@@ -253,11 +188,11 @@ export function getRecommendedMenuByTags(selectedTags) {
 
 export function getRecommendedMenuResult(selectedTags) {
   const scoredMenus = getScoredMenus(selectedTags);
-  const fallbackMenus = getVisibleMenus().map((menu) => ({
+  const fallbackMenus = menus.map((menu) => ({
     menu,
     score: 0,
     matchedTags: [],
-    reason: "오늘은 새로운 메뉴를 가볍게 시도해봐도 좋아요.",
+    reason: "오늘은 새로운 메뉴를 가볍게 시도해도 좋아요.",
   }));
   const candidates = scoredMenus.length > 0 ? scoredMenus : fallbackMenus;
   const primary = pickWeighted(candidates);
@@ -295,31 +230,82 @@ export function getRecommendedMenuResult(selectedTags) {
   };
 }
 
+function attachRestaurants(items) {
+  return items
+    .map((item) => ({
+      ...item,
+      restaurant: getRestaurantById(item.restaurantId),
+    }))
+    .filter((item) => item.restaurant);
+}
+
+export function getCrowdStatus(recentUsers) {
+  if (recentUsers >= 26) {
+    return "혼잡";
+  }
+
+  if (recentUsers >= 15) {
+    return "보통";
+  }
+
+  return "원활";
+}
+
+function matchesCategory(menu, category) {
+  if (category === "전체") {
+    return true;
+  }
+
+  if (category === "카페") {
+    return menu.category.includes("카페") || menu.tags.includes("음료") || menu.tags.includes("디저트");
+  }
+
+  if (category === "가성비") {
+    return menu.price <= 6500 || menu.tags.includes("가성비");
+  }
+
+  if (category === "혼밥") {
+    return menu.tags.includes("혼밥") || menu.tags.includes("빠른") || menu.price <= 8000;
+  }
+
+  return menu.category === category;
+}
+
+function normalizeKeyword(value) {
+  return String(value ?? "").replace(/\s+/g, "").toLowerCase();
+}
+
 function getScoredMenus(selectedTags) {
   const normalizedTags = [...new Set(selectedTags)];
 
   if (normalizedTags.length === 0) {
-    return [];
+    return menus.map((menu) => ({
+      menu,
+      score: 1,
+      matchedTags: [],
+      reason: menu.recommendationText,
+    }));
   }
 
-  return getVisibleMenus()
-    .map((menu) => ({
-      menu,
-      matchedTags: normalizedTags.filter((tag) => getMenuRecommendationTags(menu).includes(tag)),
-    }))
-    .map((item) => ({
-      ...item,
-      score: item.matchedTags.length,
-      reason: buildRecommendationReason(item.menu, item.matchedTags),
-    }))
+  return menus
+    .map((menu) => {
+      const matchedTags = normalizedTags.filter((tag) => getMenuRecommendationTags(menu).includes(tag));
+      return {
+        menu,
+        score: matchedTags.length,
+        matchedTags,
+        reason: buildRecommendationReason(menu, matchedTags),
+      };
+    })
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score || a.menu.price - b.menu.price);
 }
 
 function getMenuRecommendationTags(menu) {
   const priceTags = [];
+
   if (menu.price <= 5500) {
-    priceTags.push("저렴");
+    priceTags.push("저렴", "가성비");
   }
   if (menu.price <= 7500) {
     priceTags.push("보통");
@@ -336,25 +322,19 @@ function buildRecommendationReason(menu, matchedTags) {
     return menu.recommendationText;
   }
 
-  const tags = matchedTags.slice(0, 3).join(", ");
-  return `${tags} 조건에 잘 맞아서 추천해요. ${menu.recommendationText}`;
+  return `${matchedTags.join(", ")} 조건에 잘 맞아서 추천해요. ${menu.recommendationText}`;
 }
 
 function pickWeighted(scoredItems) {
-  if (scoredItems.length === 0) {
-    return null;
+  if (scoredItems.length <= 1) {
+    return scoredItems[0];
   }
 
   const topScore = scoredItems[0].score;
-  const topGroup = scoredItems.filter((item) => item.score === topScore);
-  return pickRandom(topGroup);
+  const topItems = scoredItems.filter((item) => item.score === topScore);
+  return pickRandom(topItems);
 }
 
 function pickRandom(items) {
-  if (items.length === 0) {
-    return null;
-  }
-
-  const randomIndex = Math.floor(Math.random() * items.length);
-  return items[randomIndex];
+  return items[Math.floor(Math.random() * items.length)];
 }

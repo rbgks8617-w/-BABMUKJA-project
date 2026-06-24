@@ -1,13 +1,55 @@
-import React from "react";
+import React, { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import PriceSummary from "../components/PriceSummary";
 import QuantitySelector from "../components/QuantitySelector";
+import { getMenuById } from "../services/restaurantService";
 import { useCart } from "../store/CartContext";
 import { APP_FONT_FAMILY } from "../theme/typography";
 import { formatPrice } from "../utils/formatPrice";
 
+function normalizeOptions(options = []) {
+  return [...options].sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function optionKey(options = []) {
+  return normalizeOptions(options).map((option) => option.id).join("|");
+}
+
 export default function CartScreen({ navigation }) {
-  const { cartItems, changeCartItemQuantity, removeFromCart, totalPrice } = useCart();
+  const { cartItems, changeCartItemQuantity, removeFromCart, splitCartItemWithOptions, totalPrice } = useCart();
+  const [optionDrafts, setOptionDrafts] = useState({});
+
+  function getDraftOptions(item) {
+    return optionDrafts[item.cartId] ?? item.selectedOptions;
+  }
+
+  function toggleOption(item, option) {
+    setOptionDrafts((currentDrafts) => {
+      const currentOptions = getDraftOptionsFromState(currentDrafts, item);
+      const optionExists = currentOptions.some((selectedOption) => selectedOption.id === option.id);
+      const nextOptions = optionExists
+        ? currentOptions.filter((selectedOption) => selectedOption.id !== option.id)
+        : [...currentOptions, option];
+
+      return {
+        ...currentDrafts,
+        [item.cartId]: normalizeOptions(nextOptions),
+      };
+    });
+  }
+
+  function getDraftOptionsFromState(drafts, item) {
+    return drafts[item.cartId] ?? item.selectedOptions;
+  }
+
+  function applyOptionChange(item) {
+    splitCartItemWithOptions(item.cartId, getDraftOptions(item));
+    setOptionDrafts((currentDrafts) => {
+      const nextDrafts = { ...currentDrafts };
+      delete nextDrafts[item.cartId];
+      return nextDrafts;
+    });
+  }
 
   if (cartItems.length === 0) {
     return (
@@ -22,41 +64,86 @@ export default function CartScreen({ navigation }) {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {cartItems.map((item) => (
-        <View key={item.cartId} style={styles.item}>
-          <Pressable
-            accessibilityLabel={`${item.name} 삭제`}
-            style={styles.deleteButton}
-            onPress={() => removeFromCart(item.cartId)}
-          >
-            <Text style={styles.deleteButtonText}>삭제</Text>
-          </Pressable>
+      {cartItems.map((item) => {
+        const menu = getMenuById(item.menuId);
+        const availableOptions = menu?.options ?? [];
+        const draftOptions = getDraftOptions(item);
+        const hasOptionChange = optionKey(draftOptions) !== optionKey(item.selectedOptions);
+        const applyLabel = item.quantity > 1 ? "이 옵션으로 1개 따로 담기" : "이 옵션으로 적용";
 
-          <View style={styles.itemHeader}>
-            <View style={styles.itemTitleArea}>
-              <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemMeta}>개당 {formatPrice(item.unitPrice ?? item.basePrice)}</Text>
+        return (
+          <View key={item.cartId} style={styles.item}>
+            <Pressable
+              accessibilityLabel={`${item.name} 삭제`}
+              style={styles.deleteButton}
+              onPress={() => removeFromCart(item.cartId)}
+            >
+              <Text style={styles.deleteButtonText}>삭제</Text>
+            </Pressable>
+
+            <View style={styles.itemHeader}>
+              <View style={styles.itemTitleArea}>
+                <Text style={styles.itemName}>{item.name}</Text>
+                <Text style={styles.itemMeta}>개당 {formatPrice(item.unitPrice ?? item.basePrice)}</Text>
+              </View>
+            </View>
+
+            {item.selectedOptions.length > 0 ? (
+              <Text style={styles.itemMeta}>
+                옵션: {item.selectedOptions.map((option) => option.name).join(", ")}
+              </Text>
+            ) : (
+              <Text style={styles.itemMeta}>옵션 없음</Text>
+            )}
+
+            {availableOptions.length > 0 ? (
+              <View style={styles.optionPanel}>
+                <View style={styles.optionPanelHeader}>
+                  <Text style={styles.optionPanelTitle}>옵션 변경</Text>
+                  <Text style={styles.optionPanelHint}>선택한 옵션은 1개만 분리돼요</Text>
+                </View>
+                <View style={styles.optionChips}>
+                  {availableOptions.map((option) => {
+                    const isSelected = draftOptions.some((selectedOption) => selectedOption.id === option.id);
+                    return (
+                      <Pressable
+                        key={option.id}
+                        style={[styles.optionChip, isSelected && styles.optionChipSelected]}
+                        onPress={() => toggleOption(item, option)}
+                      >
+                        <Text style={[styles.optionChipText, isSelected && styles.optionChipTextSelected]}>
+                          {option.name}
+                        </Text>
+                        <Text style={[styles.optionChipPrice, isSelected && styles.optionChipTextSelected]}>
+                          +{formatPrice(option.price)}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <Pressable
+                  disabled={!hasOptionChange}
+                  style={[styles.optionApplyButton, !hasOptionChange && styles.optionApplyButtonDisabled]}
+                  onPress={() => applyOptionChange(item)}
+                >
+                  <Text style={[styles.optionApplyText, !hasOptionChange && styles.optionApplyTextDisabled]}>
+                    {applyLabel}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+
+            <View style={styles.quantityPanel}>
+              <Text style={styles.quantityLabel}>수량</Text>
+              <QuantitySelector
+                quantity={item.quantity}
+                onDecrease={() => changeCartItemQuantity(item.cartId, -1)}
+                onIncrease={() => changeCartItemQuantity(item.cartId, 1)}
+              />
             </View>
           </View>
-
-          {item.selectedOptions.length > 0 ? (
-            <Text style={styles.itemMeta}>
-              옵션: {item.selectedOptions.map((option) => option.name).join(", ")}
-            </Text>
-          ) : (
-            <Text style={styles.itemMeta}>옵션 없음</Text>
-          )}
-
-          <View style={styles.quantityPanel}>
-            <Text style={styles.quantityLabel}>수량</Text>
-            <QuantitySelector
-              quantity={item.quantity}
-              onDecrease={() => changeCartItemQuantity(item.cartId, -1)}
-              onIncrease={() => changeCartItemQuantity(item.cartId, 1)}
-            />
-          </View>
-        </View>
-      ))}
+        );
+      })}
 
       <PriceSummary price={totalPrice} />
       <Pressable
@@ -127,6 +214,84 @@ const styles = StyleSheet.create({
     marginTop: 8,
     color: "#666666",
     lineHeight: 19,
+  },
+  optionPanel: {
+    marginTop: 14,
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: "#f7fbfe",
+    borderWidth: 1,
+    borderColor: "#d7e9f1",
+  },
+  optionPanelHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    marginBottom: 10,
+  },
+  optionPanelTitle: {
+    color: "#222222",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  optionPanelHint: {
+    flexShrink: 1,
+    color: "#66788a",
+    fontSize: 11,
+    fontWeight: "800",
+    textAlign: "right",
+  },
+  optionChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  optionChip: {
+    minHeight: 38,
+    justifyContent: "center",
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#cdeaf7",
+  },
+  optionChipSelected: {
+    backgroundColor: "#1d63b7",
+    borderColor: "#1d63b7",
+  },
+  optionChipText: {
+    color: "#222222",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  optionChipPrice: {
+    marginTop: 1,
+    color: "#66788a",
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  optionChipTextSelected: {
+    color: "#ffffff",
+  },
+  optionApplyButton: {
+    alignItems: "center",
+    marginTop: 11,
+    paddingVertical: 11,
+    borderRadius: 12,
+    backgroundColor: "#1d63b7",
+  },
+  optionApplyButtonDisabled: {
+    backgroundColor: "#e8f1f7",
+  },
+  optionApplyText: {
+    color: "#ffffff",
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  optionApplyTextDisabled: {
+    color: "#7f95a8",
   },
   quantityPanel: {
     marginTop: 14,

@@ -11,6 +11,7 @@ import { formatPrice } from "../utils/formatPrice";
 export default function RecommendationScreen({ navigation }) {
   const tree = getRecommendationTree();
   const [selectedOptions, setSelectedOptions] = useState({});
+  const [shuffleSeed, setShuffleSeed] = useState(0);
   const resultOpacity = useRef(new Animated.Value(1)).current;
 
   const selectedTags = useMemo(() => {
@@ -19,7 +20,7 @@ export default function RecommendationScreen({ navigation }) {
 
   const activeStepIndex = Math.min(Object.keys(selectedOptions).length, tree.length - 1);
   const visibleSteps = tree.slice(0, activeStepIndex + 1);
-  const recommendation = useMemo(() => getRecommendedMenuResult(selectedTags), [selectedTags]);
+  const recommendation = useMemo(() => getRecommendedMenuResult(selectedTags), [selectedTags, shuffleSeed]);
   const recommendedMenu = recommendation.primary;
   const selectedPath = tree.map((step) => selectedOptions[step.id]?.label).filter(Boolean);
 
@@ -43,6 +44,7 @@ export default function RecommendationScreen({ navigation }) {
   }
 
   function handleShuffle() {
+    setShuffleSeed((currentSeed) => currentSeed + 1);
     animateResult();
   }
 
@@ -60,14 +62,14 @@ export default function RecommendationScreen({ navigation }) {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.hero}>
-        <Text style={styles.eyebrow}>오늘 메뉴 큐레이션</Text>
-        <Text style={styles.title}>몇 번만 고르면 메뉴가 좁혀져요</Text>
-        <Text style={styles.description}>
-          상황, 입맛, 형태, 가격대를 반영해 캠퍼스 메뉴 중 가장 잘 맞는 후보를 골라줄게요.
-        </Text>
-        <View style={styles.progressPill}>
-          <Text style={styles.progressText}>{progressText}</Text>
+        <View style={styles.heroTop}>
+          <Text style={styles.eyebrow}>오늘 메뉴 추천</Text>
+          <View style={styles.progressPill}>
+            <Text style={styles.progressText}>{progressText}</Text>
+          </View>
         </View>
+        <Text style={styles.title}>취향만 골라주세요</Text>
+        <Text style={styles.description}>상황, 입맛, 가격대에 맞춰 캠퍼스 메뉴를 추천해요.</Text>
       </View>
 
       {selectedPath.length > 0 && (
@@ -177,40 +179,48 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   hero: {
-    marginBottom: 16,
-    padding: 20,
-    borderRadius: 16,
-    backgroundColor: colors.ink,
+    marginBottom: 14,
+    padding: 17,
+    borderRadius: 20,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#cdeaf7",
+  },
+  heroTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
   },
   eyebrow: {
-    color: "#ffc4ad",
-    fontSize: 13,
-    fontWeight: "800",
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: "900",
   },
   title: {
     marginTop: 8,
-    color: "#ffffff",
-    fontSize: 27,
-    fontWeight: "800",
-    lineHeight: 34,
+    color: colors.text,
+    fontSize: 24,
+    fontWeight: "900",
+    lineHeight: 30,
   },
   description: {
-    marginTop: 8,
-    color: "#f5ded3",
-    lineHeight: 21,
+    marginTop: 6,
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: "800",
+    lineHeight: 19,
   },
   progressPill: {
-    alignSelf: "flex-start",
-    marginTop: 14,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: "rgba(255, 255, 255, 0.12)",
+    backgroundColor: "#eef8fc",
   },
   progressText: {
-    color: "#ffffff",
+    color: colors.primaryDark,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "900",
   },
   pathBox: {
     marginBottom: 14,

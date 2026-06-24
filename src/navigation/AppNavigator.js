@@ -1,5 +1,6 @@
 import React from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { CommonActions } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import CartScreen from "../screens/CartScreen";
 import CampusMapScreen from "../screens/CampusMapScreen";
@@ -26,12 +27,26 @@ const headerTitleStyle = {
   fontWeight: "700",
 };
 
-function BackHeaderButton({ navigation, label = "뒤로" }) {
+function goBackOrFallback(navigation, fallbackRoute = "RestaurantList") {
+  if (navigation.canGoBack()) {
+    navigation.goBack();
+    return;
+  }
+
+  navigation.dispatch(
+    CommonActions.reset({
+      index: 0,
+      routes: [{ name: fallbackRoute }],
+    }),
+  );
+}
+
+function BackHeaderButton({ navigation, label = "뒤로", fallbackRoute = "RestaurantList" }) {
   return (
     <Pressable
       hitSlop={8}
       style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-      onPress={() => navigation.goBack()}
+      onPress={() => goBackOrFallback(navigation, fallbackRoute)}
     >
       <View style={styles.backIconCircle}>
         <View style={styles.backChevron} />
@@ -55,7 +70,7 @@ function HomeHeaderTitle() {
   );
 }
 
-function pushOptions(navigation, title, label = "뒤로") {
+function pushOptions(navigation, title, label = "뒤로", fallbackRoute = "RestaurantList") {
   return {
     animation: "slide_from_right",
     animationDuration: 360,
@@ -63,7 +78,7 @@ function pushOptions(navigation, title, label = "뒤로") {
     customAnimationOnGesture: true,
     fullScreenGestureEnabled: true,
     gestureEnabled: true,
-    headerLeft: () => <BackHeaderButton navigation={navigation} label={label} />,
+    headerLeft: () => <BackHeaderButton navigation={navigation} label={label} fallbackRoute={fallbackRoute} />,
     headerShadowVisible: false,
     headerStyle: { backgroundColor: colors.background },
     headerTitleStyle,
@@ -127,12 +142,12 @@ export default function AppNavigator() {
       <Stack.Screen
         name="MealMate"
         component={MealMateScreen}
-        options={({ navigation }) => pushOptions(navigation, "나랑 밥먹자", "커뮤니티")}
+        options={({ navigation }) => pushOptions(navigation, "나랑 밥먹자", "커뮤니티", "Community")}
       />
       <Stack.Screen
         name="MealMateChat"
         component={MealMateChatScreen}
-        options={({ navigation }) => pushOptions(navigation, "익명 채팅", "모임")}
+        options={({ navigation }) => pushOptions(navigation, "익명 채팅", "모임", "MealMate")}
       />
       <Stack.Screen
         name="Notifications"
@@ -140,7 +155,7 @@ export default function AppNavigator() {
         options={({ navigation }) => pushOptions(navigation, "알림", "홈")}
       />
       <Stack.Screen name="Cart" component={CartScreen} options={({ navigation }) => pushOptions(navigation, "장바구니")} />
-      <Stack.Screen name="Payment" component={PaymentScreen} options={({ navigation }) => pushOptions(navigation, "결제")} />
+      <Stack.Screen name="Payment" component={PaymentScreen} options={({ navigation }) => pushOptions(navigation, "결제", "장바구니", "Cart")} />
       <Stack.Screen
         name="OrderComplete"
         component={OrderCompleteScreen}

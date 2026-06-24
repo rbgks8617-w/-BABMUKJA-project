@@ -9,6 +9,29 @@ import { NotificationProvider } from "./src/store/NotificationContext";
 import { colors } from "./src/theme/colors";
 import { roundedTextStyle } from "./src/theme/typography";
 
+const webOrigin = typeof window === "undefined" ? "" : window.location.origin;
+
+const linking = {
+  prefixes: ["babmukja://", webOrigin].filter(Boolean),
+  config: {
+    screens: {
+      Splash: "",
+      RestaurantList: "home",
+      Community: "community",
+      Recommendation: "recommendation",
+      RestaurantDetail: "restaurant/:restaurantId",
+      MenuDetail: "menu/:menuId",
+      CampusMap: "map",
+      MealMate: "meal-mate",
+      MealMateChat: "meal-mate/chat",
+      Notifications: "notifications",
+      Cart: "cart",
+      Payment: "payment",
+      OrderComplete: "order-complete",
+    },
+  },
+};
+
 function applyDefaultFont(Component) {
   Component.defaultProps = Component.defaultProps || {};
   Component.defaultProps.style = [Component.defaultProps.style, roundedTextStyle];
@@ -42,6 +65,11 @@ export default function App() {
       [class*="css-text"] {
         font-family: "GowunDodum", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif !important;
       }
+      html,
+      body,
+      #root {
+        overscroll-behavior-x: contain;
+      }
     `;
     document.head.appendChild(style);
   }, []);
@@ -53,7 +81,7 @@ export default function App() {
   return (
     <NotificationProvider>
       <CartProvider>
-        <NavigationContainer>
+        <NavigationContainer linking={linking}>
           <StatusBar style="dark" />
           <AppNavigator />
         </NavigationContainer>

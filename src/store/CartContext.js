@@ -81,6 +81,52 @@ export function CartProvider({ children }) {
     setCartItems((prevItems) => prevItems.filter((item) => item.cartId !== cartId));
   }
 
+  function splitCartItemWithOptions(cartId, nextSelectedOptions = []) {
+    const selectedOptions = normalizeOptions(nextSelectedOptions);
+
+    setCartItems((prevItems) => {
+      const sourceItem = prevItems.find((item) => item.cartId === cartId);
+
+      if (!sourceItem) {
+        return prevItems;
+      }
+
+      const nextCartId = createCartKey(sourceItem.menuId, selectedOptions);
+
+      if (nextCartId === cartId) {
+        return prevItems;
+      }
+
+      const splitItem = withCalculatedTotal({
+        ...sourceItem,
+        cartId: nextCartId,
+        selectedOptions,
+        quantity: 1,
+      });
+      let mergedIntoExistingItem = false;
+      const nextItems = [];
+
+      prevItems.forEach((item) => {
+        if (item.cartId === cartId) {
+          if (item.quantity > 1) {
+            nextItems.push(withCalculatedTotal({ ...item, quantity: item.quantity - 1 }));
+          }
+          return;
+        }
+
+        if (item.cartId === nextCartId) {
+          mergedIntoExistingItem = true;
+          nextItems.push(withCalculatedTotal({ ...item, quantity: item.quantity + 1 }));
+          return;
+        }
+
+        nextItems.push(item);
+      });
+
+      return mergedIntoExistingItem ? nextItems : [...nextItems, splitItem];
+    });
+  }
+
   function clearCart() {
     setCartItems([]);
   }
@@ -102,6 +148,7 @@ export function CartProvider({ children }) {
     addToCart,
     changeCartItemQuantity,
     removeFromCart,
+    splitCartItemWithOptions,
     clearCart,
   };
 
