@@ -361,18 +361,6 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
           ) : null}
         </View>
 
-        <Pressable style={styles.mateBanner} onPress={() => navigation.navigate("Community")}>
-          <View style={styles.mateIcon}>
-            <Text style={styles.mateIconText}>밥</Text>
-          </View>
-          <View style={styles.mateCopy}>
-            <Text style={styles.mateEyebrow}>혼밥이 걱정될 땐?</Text>
-            <Text style={styles.mateTitle}>나랑 밥먹자 게시판 열기</Text>
-            <Text style={styles.mateDescription}>음식 후기, 자유게시판, 익명 밥 약속까지 한 번에 봐요</Text>
-          </View>
-          <Text style={styles.mateAction}>열기</Text>
-        </Pressable>
-
         {isWideLayout ? (
           <View style={styles.contentLayout}>
             {restaurantSection}
@@ -380,25 +368,30 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
           </View>
         ) : (
           <>
-            {infoRail}
             {restaurantSection}
+            {infoRail}
           </>
         )}
       </ScrollView>
 
-      <Pressable
+      <View
         style={[styles.bottomDock, isWideLayout && { left: (width - 520) / 2, right: undefined, width: 520 }]}
-        onPress={() => navigation.navigate("Recommendation")}
       >
-        <View style={styles.dockIcon}>
-          <Image source={require("../../assets/lunchbox-recommendation.png")} style={styles.dockImage} />
-        </View>
-        <View style={styles.dockCopy}>
-          <Text style={styles.dockTitle}>뭐 먹을지 고민될 땐?</Text>
-          <Text style={styles.dockDescription}>취향 기반으로 오늘 메뉴 추천</Text>
-        </View>
-        <Text style={styles.dockAction}>추천</Text>
-      </Pressable>
+        <Pressable style={styles.dockMainAction} onPress={() => navigation.navigate("Recommendation")}>
+          <View style={styles.dockIcon}>
+            <Image source={require("../../assets/lunchbox-recommendation.png")} style={styles.dockImage} />
+          </View>
+          <View style={styles.dockCopy}>
+            <Text style={styles.dockTitle}>뭐 먹을지 고민될 땐?</Text>
+            <Text style={styles.dockDescription}>취향 기반 메뉴 추천</Text>
+          </View>
+          <Text style={styles.dockAction}>추천</Text>
+        </Pressable>
+        <Pressable style={styles.dockCommunityAction} onPress={() => navigation.navigate("Community")}>
+          <Text style={styles.dockCommunityEyebrow}>게시판</Text>
+          <Text style={styles.dockCommunityTitle}>후기 · 자유 · 밥친구</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -1233,10 +1226,10 @@ const styles = StyleSheet.create({
     zIndex: 10,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 8,
     maxWidth: 520,
     alignSelf: "center",
-    padding: 12,
+    padding: 8,
     borderRadius: 28,
     backgroundColor: "rgba(255, 255, 255, 0.94)",
     borderWidth: 1,
@@ -1246,6 +1239,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.22,
     shadowRadius: 24,
     elevation: 8,
+  },
+  dockMainAction: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 4,
   },
   dockIcon: {
     width: 50,
@@ -1285,5 +1286,29 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 12,
     fontWeight: "900",
+  },
+  dockCommunityAction: {
+    alignSelf: "stretch",
+    justifyContent: "center",
+    minWidth: 96,
+    maxWidth: 132,
+    paddingHorizontal: 12,
+    borderRadius: 22,
+    backgroundColor: "#edf6fc",
+    borderWidth: 1,
+    borderColor: "#d5edf8",
+  },
+  dockCommunityEyebrow: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: "900",
+    lineHeight: 14,
+  },
+  dockCommunityTitle: {
+    marginTop: 2,
+    color: colors.ink,
+    fontSize: 11,
+    fontWeight: "900",
+    lineHeight: 14,
   },
 });
