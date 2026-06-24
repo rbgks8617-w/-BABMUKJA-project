@@ -73,83 +73,85 @@ export default function CampusMapScreen({ route, navigation }: AppScreenProps<"C
       <View pointerEvents="none" style={styles.skyGlowTop} />
       <View pointerEvents="none" style={styles.skyGlowMiddle} />
       <View pointerEvents="none" style={styles.skyGlowFade} />
-      <View style={[styles.mapStage, { height: mapStageHeight }]}>
-        <View style={[styles.mapCanvas, { width: mapWidth, aspectRatio: mapAspectRatio }]}>
-          <ImageBackground source={campusMapImage} resizeMode="contain" style={styles.mapImage}>
-            {campusMapBuildings.map((building) => (
-              <Pressable
-                key={`${building.id}-touch`}
-                style={[styles.touchArea, buildingTouchAreas[building.id]]}
-                onPress={() => selectBuilding(building.id)}
-              />
-            ))}
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={[styles.mapStage, { height: mapStageHeight }]}>
+          <View style={[styles.mapCanvas, { width: mapWidth, aspectRatio: mapAspectRatio }]}>
+            <ImageBackground source={campusMapImage} resizeMode="contain" style={styles.mapImage}>
+              {campusMapBuildings.map((building) => (
+                <Pressable
+                  key={`${building.id}-touch`}
+                  style={[styles.touchArea, buildingTouchAreas[building.id]]}
+                  onPress={() => selectBuilding(building.id)}
+                />
+              ))}
 
-            {campusMapBuildings.map((building) => {
-              const isSelected = selectedBuilding.id === building.id;
-              const anchor = cardAnchors[building.id];
+              {campusMapBuildings.map((building) => {
+                const isSelected = selectedBuilding.id === building.id;
+                const anchor = cardAnchors[building.id];
 
-              return (
-                <View
-                  key={building.id}
-                  pointerEvents="box-none"
-                  style={[
-                    styles.infoBubbleWrap,
-                    anchor,
-                    {
-                      width: anchor.width,
-                    },
-                  ]}
-                >
-                  <Pressable
-                    style={[styles.infoBubble, isSelected && styles.infoBubbleSelected]}
-                    onPress={() => selectBuilding(building.id)}
+                return (
+                  <View
+                    key={building.id}
+                    pointerEvents="box-none"
+                    style={[
+                      styles.infoBubbleWrap,
+                      anchor,
+                      {
+                        width: anchor.width,
+                      },
+                    ]}
                   >
-                    <View style={styles.infoTitleRow}>
-                      <Text style={styles.infoTitle} numberOfLines={1}>
-                        {building.name}
-                      </Text>
-                      <Text style={styles.infoCount}>{building.restaurants.length}</Text>
-                    </View>
-                  </Pressable>
-                </View>
+                    <Pressable
+                      style={[styles.infoBubble, isSelected && styles.infoBubbleSelected]}
+                      onPress={() => selectBuilding(building.id)}
+                    >
+                      <View style={styles.infoTitleRow}>
+                        <Text style={styles.infoTitle} numberOfLines={1}>
+                          {building.name}
+                        </Text>
+                        <Text style={styles.infoCount}>{building.restaurants.length}</Text>
+                      </View>
+                    </Pressable>
+                  </View>
+                );
+              })}
+            </ImageBackground>
+          </View>
+        </View>
+
+        {selectedBuilding ? (
+          <View style={styles.bottomSheet}>
+            <View style={styles.sheetTop}>
+              <View>
+                <Text style={styles.sheetEyebrow}>선택한 건물</Text>
+                <Text style={styles.sheetTitle}>{selectedBuilding.name}</Text>
+              </View>
+              <Text style={styles.sheetCount}>{selectedBuilding.restaurants.length}곳</Text>
+            </View>
+            {selectedBuilding.restaurants.map((item) => {
+              const restaurant = getRestaurantById(item.restaurantId);
+              return (
+                <Pressable key={item.restaurantId} style={styles.restaurantCard} onPress={() => openRestaurantDetail(item.restaurantId)}>
+                  <ImageBackground
+                    source={{ uri: restaurant?.imageUrl ?? "" }}
+                    style={styles.restaurantImage}
+                    imageStyle={styles.restaurantImageRadius}
+                  >
+                    <View style={styles.restaurantImageDim} />
+                  </ImageBackground>
+                  <View style={styles.sheetCopy}>
+                    <Text style={styles.sheetName}>{item.label}</Text>
+                    <Text style={styles.sheetMeta}>
+                      {restaurant?.category ?? "식당"} · {item.hours}
+                    </Text>
+                  </View>
+                  <Text style={styles.cardArrow}>›</Text>
+                </Pressable>
               );
             })}
-          </ImageBackground>
-        </View>
-      </View>
-
-      {selectedBuilding ? (
-        <View style={styles.bottomSheet}>
-          <View style={styles.sheetTop}>
-            <View>
-              <Text style={styles.sheetEyebrow}>선택한 건물</Text>
-              <Text style={styles.sheetTitle}>{selectedBuilding.name}</Text>
-            </View>
-            <Text style={styles.sheetCount}>{selectedBuilding.restaurants.length}곳</Text>
           </View>
-          {selectedBuilding.restaurants.map((item) => {
-            const restaurant = getRestaurantById(item.restaurantId);
-            return (
-              <Pressable key={item.restaurantId} style={styles.restaurantCard} onPress={() => openRestaurantDetail(item.restaurantId)}>
-                <ImageBackground
-                  source={{ uri: restaurant?.imageUrl ?? "" }}
-                  style={styles.restaurantImage}
-                  imageStyle={styles.restaurantImageRadius}
-                >
-                  <View style={styles.restaurantImageDim} />
-                </ImageBackground>
-                <View style={styles.sheetCopy}>
-                  <Text style={styles.sheetName}>{item.label}</Text>
-                  <Text style={styles.sheetMeta}>
-                    {restaurant?.category ?? "식당"} · {item.hours}
-                  </Text>
-                </View>
-                <Text style={styles.cardArrow}>›</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      ) : null}
+        ) : null}
+      </ScrollView>
     </View>
   );
 }
@@ -158,9 +160,11 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "#f8fcff",
+  },
+  scrollContent: {
     paddingHorizontal: 8,
     paddingTop: 0,
-    paddingBottom: 8,
+    paddingBottom: 18,
   },
   skyGlowTop: {
     position: "absolute",
