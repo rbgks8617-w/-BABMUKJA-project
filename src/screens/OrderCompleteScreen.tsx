@@ -2,9 +2,10 @@ import React, { useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
+import type { AppScreenProps } from "../types/app";
 import { formatPrice } from "../utils/formatPrice";
 
-export default function OrderCompleteScreen({ route, navigation }) {
+export default function OrderCompleteScreen({ route, navigation }: AppScreenProps<"OrderComplete">) {
   const { order } = route.params;
   const { addNotification } = useNotifications();
 

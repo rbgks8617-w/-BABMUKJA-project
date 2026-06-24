@@ -3,8 +3,9 @@ import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import MenuCard from "../components/MenuCard";
 import { getMenusByRestaurantId, getRestaurantById } from "../services/restaurantService";
 import { colors } from "../theme/colors";
+import type { AppScreenProps } from "../types/app";
 
-export default function RestaurantDetailScreen({ route, navigation }) {
+export default function RestaurantDetailScreen({ route, navigation }: AppScreenProps<"RestaurantDetail">) {
   const { restaurantId } = route.params;
   const restaurant = getRestaurantById(restaurantId);
   const menus = getMenusByRestaurantId(restaurantId);

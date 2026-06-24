@@ -1,7 +1,13 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-export default function QuantitySelector({ quantity, onDecrease, onIncrease }) {
+type QuantitySelectorProps = {
+  quantity: number;
+  onDecrease: () => void;
+  onIncrease: () => void;
+};
+
+export default function QuantitySelector({ quantity, onDecrease, onIncrease }: QuantitySelectorProps) {
   return (
     <View style={styles.container}>
       <Pressable style={styles.button} onPress={onDecrease}>

@@ -15,11 +15,12 @@ import {
 import { useCart } from "../store/CartContext";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
+import type { AppScreenProps, SearchResult } from "../types/app";
 import { formatPrice } from "../utils/formatPrice";
 
 const categoryTabs = ["전체", "한식", "중식", "분식", "양식", "카페", "가성비", "혼밥"];
 
-export default function RestaurantListScreen({ navigation }) {
+export default function RestaurantListScreen({ navigation }: AppScreenProps<"RestaurantList">) {
   const { width } = useWindowDimensions();
   const todayCafeteria = getTodayCafeteria();
   const popularRestaurants = getPopularRestaurants();
@@ -78,7 +79,7 @@ export default function RestaurantListScreen({ navigation }) {
   const searchResults = useMemo(() => searchCampusFood(searchQuery), [searchQuery]);
   const trimmedSearchQuery = searchQuery.trim();
 
-  function openSearchResult(result) {
+  function openSearchResult(result: SearchResult) {
     if (result.type === "menu") {
       navigation.navigate("MenuDetail", { menuId: result.targetId });
       return;
@@ -518,7 +519,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     padding: 0,
-    outlineStyle: "none",
   },
   searchIcon: {
     color: colors.primaryDark,

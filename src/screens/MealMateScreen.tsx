@@ -3,12 +3,29 @@ import { Animated, Pressable, ScrollView, StyleSheet, Text, TextInput, View } fr
 import { getRestaurants } from "../services/restaurantService";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
+import type { AppScreenProps, Restaurant } from "../types/app";
 
 const anonymousNames = ["익명 01", "익명 02", "익명 03", "익명 04", "익명 05"];
 
-function buildInitialPosts(restaurants) {
+type MealMateLocalPost = {
+  id: string;
+  restaurant: Restaurant;
+  time: string;
+  topic: string;
+  currentCount: number;
+  maxCount: number;
+  note: string;
+  createdBy: string;
+  joinedByMe: boolean;
+};
+
+function buildInitialPosts(restaurants: Restaurant[]): MealMateLocalPost[] {
   const first = restaurants[0];
   const second = restaurants[1] ?? restaurants[0];
+
+  if (!first || !second) {
+    return [];
+  }
 
   return [
     {
@@ -33,10 +50,10 @@ function buildInitialPosts(restaurants) {
       createdBy: "익명 02",
       joinedByMe: false,
     },
-  ].filter((post) => post.restaurant);
+  ];
 }
 
-export default function MealMateScreen({ navigation }) {
+export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate">) {
   const restaurants = useMemo(() => getRestaurants().slice(0, 8), []);
   const [posts, setPosts] = useState(() => buildInitialPosts(restaurants));
   const [topic, setTopic] = useState("");
@@ -50,7 +67,7 @@ export default function MealMateScreen({ navigation }) {
 
   const selectedRestaurant = restaurants.find((restaurant) => restaurant.id === restaurantId) ?? restaurants[0];
 
-  const showToast = (message) => {
+  const showToast = (message: string) => {
     setToastMessage(message);
     toastMotion.stopAnimation();
     toastMotion.setValue(0);
@@ -101,7 +118,7 @@ export default function MealMateScreen({ navigation }) {
     showToast("나랑 밥먹자 모집글을 올렸어요");
   };
 
-  const openChat = (post) => {
+  const openChat = (post: MealMateLocalPost) => {
     navigation.navigate("MealMateChat", {
       room: {
         id: post.id,
@@ -114,7 +131,7 @@ export default function MealMateScreen({ navigation }) {
     });
   };
 
-  const joinPost = (postId) => {
+  const joinPost = (postId: string) => {
     const targetPost = posts.find((post) => post.id === postId);
 
     if (!targetPost) {

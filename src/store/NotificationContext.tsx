@@ -1,8 +1,20 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import type { CampusNotification } from "../types/app";
 
-const NotificationContext = createContext(null);
+type AddNotificationInput = Omit<CampusNotification, "id" | "createdAt" | "isRead"> &
+  Partial<Pick<CampusNotification, "id" | "createdAt" | "isRead">>;
 
-const initialNotifications = [
+type NotificationContextValue = {
+  notifications: CampusNotification[];
+  unreadCount: number;
+  addNotification: (notification: AddNotificationInput) => void;
+  markAllRead: () => void;
+};
+
+const NotificationContext = createContext<NotificationContextValue | null>(null);
+
+const initialNotifications: CampusNotification[] = [
   {
     id: "ready-1",
     type: "order",
@@ -21,13 +33,13 @@ const initialNotifications = [
   },
 ];
 
-export function NotificationProvider({ children }) {
-  const [notifications, setNotifications] = useState(initialNotifications);
+export function NotificationProvider({ children }: { children: ReactNode }) {
+  const [notifications, setNotifications] = useState<CampusNotification[]>(initialNotifications);
 
-  const addNotification = useCallback((notification) => {
-    const nextNotification = {
-      id: `${notification.type ?? "notice"}-${Date.now()}`,
-      isRead: false,
+  const addNotification = useCallback((notification: AddNotificationInput) => {
+    const nextNotification: CampusNotification = {
+      id: notification.id ?? `${notification.type ?? "system"}-${Date.now()}`,
+      isRead: notification.isRead ?? false,
       ...notification,
       createdAt: notification.createdAt ?? "방금",
     };

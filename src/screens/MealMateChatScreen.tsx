@@ -1,8 +1,15 @@
 import React, { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { colors } from "../theme/colors";
+import type { AppScreenProps } from "../types/app";
 
-export default function MealMateChatScreen({ route }) {
+type ChatMessage = {
+  id: string;
+  sender: string;
+  message: string;
+};
+
+export default function MealMateChatScreen({ route }: AppScreenProps<"MealMateChat">) {
   const room = route.params?.room ?? {
     title: "나랑 밥먹자",
     topic: "편하게 밥 먹기",
@@ -10,7 +17,7 @@ export default function MealMateChatScreen({ route }) {
     members: 1,
     maxCount: 3,
   };
-  const initialMessages = useMemo(
+  const initialMessages = useMemo<ChatMessage[]>(
     () => [
       {
         id: "message-1",

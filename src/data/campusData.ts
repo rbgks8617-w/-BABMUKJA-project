@@ -1,4 +1,15 @@
-const images = {
+import type {
+  Building,
+  MealMatePost,
+  Menu,
+  MenuOption,
+  RankedRestaurant,
+  RecommendationStep,
+  Restaurant,
+  TodayCafeteria,
+} from "../types/app";
+
+const images: Record<string, string> = {
   cafeteria: "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=900&q=80",
   gimbap: "https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?auto=format&fit=crop&w=900&q=80",
   omelet: "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=900&q=80",
@@ -10,13 +21,18 @@ const images = {
   dosirak: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=900&q=80",
 };
 
-function options(prefix, items) {
+function options(prefix: string, items: [string, number][]): MenuOption[] {
   return items.map(([name, price], index) => ({
     id: `${prefix}-${index + 1}`,
     name,
     price,
   }));
 }
+
+type MenuInput = Omit<Menu, "options" | "tasteScore" | "portionScore" | "valueScore"> &
+  Partial<Pick<Menu, "tasteScore" | "portionScore" | "valueScore">> & {
+  optionItems: [string, number][];
+};
 
 function menu({
   id,
@@ -32,7 +48,7 @@ function menu({
   tasteScore = 4.3,
   portionScore = 4.3,
   valueScore = 4.4,
-}) {
+}: MenuInput): Menu {
   return {
     id,
     restaurantId,
@@ -50,7 +66,7 @@ function menu({
   };
 }
 
-export const todayCafeteria = {
+export const todayCafeteria: TodayCafeteria = {
   title: "오늘 학식",
   restaurantId: "raon-restaurant",
   restaurantName: "라온식당",
@@ -60,7 +76,7 @@ export const todayCafeteria = {
   statusText: "점심 운영중",
 };
 
-export const restaurants = [
+export const restaurants: Restaurant[] = [
   {
     id: "shin-bukgyeong-maratang",
     name: "신북경마라탕",
@@ -191,7 +207,7 @@ export const restaurants = [
   },
 ];
 
-export const menus = [
+export const menus: Menu[] = [
   menu({
     id: "menu-maratang",
     restaurantId: "shin-bukgyeong-maratang",
@@ -348,7 +364,7 @@ export const menus = [
   }),
 ];
 
-export const campusMapBuildings = [
+export const campusMapBuildings: Building[] = [
   {
     id: "tip",
     name: "TIP",
@@ -378,13 +394,13 @@ export const campusMapBuildings = [
   },
 ];
 
-export const popularRestaurants = [
+export const popularRestaurants: RankedRestaurant[] = [
   { restaurantId: "moms-touch", rank: 1, selectedCount: 42 },
   { restaurantId: "shin-bukgyeong-maratang", rank: 2, selectedCount: 38 },
   { restaurantId: "tomato-gimbap", rank: 3, selectedCount: 31 },
 ];
 
-export const mealMatePosts = [
+export const mealMatePosts: MealMatePost[] = [
   {
     id: "mate-1",
     restaurantId: "tomato-gimbap",
@@ -407,7 +423,7 @@ export const mealMatePosts = [
   },
 ];
 
-export const recommendationTree = [
+export const recommendationTree: RecommendationStep[] = [
   {
     id: "situation",
     title: "지금 어떤 상황이야?",

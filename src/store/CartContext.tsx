@@ -1,12 +1,27 @@
 import React, { createContext, useContext, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import type { CartItem, MenuOption } from "../types/app";
 
-const CartContext = createContext(null);
+type AddToCartInput = Omit<CartItem, "cartId" | "unitPrice" | "totalPrice">;
 
-function normalizeOptions(options = []) {
+type CartContextValue = {
+  cartItems: CartItem[];
+  totalPrice: number;
+  totalQuantity: number;
+  addToCart: (item: AddToCartInput) => void;
+  changeCartItemQuantity: (cartId: string, amount: number) => void;
+  removeFromCart: (cartId: string) => void;
+  splitCartItemWithOptions: (cartId: string, nextSelectedOptions?: MenuOption[]) => void;
+  clearCart: () => void;
+};
+
+const CartContext = createContext<CartContextValue | null>(null);
+
+function normalizeOptions(options: MenuOption[] = []) {
   return [...options].sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function createCartKey(menuId, selectedOptions = []) {
+function createCartKey(menuId: string, selectedOptions: MenuOption[] = []) {
   const optionKey = normalizeOptions(selectedOptions)
     .map((option) => option.id)
     .join("|");
@@ -14,26 +29,27 @@ function createCartKey(menuId, selectedOptions = []) {
   return `${menuId}::${optionKey}`;
 }
 
-function getUnitPrice(item) {
+function getUnitPrice(item: Pick<CartItem, "basePrice" | "selectedOptions">) {
   const optionTotal = item.selectedOptions.reduce((sum, option) => sum + option.price, 0);
   return item.basePrice + optionTotal;
 }
 
-function withCalculatedTotal(item) {
+function withCalculatedTotal<T extends Omit<CartItem, "unitPrice" | "totalPrice">>(item: T): CartItem {
   const unitPrice = getUnitPrice(item);
+  const quantity = Math.max(1, item.quantity);
 
   return {
     ...item,
-    quantity: Math.max(1, item.quantity),
+    quantity,
     unitPrice,
-    totalPrice: unitPrice * Math.max(1, item.quantity),
+    totalPrice: unitPrice * quantity,
   };
 }
 
-export function CartProvider({ children }) {
-  const [cartItems, setCartItems] = useState([]);
+export function CartProvider({ children }: { children: ReactNode }) {
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  function addToCart(item) {
+  function addToCart(item: AddToCartInput) {
     const selectedOptions = normalizeOptions(item.selectedOptions);
     const cartId = createCartKey(item.menuId, selectedOptions);
     const normalizedItem = withCalculatedTotal({
@@ -62,7 +78,7 @@ export function CartProvider({ children }) {
     });
   }
 
-  function changeCartItemQuantity(cartId, amount) {
+  function changeCartItemQuantity(cartId: string, amount: number) {
     setCartItems((prevItems) =>
       prevItems.map((item) => {
         if (item.cartId !== cartId) {
@@ -77,11 +93,11 @@ export function CartProvider({ children }) {
     );
   }
 
-  function removeFromCart(cartId) {
+  function removeFromCart(cartId: string) {
     setCartItems((prevItems) => prevItems.filter((item) => item.cartId !== cartId));
   }
 
-  function splitCartItemWithOptions(cartId, nextSelectedOptions = []) {
+  function splitCartItemWithOptions(cartId: string, nextSelectedOptions: MenuOption[] = []) {
     const selectedOptions = normalizeOptions(nextSelectedOptions);
 
     setCartItems((prevItems) => {
@@ -104,7 +120,7 @@ export function CartProvider({ children }) {
         quantity: 1,
       });
       let mergedIntoExistingItem = false;
-      const nextItems = [];
+      const nextItems: CartItem[] = [];
 
       prevItems.forEach((item) => {
         if (item.cartId === cartId) {

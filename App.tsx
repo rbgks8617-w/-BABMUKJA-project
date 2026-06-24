@@ -32,7 +32,7 @@ const linking = {
   },
 };
 
-function applyDefaultFont(Component) {
+function applyDefaultFont(Component: any) {
   Component.defaultProps = Component.defaultProps || {};
   Component.defaultProps.style = [Component.defaultProps.style, roundedTextStyle];
 }
@@ -69,6 +69,10 @@ export default function App() {
       button,
       [class*="css-text"] {
         font-family: "GowunDodum", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif !important;
+      }
+      input,
+      textarea {
+        outline: none;
       }
       html,
       body,

@@ -3,7 +3,11 @@ import { Animated, Easing, Image, StyleSheet, Text, View } from "react-native";
 
 const tukLogo = require("../../assets/tuk-logo.png");
 
-export default function SplashScreen({ navigation }) {
+type StartupSplashProps = {
+  onDone?: () => void;
+};
+
+export default function StartupSplash({ onDone }: StartupSplashProps) {
   const logoTranslateX = useRef(new Animated.Value(-90)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const screenOpacity = useRef(new Animated.Value(1)).current;
@@ -32,12 +36,12 @@ export default function SplashScreen({ navigation }) {
         useNativeDriver: true,
       }),
     ]).start(() => {
-      navigation.replace("RestaurantList");
+      onDone?.();
     });
-  }, [logoOpacity, logoTranslateX, navigation, screenOpacity]);
+  }, [logoOpacity, logoTranslateX, onDone, screenOpacity]);
 
   return (
-    <Animated.View style={[styles.container, { opacity: screenOpacity }]}>
+    <Animated.View pointerEvents="auto" style={[styles.container, { opacity: screenOpacity }]}>
       <Animated.View
         style={[
           styles.logoWrap,
@@ -57,7 +61,12 @@ export default function SplashScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 999,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 28,

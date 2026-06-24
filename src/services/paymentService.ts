@@ -1,4 +1,6 @@
-export function createDummyPayment(orderItems, paymentMethod) {
+import type { CompletedOrder, OrderItem } from "../types/app";
+
+export function createDummyPayment(orderItems: OrderItem[], paymentMethod: string): CompletedOrder {
   const totalPrice = orderItems.reduce((sum, item) => sum + item.totalPrice, 0);
   const orderNumber = `BMJ-${Date.now().toString().slice(-6)}`;
 

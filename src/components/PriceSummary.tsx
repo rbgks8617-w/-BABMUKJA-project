@@ -3,7 +3,12 @@ import { StyleSheet, Text, View } from "react-native";
 import { colors } from "../theme/colors";
 import { formatPrice } from "../utils/formatPrice";
 
-export default function PriceSummary({ label = "총 결제 금액", price }) {
+type PriceSummaryProps = {
+  label?: string;
+  price: number;
+};
+
+export default function PriceSummary({ label = "총 결제 금액", price }: PriceSummaryProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>

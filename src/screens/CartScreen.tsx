@@ -5,25 +5,26 @@ import QuantitySelector from "../components/QuantitySelector";
 import { getMenuById } from "../services/restaurantService";
 import { useCart } from "../store/CartContext";
 import { APP_FONT_FAMILY } from "../theme/typography";
+import type { AppScreenProps, CartItem, MenuOption } from "../types/app";
 import { formatPrice } from "../utils/formatPrice";
 
-function normalizeOptions(options = []) {
+function normalizeOptions(options: MenuOption[] = []) {
   return [...options].sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function optionKey(options = []) {
+function optionKey(options: MenuOption[] = []) {
   return normalizeOptions(options).map((option) => option.id).join("|");
 }
 
-export default function CartScreen({ navigation }) {
+export default function CartScreen({ navigation }: AppScreenProps<"Cart">) {
   const { cartItems, changeCartItemQuantity, removeFromCart, splitCartItemWithOptions, totalPrice } = useCart();
-  const [optionDrafts, setOptionDrafts] = useState({});
+  const [optionDrafts, setOptionDrafts] = useState<Record<string, MenuOption[]>>({});
 
-  function getDraftOptions(item) {
+  function getDraftOptions(item: CartItem) {
     return optionDrafts[item.cartId] ?? item.selectedOptions;
   }
 
-  function toggleOption(item, option) {
+  function toggleOption(item: CartItem, option: MenuOption) {
     setOptionDrafts((currentDrafts) => {
       const currentOptions = getDraftOptionsFromState(currentDrafts, item);
       const optionExists = currentOptions.some((selectedOption) => selectedOption.id === option.id);
@@ -38,11 +39,11 @@ export default function CartScreen({ navigation }) {
     });
   }
 
-  function getDraftOptionsFromState(drafts, item) {
+  function getDraftOptionsFromState(drafts: Record<string, MenuOption[]>, item: CartItem) {
     return drafts[item.cartId] ?? item.selectedOptions;
   }
 
-  function applyOptionChange(item) {
+  function applyOptionChange(item: CartItem) {
     splitCartItemWithOptions(item.cartId, getDraftOptions(item));
     setOptionDrafts((currentDrafts) => {
       const nextDrafts = { ...currentDrafts };

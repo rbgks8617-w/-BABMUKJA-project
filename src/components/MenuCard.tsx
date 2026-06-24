@@ -1,9 +1,15 @@
 import React from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { colors } from "../theme/colors";
+import type { Menu } from "../types/app";
 import { formatPrice } from "../utils/formatPrice";
 
-export default function MenuCard({ menu, onPress }) {
+type MenuCardProps = {
+  menu: Menu;
+  onPress: () => void;
+};
+
+export default function MenuCard({ menu, onPress }: MenuCardProps) {
   return (
     <Pressable style={styles.card} onPress={onPress}>
       <Image source={{ uri: menu.imageUrl }} style={styles.image} />

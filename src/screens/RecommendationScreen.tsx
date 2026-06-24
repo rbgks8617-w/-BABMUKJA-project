@@ -6,11 +6,14 @@ import {
   getRestaurantNameById,
 } from "../services/restaurantService";
 import { colors } from "../theme/colors";
+import type { AppScreenProps, RecommendationOption } from "../types/app";
 import { formatPrice } from "../utils/formatPrice";
 
-export default function RecommendationScreen({ navigation }) {
+type SelectedRecommendationOptions = Record<string, RecommendationOption>;
+
+export default function RecommendationScreen({ navigation }: AppScreenProps<"Recommendation">) {
   const tree = getRecommendationTree();
-  const [selectedOptions, setSelectedOptions] = useState({});
+  const [selectedOptions, setSelectedOptions] = useState<SelectedRecommendationOptions>({});
   const [shuffleSeed, setShuffleSeed] = useState(0);
   const resultOpacity = useRef(new Animated.Value(1)).current;
 
@@ -24,9 +27,9 @@ export default function RecommendationScreen({ navigation }) {
   const recommendedMenu = recommendation.primary;
   const selectedPath = tree.map((step) => selectedOptions[step.id]?.label).filter(Boolean);
 
-  function handleSelect(stepId, option) {
+  function handleSelect(stepId: string, option: RecommendationOption) {
     const stepIndex = tree.findIndex((step) => step.id === stepId);
-    const nextSelectedOptions = tree.slice(0, stepIndex).reduce((next, step) => {
+    const nextSelectedOptions = tree.slice(0, stepIndex).reduce<SelectedRecommendationOptions>((next, step) => {
       if (selectedOptions[step.id]) {
         next[step.id] = selectedOptions[step.id];
       }

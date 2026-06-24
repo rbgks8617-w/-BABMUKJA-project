@@ -1,20 +1,29 @@
 import React, { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { colors } from "../theme/colors";
+import type { AppScreenProps } from "../types/app";
 
-const tabs = ["음식 후기", "자유게시판", "나랑 밥먹자"];
+type CommunityTab = "음식 후기" | "자유게시판" | "나랑 밥먹자";
+type Post = {
+  id: string;
+  title: string;
+  meta: string;
+  body: string;
+};
 
-const reviewPosts = [
+const tabs: CommunityTab[] = ["음식 후기", "자유게시판", "나랑 밥먹자"];
+
+const reviewPosts: Post[] = [
   { id: "review-1", title: "맘스터치 싸이버거 세트 든든함", meta: "익명 · 맛 4.6 · 가성비 4.2", body: "공강 짧을 때 빨리 먹기 좋고 양도 꽤 괜찮아요." },
   { id: "review-2", title: "라온식당 김치찌개 괜찮음", meta: "익명 · 맛 4.3 · 가성비 4.5", body: "종합교육관 쪽 수업이면 이동이 편해서 자주 갈 듯." },
 ];
 
-const freePosts = [
+const freePosts: Post[] = [
   { id: "free-1", title: "오늘 점심 어디가 덜 붐벼요?", meta: "익명 · 댓글 8", body: "12시 반쯤 TIP 가면 대기 긴지 궁금해요." },
   { id: "free-2", title: "시험기간 카페 자리 공유해요", meta: "익명 · 댓글 5", body: "cafe ing는 지금 자리가 조금 남아 있어요." },
 ];
 
-function PostCard({ post }) {
+function PostCard({ post }: { post: Post }) {
   return (
     <View style={styles.postCard}>
       <Text style={styles.postTitle}>{post.title}</Text>
@@ -24,8 +33,8 @@ function PostCard({ post }) {
   );
 }
 
-export default function CommunityScreen({ navigation }) {
-  const [activeTab, setActiveTab] = useState("음식 후기");
+export default function CommunityScreen({ navigation }: AppScreenProps<"Community">) {
+  const [activeTab, setActiveTab] = useState<CommunityTab>("음식 후기");
   const posts = activeTab === "음식 후기" ? reviewPosts : freePosts;
 
   return (

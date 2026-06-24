@@ -4,18 +4,19 @@ import PriceSummary from "../components/PriceSummary";
 import QuantitySelector from "../components/QuantitySelector";
 import { getMenuById } from "../services/restaurantService";
 import { useCart } from "../store/CartContext";
+import type { AppScreenProps, MenuOption, OrderItem } from "../types/app";
 import { formatPrice } from "../utils/formatPrice";
 
-export default function MenuDetailScreen({ route, navigation }) {
+export default function MenuDetailScreen({ route, navigation }: AppScreenProps<"MenuDetail">) {
   const { menuId } = route.params;
   const menu = getMenuById(menuId);
   const { addToCart } = useCart();
   const [quantity, setQuantity] = useState(1);
-  const [selectedOptions, setSelectedOptions] = useState([]);
+  const [selectedOptions, setSelectedOptions] = useState<MenuOption[]>([]);
   const [addedMessage, setAddedMessage] = useState("");
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const toastTranslateY = useRef(new Animated.Value(28)).current;
-  const toastAnimation = useRef(null);
+  const toastAnimation = useRef<Animated.CompositeAnimation | null>(null);
 
   const normalizedSelectedOptions = useMemo(
     () => [...selectedOptions].sort((a, b) => a.id.localeCompare(b.id)),
@@ -35,7 +36,8 @@ export default function MenuDetailScreen({ route, navigation }) {
     );
   }
 
-  const unitPrice = menu.price + optionTotal;
+  const currentMenu = menu;
+  const unitPrice = currentMenu.price + optionTotal;
   const totalPrice = unitPrice * quantity;
 
   useEffect(() => {
@@ -46,7 +48,7 @@ export default function MenuDetailScreen({ route, navigation }) {
     };
   }, []);
 
-  function toggleOption(option) {
+  function toggleOption(option: MenuOption) {
     setAddedMessage("");
     setSelectedOptions((prevOptions) => {
       const exists = prevOptions.some((item) => item.id === option.id);
@@ -54,19 +56,19 @@ export default function MenuDetailScreen({ route, navigation }) {
     });
   }
 
-  function makeOrderItem() {
+  function makeOrderItem(): OrderItem {
     return {
-      menuId: menu.id,
-      name: menu.name,
+      menuId: currentMenu.id,
+      name: currentMenu.name,
       quantity,
       selectedOptions: normalizedSelectedOptions,
-      basePrice: menu.price,
+      basePrice: currentMenu.price,
       unitPrice,
       totalPrice,
     };
   }
 
-  function showAddedToast(message) {
+  function showAddedToast(message: string) {
     if (toastAnimation.current) {
       toastAnimation.current.stop();
     }
@@ -103,7 +105,7 @@ export default function MenuDetailScreen({ route, navigation }) {
       ]),
     ]);
 
-    toastAnimation.current.start(({ finished }) => {
+    toastAnimation.current.start(({ finished }: { finished: boolean }) => {
       if (finished) {
         setAddedMessage("");
       }
@@ -112,7 +114,7 @@ export default function MenuDetailScreen({ route, navigation }) {
 
   function handleAddToCart() {
     addToCart(makeOrderItem());
-    showAddedToast(`${menu.name} ${quantity}개가 추가되었습니다.`);
+    showAddedToast(`${currentMenu.name} ${quantity}개가 추가되었습니다.`);
   }
 
   function handleGoToCart() {
@@ -131,15 +133,15 @@ export default function MenuDetailScreen({ route, navigation }) {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Image source={{ uri: menu.imageUrl }} style={styles.image} />
-        <Text style={styles.category}>{menu.category}</Text>
-        <Text style={styles.name}>{menu.name}</Text>
-        <Text style={styles.price}>{formatPrice(menu.price)}</Text>
-        <Text style={styles.description}>{menu.description}</Text>
+        <Image source={{ uri: currentMenu.imageUrl }} style={styles.image} />
+        <Text style={styles.category}>{currentMenu.category}</Text>
+        <Text style={styles.name}>{currentMenu.name}</Text>
+        <Text style={styles.price}>{formatPrice(currentMenu.price)}</Text>
+        <Text style={styles.description}>{currentMenu.description}</Text>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>옵션 선택</Text>
-          {menu.options.map((option) => {
+          {currentMenu.options.map((option) => {
             const isSelected = selectedOptions.some((item) => item.id === option.id);
             return (
               <Pressable

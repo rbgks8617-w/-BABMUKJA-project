@@ -2,6 +2,8 @@ import React from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { CommonActions } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import type { NativeStackNavigationOptions, NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { ImageStyle } from "react-native";
 import CartScreen from "../screens/CartScreen";
 import CampusMapScreen from "../screens/CampusMapScreen";
 import CommunityScreen from "../screens/CommunityScreen";
@@ -16,17 +18,20 @@ import RestaurantDetailScreen from "../screens/RestaurantDetailScreen";
 import RestaurantListScreen from "../screens/RestaurantListScreen";
 import { colors } from "../theme/colors";
 import { APP_FONT_FAMILY } from "../theme/typography";
+import type { RootStackParamList } from "../types/app";
 
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
+type AppNavigation = NativeStackNavigationProp<RootStackParamList>;
+type RouteName = keyof RootStackParamList;
 
-const headerTitleStyle = {
+const headerTitleStyle: NativeStackNavigationOptions["headerTitleStyle"] = {
   color: "#27211d",
   fontFamily: APP_FONT_FAMILY,
   fontSize: 17,
   fontWeight: "700",
 };
 
-function goBackOrFallback(navigation, fallbackRoute = "RestaurantList") {
+function goBackOrFallback(navigation: AppNavigation, fallbackRoute: RouteName = "RestaurantList") {
   if (navigation.canGoBack()) {
     navigation.goBack();
     return;
@@ -40,7 +45,15 @@ function goBackOrFallback(navigation, fallbackRoute = "RestaurantList") {
   );
 }
 
-function BackHeaderButton({ navigation, label = "뒤로", fallbackRoute = "RestaurantList" }) {
+function BackHeaderButton({
+  navigation,
+  label = "뒤로",
+  fallbackRoute = "RestaurantList",
+}: {
+  navigation: AppNavigation;
+  label?: string;
+  fallbackRoute?: RouteName;
+}) {
   return (
     <Pressable
       hitSlop={8}
@@ -59,7 +72,7 @@ function HomeHeaderTitle() {
   return (
     <View style={styles.homeLogo}>
       <View style={styles.homeLogoMark}>
-        <Image source={require("../../assets/tuk-symbol.png")} style={styles.homeLogoImage} />
+        <Image source={require("../../assets/tuk-symbol.png")} style={styles.homeLogoImage as ImageStyle} />
       </View>
       <View>
         <Text style={styles.homeLogoName}>대학교 밥먹자</Text>
@@ -69,7 +82,12 @@ function HomeHeaderTitle() {
   );
 }
 
-function pushOptions(navigation, title, label = "뒤로", fallbackRoute = "RestaurantList") {
+function pushOptions(
+  navigation: AppNavigation,
+  title: string,
+  label = "뒤로",
+  fallbackRoute: RouteName = "RestaurantList",
+): NativeStackNavigationOptions {
   return {
     animation: "slide_from_right",
     animationDuration: 360,

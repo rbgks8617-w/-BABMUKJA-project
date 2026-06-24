@@ -7,11 +7,39 @@ import {
   restaurants,
   todayCafeteria,
 } from "../data/campusData";
+import type {
+  Building,
+  CongestionLevel,
+  MealMatePost,
+  Menu,
+  RecommendedMenu,
+  RecommendationResult,
+  Restaurant,
+  SearchResult,
+} from "../types/app";
 
 export { campusMapBuildings };
 
 const restaurantById = new Map(restaurants.map((restaurant) => [restaurant.id, restaurant]));
 const menuById = new Map(menus.map((menu) => [menu.id, menu]));
+
+type RestaurantAttached<T> = T & { restaurant: Restaurant };
+type ScoredMenu = {
+  menu: Menu;
+  score: number;
+  matchedTags: string[];
+  reason: string;
+};
+
+type CrowdPick = (typeof quickPickConfigs)[number] & {
+  restaurant: Restaurant;
+  status: CongestionLevel;
+};
+
+type PopularMenuPick = (typeof popularMenuConfigs)[number] & {
+  menu: Menu;
+  restaurant: Restaurant;
+};
 
 const quickPickConfigs = [
   {
@@ -37,15 +65,15 @@ const popularMenuConfigs = [
   { menuId: "menu-tomato-gimbap", rank: 3 },
 ];
 
-export function getRestaurants() {
+export function getRestaurants(): Restaurant[] {
   return restaurants;
 }
 
-export function getRestaurantById(restaurantId) {
+export function getRestaurantById(restaurantId: string): Restaurant | undefined {
   return restaurantById.get(restaurantId);
 }
 
-export function getRestaurantNameById(restaurantId) {
+export function getRestaurantNameById(restaurantId: string): string {
   return getRestaurantById(restaurantId)?.name ?? "알 수 없는 식당";
 }
 
@@ -64,10 +92,10 @@ export function getCrowdPicks() {
       restaurant: getRestaurantById(item.restaurantId),
       status: getCrowdStatus(item.recentUsers),
     }))
-    .filter((item) => item.restaurant);
+    .filter((item): item is CrowdPick => Boolean(item.restaurant));
 }
 
-export function getPopularMenus() {
+export function getPopularMenus(): PopularMenuPick[] {
   return popularMenuConfigs
     .map((item) => {
       const menu = getMenuById(item.menuId);
@@ -77,7 +105,7 @@ export function getPopularMenus() {
         restaurant: menu ? getRestaurantById(menu.restaurantId) : undefined,
       };
     })
-    .filter((item) => item.menu && item.restaurant);
+    .filter((item): item is PopularMenuPick => Boolean(item.menu && item.restaurant));
 }
 
 export function getMealMatePosts() {
@@ -94,15 +122,15 @@ export function getRecommendationTree() {
   return recommendationTree;
 }
 
-export function getMenuById(menuId) {
+export function getMenuById(menuId: string): Menu | undefined {
   return menuById.get(menuId);
 }
 
-export function getMenusByRestaurantId(restaurantId) {
+export function getMenusByRestaurantId(restaurantId: string): Menu[] {
   return menus.filter((menu) => menu.restaurantId === restaurantId);
 }
 
-export function getMenusByCategory(category) {
+export function getMenusByCategory(category: string) {
   return menus
     .filter((menu) => matchesCategory(menu, category))
     .slice(0, 8)
@@ -112,7 +140,7 @@ export function getMenusByCategory(category) {
     }));
 }
 
-export function searchCampusFood(query) {
+export function searchCampusFood(query: string): SearchResult[] {
   const keyword = normalizeKeyword(query);
 
   if (!keyword) {
@@ -127,7 +155,7 @@ export function searchCampusFood(query) {
     })
     .map((restaurant) => ({
       id: `restaurant-${restaurant.id}`,
-      type: "restaurant",
+      type: "restaurant" as const,
       title: restaurant.name,
       subtitle: `${restaurant.category} · ${restaurant.location}`,
       imageUrl: restaurant.imageUrl,
@@ -145,7 +173,7 @@ export function searchCampusFood(query) {
       const restaurant = getRestaurantById(menu.restaurantId);
       return {
         id: `menu-${menu.id}`,
-        type: "menu",
+        type: "menu" as const,
         title: menu.name,
         subtitle: `${restaurant?.name ?? "학교 식당"} · ${menu.category}`,
         imageUrl: menu.imageUrl,
@@ -157,7 +185,7 @@ export function searchCampusFood(query) {
   return [...restaurantResults, ...menuResults].slice(0, 8);
 }
 
-export function getRestaurantCount() {
+export function getRestaurantCount(): number {
   return campusMapBuildings.reduce((count, building) => count + building.restaurants.length, 0);
 }
 
@@ -182,11 +210,11 @@ export function getBuildingCards() {
   });
 }
 
-export function getRecommendedMenuByTags(selectedTags) {
+export function getRecommendedMenuByTags(selectedTags: string[]): RecommendedMenu | null {
   return getRecommendedMenuResult(selectedTags).primary;
 }
 
-export function getRecommendedMenuResult(selectedTags) {
+export function getRecommendedMenuResult(selectedTags: string[]): RecommendationResult {
   const scoredMenus = getScoredMenus(selectedTags);
   const fallbackMenus = menus.map((menu) => ({
     menu,
@@ -230,16 +258,16 @@ export function getRecommendedMenuResult(selectedTags) {
   };
 }
 
-function attachRestaurants(items) {
+function attachRestaurants<T extends { restaurantId: string }>(items: T[]): RestaurantAttached<T>[] {
   return items
     .map((item) => ({
       ...item,
       restaurant: getRestaurantById(item.restaurantId),
     }))
-    .filter((item) => item.restaurant);
+    .filter((item): item is RestaurantAttached<T> => Boolean(item.restaurant));
 }
 
-export function getCrowdStatus(recentUsers) {
+export function getCrowdStatus(recentUsers: number): CongestionLevel {
   if (recentUsers >= 26) {
     return "혼잡";
   }
@@ -251,7 +279,7 @@ export function getCrowdStatus(recentUsers) {
   return "원활";
 }
 
-function matchesCategory(menu, category) {
+function matchesCategory(menu: Menu, category: string) {
   if (category === "전체") {
     return true;
   }
@@ -271,11 +299,11 @@ function matchesCategory(menu, category) {
   return menu.category === category;
 }
 
-function normalizeKeyword(value) {
+function normalizeKeyword(value: unknown) {
   return String(value ?? "").replace(/\s+/g, "").toLowerCase();
 }
 
-function getScoredMenus(selectedTags) {
+function getScoredMenus(selectedTags: string[]): ScoredMenu[] {
   const normalizedTags = [...new Set(selectedTags)];
 
   if (normalizedTags.length === 0) {
@@ -301,8 +329,8 @@ function getScoredMenus(selectedTags) {
     .sort((a, b) => b.score - a.score || a.menu.price - b.menu.price);
 }
 
-function getMenuRecommendationTags(menu) {
-  const priceTags = [];
+function getMenuRecommendationTags(menu: Menu): string[] {
+  const priceTags: string[] = [];
 
   if (menu.price <= 5500) {
     priceTags.push("저렴", "가성비");
@@ -317,7 +345,7 @@ function getMenuRecommendationTags(menu) {
   return [...menu.tags, ...priceTags];
 }
 
-function buildRecommendationReason(menu, matchedTags) {
+function buildRecommendationReason(menu: Menu, matchedTags: string[]): string {
   if (matchedTags.length === 0) {
     return menu.recommendationText;
   }
@@ -325,7 +353,7 @@ function buildRecommendationReason(menu, matchedTags) {
   return `${matchedTags.join(", ")} 조건에 잘 맞아서 추천해요. ${menu.recommendationText}`;
 }
 
-function pickWeighted(scoredItems) {
+function pickWeighted(scoredItems: ScoredMenu[]): ScoredMenu | undefined {
   if (scoredItems.length <= 1) {
     return scoredItems[0];
   }
@@ -335,6 +363,6 @@ function pickWeighted(scoredItems) {
   return pickRandom(topItems);
 }
 
-function pickRandom(items) {
+function pickRandom<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }

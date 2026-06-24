@@ -4,11 +4,12 @@ import PriceSummary from "../components/PriceSummary";
 import { createDummyPayment } from "../services/paymentService";
 import { useCart } from "../store/CartContext";
 import { colors } from "../theme/colors";
+import type { AppScreenProps } from "../types/app";
 import { formatPrice } from "../utils/formatPrice";
 
 const paymentMethods = ["학교 포인트", "체크카드", "간편결제"];
 
-export default function PaymentScreen({ route, navigation }) {
+export default function PaymentScreen({ route, navigation }: AppScreenProps<"Payment">) {
   const orderItems = route.params?.orderItems ?? [];
   const { clearCart } = useCart();
   const [paymentMethod, setPaymentMethod] = useState(paymentMethods[0]);

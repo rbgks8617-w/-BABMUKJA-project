@@ -8,30 +8,47 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import type { DimensionValue } from "react-native";
 import { campusMapBuildings, getRestaurantById } from "../services/restaurantService";
 import { colors } from "../theme/colors";
+import type { AppScreenProps } from "../types/app";
 
 const campusMapImage = require("../../assets/tuk-campus-map.png");
 const mapAspectRatio = 1608 / 978;
 
-const cardAnchors = {
+type FloatingStyle = {
+  left?: DimensionValue;
+  right?: DimensionValue;
+  top: DimensionValue;
+  width: number;
+};
+
+type TouchAreaStyle = {
+  left?: DimensionValue;
+  right?: DimensionValue;
+  top: DimensionValue;
+  width: DimensionValue;
+  height: DimensionValue;
+};
+
+const cardAnchors: Record<string, FloatingStyle> = {
   tip: { left: "15%", top: "30%", width: 76 },
   education: { left: "43%", top: "23%", width: 104 },
   industry: { right: "15%", top: "31%", width: 100 },
 };
 
-const buildingTouchAreas = {
+const buildingTouchAreas: Record<string, TouchAreaStyle> = {
   tip: { left: "6%", top: "27%", width: "29%", height: "35%" },
   education: { left: "38%", top: "20%", width: "25%", height: "30%" },
   industry: { right: "8%", top: "31%", width: "25%", height: "28%" },
 };
 
-function getInitialBuildingId(route) {
+function getInitialBuildingId(route?: AppScreenProps<"CampusMap">["route"]) {
   const buildingId = route?.params?.buildingId;
   return campusMapBuildings.some((building) => building.id === buildingId) ? buildingId : "education";
 }
 
-export default function CampusMapScreen({ route, navigation }) {
+export default function CampusMapScreen({ route, navigation }: AppScreenProps<"CampusMap">) {
   const { width } = useWindowDimensions();
   const [selectedBuildingId, setSelectedBuildingId] = useState(() => getInitialBuildingId(route));
 
@@ -42,11 +59,11 @@ export default function CampusMapScreen({ route, navigation }) {
     setSelectedBuildingId(getInitialBuildingId(route));
   }, [route]);
 
-  const openRestaurantDetail = (restaurantId) => {
+  const openRestaurantDetail = (restaurantId: string) => {
     navigation.navigate("RestaurantDetail", { restaurantId });
   };
 
-  const selectBuilding = (buildingId) => {
+  const selectBuilding = (buildingId: string) => {
     setSelectedBuildingId(buildingId);
   };
 
@@ -111,7 +128,7 @@ export default function CampusMapScreen({ route, navigation }) {
             return (
               <Pressable key={item.restaurantId} style={styles.restaurantCard} onPress={() => openRestaurantDetail(item.restaurantId)}>
                 <ImageBackground
-                  source={{ uri: restaurant?.imageUrl }}
+                  source={{ uri: restaurant?.imageUrl ?? "" }}
                   style={styles.restaurantImage}
                   imageStyle={styles.restaurantImageRadius}
                 >
