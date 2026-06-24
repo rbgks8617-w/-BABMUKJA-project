@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { colors } from "../theme/colors";
 import type { AppScreenProps } from "../types/app";
 
@@ -21,6 +21,7 @@ type CommunityPostItem = {
   createdAt: string;
   isMine: boolean;
   meta?: string;
+  imageUrl?: string;
   comments: CommunityComment[];
 };
 
@@ -36,6 +37,7 @@ const initialPosts: CommunityPostItem[] = [
     body: "공강 짧을 때 빨리 먹기 좋고 양도 꽤 괜찮아요.",
     createdAt: "방금",
     isMine: false,
+    imageUrl: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=700&q=80",
     comments: [
       { id: "review-1-comment-1", body: "감튀까지 먹으면 진짜 든든하더라.", byAuthor: false, createdAt: "방금" },
       { id: "review-1-comment-2", body: "점심 피크만 피하면 빨라요.", byAuthor: false, createdAt: "방금" },
@@ -49,6 +51,7 @@ const initialPosts: CommunityPostItem[] = [
     body: "종합교육관 쪽 수업이면 이동이 편해서 자주 갈 듯.",
     createdAt: "3분 전",
     isMine: false,
+    imageUrl: "https://images.unsplash.com/photo-1583224964978-2257b960c3d3?auto=format&fit=crop&w=700&q=80",
     comments: [],
   },
   {
@@ -83,59 +86,75 @@ function getCommentAuthorLabel(post: CommunityPostItem, comment: CommunityCommen
 function PostCard({
   post,
   commentDraft,
+  isExpanded,
   onChangeComment,
   onSubmitComment,
+  onToggle,
 }: {
   post: CommunityPostItem;
   commentDraft: string;
+  isExpanded: boolean;
   onChangeComment: (value: string) => void;
   onSubmitComment: () => void;
+  onToggle: () => void;
 }) {
   return (
     <View style={styles.postCard}>
-      <View style={styles.postTop}>
-        <View style={styles.postTopicPill}>
-          <Text style={styles.postTopicText}>{post.topic}</Text>
+      <Pressable style={styles.postSummary} onPress={onToggle}>
+        <View style={styles.postSummaryCopy}>
+          <View style={styles.postTopicPill}>
+            <Text style={styles.postTopicText}>{post.topic}</Text>
+          </View>
+          <Text style={styles.postTitle}>{post.title}</Text>
+          <Text style={styles.postMeta}>
+            익명{post.meta ? ` · ${post.meta}` : ""} · 댓글 {post.comments.length}
+          </Text>
         </View>
-        <Text style={styles.postTime}>{post.createdAt}</Text>
-      </View>
-      <Text style={styles.postTitle}>{post.title}</Text>
-      <Text style={styles.postMeta}>
-        익명{post.meta ? ` · ${post.meta}` : ""} · 댓글 {post.comments.length}
-      </Text>
-      <Text style={styles.postBody}>{post.body}</Text>
+        <View style={styles.postSideMeta}>
+          <Text style={styles.postTime}>{post.createdAt}</Text>
+          {post.imageUrl ? <Image source={{ uri: post.imageUrl }} style={styles.postThumbnail} /> : null}
+          <Text style={styles.expandHint}>{isExpanded ? "닫기" : "보기"}</Text>
+        </View>
+      </Pressable>
 
-      <View style={styles.commentBlock}>
-        <Text style={styles.commentTitle}>댓글</Text>
-        {post.comments.length > 0 ? (
-          post.comments.map((comment, index) => (
-            <View key={comment.id} style={styles.commentItem}>
-              <View style={styles.commentHeader}>
-                <Text style={[styles.commentAuthor, comment.byAuthor && styles.commentAuthorOwner]}>
-                  {getCommentAuthorLabel(post, comment, index)}
-                </Text>
-                <Text style={styles.commentTime}>{comment.createdAt}</Text>
-              </View>
-              <Text style={styles.commentBody}>{comment.body}</Text>
+      {isExpanded ? (
+        <View style={styles.postDetail}>
+          <Text style={styles.postBody}>{post.body}</Text>
+          {post.imageUrl ? <Image source={{ uri: post.imageUrl }} style={styles.postDetailImage} /> : null}
+
+          <View style={styles.commentBlock}>
+            <Text style={styles.commentTitle}>댓글</Text>
+            {post.comments.length > 0 ? (
+              post.comments.map((comment, index) => (
+                <View key={comment.id} style={styles.commentItem}>
+                  <View style={styles.commentHeader}>
+                    <Text style={[styles.commentAuthor, comment.byAuthor && styles.commentAuthorOwner]}>
+                      {getCommentAuthorLabel(post, comment, index)}
+                    </Text>
+                    <Text style={styles.commentTime}>{comment.createdAt}</Text>
+                  </View>
+                  <Text style={styles.commentBody}>{comment.body}</Text>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.commentEmpty}>아직 댓글이 없어요.</Text>
+            )}
+
+            <View style={styles.commentComposer}>
+              <TextInput
+                value={commentDraft}
+                onChangeText={onChangeComment}
+                placeholder="익명으로 댓글 달기"
+                placeholderTextColor={colors.textSoft}
+                style={styles.commentInput}
+              />
+              <Pressable style={styles.commentButton} onPress={onSubmitComment}>
+                <Text style={styles.commentButtonText}>등록</Text>
+              </Pressable>
             </View>
-          ))
-        ) : (
-          <Text style={styles.commentEmpty}>아직 댓글이 없어요.</Text>
-        )}
-
-        <View style={styles.commentComposer}>
-          <TextInput
-            value={commentDraft}
-            onChangeText={onChangeComment}
-            placeholder="익명으로 댓글 달기"
-            placeholderTextColor={colors.textSoft}
-            style={styles.commentInput}
-          />
-          <Pressable style={styles.commentButton} onPress={onSubmitComment}>
-            <Text style={styles.commentButtonText}>등록</Text>
-          </Pressable>
+          </View>
         </View>
-      </View>
+      ) : null}
     </View>
   );
 }
@@ -148,6 +167,8 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
   const [writeTopic, setWriteTopic] = useState<WritableCommunityTab>("음식 후기");
   const [writeTitle, setWriteTitle] = useState("");
   const [writeBody, setWriteBody] = useState("");
+  const [writeImageUrl, setWriteImageUrl] = useState("");
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
 
   const visiblePosts = useMemo(
     () => posts.filter((post) => post.topic === activeTab),
@@ -163,11 +184,13 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
     setWriterOpen(false);
     setWriteTitle("");
     setWriteBody("");
+    setWriteImageUrl("");
   }
 
   function createPost() {
     const title = writeTitle.trim();
     const body = writeBody.trim();
+    const imageUrl = writeImageUrl.trim();
 
     if (!title || !body) {
       return;
@@ -180,11 +203,13 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
       body,
       createdAt: "방금",
       isMine: true,
+      imageUrl: imageUrl || undefined,
       comments: [],
     };
 
     setPosts((currentPosts) => [nextPost, ...currentPosts]);
     setActiveTab(writeTopic);
+    setSelectedPostId(nextPost.id);
     closeWriter();
   }
 
@@ -193,6 +218,11 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
       ...currentDrafts,
       [postId]: value,
     }));
+  }
+
+  function selectTab(tab: CommunityTab) {
+    setActiveTab(tab);
+    setSelectedPostId(null);
   }
 
   function addComment(postId: string) {
@@ -230,7 +260,7 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.tabRow}>
           {tabs.map((tab) => (
-            <Pressable key={tab} style={[styles.tab, activeTab === tab && styles.tabActive]} onPress={() => setActiveTab(tab)}>
+            <Pressable key={tab} style={[styles.tab, activeTab === tab && styles.tabActive]} onPress={() => selectTab(tab)}>
               <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
             </Pressable>
           ))}
@@ -269,8 +299,10 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
             key={post.id}
             post={post}
             commentDraft={commentDrafts[post.id] ?? ""}
+            isExpanded={selectedPostId === post.id}
             onChangeComment={(value) => updateCommentDraft(post.id, value)}
             onSubmitComment={() => addComment(post.id)}
+            onToggle={() => setSelectedPostId((currentId) => (currentId === post.id ? null : post.id))}
           />
         ))}
       </ScrollView>
@@ -319,6 +351,28 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
             multiline
             style={[styles.writerInput, styles.writerTextArea]}
           />
+
+          <Text style={styles.inputLabel}>사진 첨부</Text>
+          <TextInput
+            value={writeImageUrl}
+            onChangeText={setWriteImageUrl}
+            placeholder="이미지 URL 붙여넣기"
+            placeholderTextColor={colors.textSoft}
+            style={styles.writerInput}
+          />
+          <View style={styles.imageAttachRow}>
+            <Pressable
+              style={styles.sampleImageButton}
+              onPress={() =>
+                setWriteImageUrl("https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=700&q=80")
+              }
+            >
+              <Text style={styles.sampleImageButtonText}>샘플 사진 첨부</Text>
+            </Pressable>
+            {writeImageUrl.trim() ? (
+              <Image source={{ uri: writeImageUrl.trim() }} style={styles.writerThumbnail} />
+            ) : null}
+          </View>
 
           <Pressable
             style={[styles.submitButton, (!writeTitle.trim() || !writeBody.trim()) && styles.submitButtonDisabled]}
@@ -489,19 +543,28 @@ const styles = StyleSheet.create({
   },
   postCard: {
     marginBottom: 12,
-    padding: 15,
+    padding: 14,
     borderRadius: 22,
     backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: colors.border,
   },
-  postTop: {
+  postSummary: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: 10,
+    gap: 12,
+  },
+  postSummaryCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  postSideMeta: {
+    alignItems: "flex-end",
+    minWidth: 54,
   },
   postTopicPill: {
+    alignSelf: "flex-start",
     overflow: "hidden",
     paddingHorizontal: 9,
     paddingVertical: 5,
@@ -518,6 +581,24 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
   },
+  postThumbnail: {
+    width: 48,
+    height: 40,
+    marginTop: 7,
+    borderRadius: 12,
+    backgroundColor: "#edf6fc",
+  },
+  expandHint: {
+    overflow: "hidden",
+    marginTop: 7,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#edf6fc",
+    color: colors.primary,
+    fontSize: 10,
+    fontWeight: "900",
+  },
   postTitle: {
     marginTop: 10,
     color: colors.text,
@@ -531,12 +612,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "900",
   },
+  postDetail: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#e2f0f7",
+  },
   postBody: {
-    marginTop: 8,
     color: colors.textMuted,
     fontSize: 14,
     fontWeight: "800",
     lineHeight: 20,
+  },
+  postDetailImage: {
+    width: "100%",
+    height: 150,
+    marginTop: 12,
+    borderRadius: 18,
+    backgroundColor: "#edf6fc",
   },
   commentBlock: {
     marginTop: 14,
@@ -763,6 +856,33 @@ const styles = StyleSheet.create({
   writerTextArea: {
     minHeight: 92,
     textAlignVertical: "top",
+  },
+  imageAttachRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 9,
+  },
+  sampleImageButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 42,
+    borderRadius: 16,
+    backgroundColor: "#edf6fc",
+    borderWidth: 1,
+    borderColor: "#d7edf7",
+  },
+  sampleImageButtonText: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  writerThumbnail: {
+    width: 52,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: "#edf6fc",
   },
   submitButton: {
     alignItems: "center",
