@@ -1,8 +1,9 @@
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Platform, Text, TextInput, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
+import StartupSplash from "./src/components/StartupSplash";
 import AppNavigator from "./src/navigation/AppNavigator";
 import { CartProvider } from "./src/store/CartContext";
 import { NotificationProvider } from "./src/store/NotificationContext";
@@ -15,7 +16,6 @@ const linking = {
   prefixes: ["babmukja://", webOrigin].filter(Boolean),
   config: {
     screens: {
-      Splash: "",
       RestaurantList: "home",
       Community: "community",
       Recommendation: "recommendation",
@@ -41,9 +41,14 @@ applyDefaultFont(Text);
 applyDefaultFont(TextInput);
 
 export default function App() {
+  const [showStartupSplash, setShowStartupSplash] = useState(true);
   const [fontsLoaded] = useFonts({
     GowunDodum: require("./assets/fonts/GowunDodum-Regular.ttf"),
   });
+
+  const hideStartupSplash = useCallback(() => {
+    setShowStartupSplash(false);
+  }, []);
 
   useEffect(() => {
     if (Platform.OS !== "web" || typeof document === "undefined") {
@@ -81,10 +86,13 @@ export default function App() {
   return (
     <NotificationProvider>
       <CartProvider>
-        <NavigationContainer linking={linking}>
-          <StatusBar style="dark" />
-          <AppNavigator />
-        </NavigationContainer>
+        <View style={{ flex: 1 }}>
+          <NavigationContainer linking={linking}>
+            <StatusBar style="dark" />
+            <AppNavigator />
+          </NavigationContainer>
+          {showStartupSplash ? <StartupSplash onDone={hideStartupSplash} /> : null}
+        </View>
       </CartProvider>
     </NotificationProvider>
   );

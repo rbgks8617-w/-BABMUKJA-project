@@ -14,7 +14,6 @@ import PaymentScreen from "../screens/PaymentScreen";
 import RecommendationScreen from "../screens/RecommendationScreen";
 import RestaurantDetailScreen from "../screens/RestaurantDetailScreen";
 import RestaurantListScreen from "../screens/RestaurantListScreen";
-import SplashScreen from "../screens/SplashScreen";
 import { colors } from "../theme/colors";
 import { APP_FONT_FAMILY } from "../theme/typography";
 
@@ -90,7 +89,7 @@ function pushOptions(navigation, title, label = "뒤로", fallbackRoute = "Resta
 export default function AppNavigator() {
   return (
     <Stack.Navigator
-      initialRouteName="Splash"
+      initialRouteName="RestaurantList"
       screenOptions={{
         animation: "slide_from_right",
         contentStyle: { backgroundColor: colors.background },
@@ -102,7 +101,6 @@ export default function AppNavigator() {
         headerTitleStyle,
       }}
     >
-      <Stack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} />
       <Stack.Screen
         name="RestaurantList"
         component={RestaurantListScreen}
