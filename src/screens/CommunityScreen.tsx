@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { colors } from "../theme/colors";
 import type { AppScreenProps } from "../types/app";
 
@@ -37,6 +37,10 @@ function formatRating(score: number) {
 
 function clampRating(score: number) {
   return Math.min(maxRating, Math.max(minRating, Number(score.toFixed(1))));
+}
+
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }
 
 const initialPosts: CommunityPostItem[] = [
@@ -169,6 +173,11 @@ function PostCard({
 }
 
 export default function CommunityScreen({ navigation }: AppScreenProps<"Community">) {
+  const { height: viewportHeight } = useWindowDimensions();
+  const maxWriterHeight = Math.max(360, viewportHeight - 28);
+  const minWriterHeight = Math.min(maxWriterHeight, Math.max(320, viewportHeight * 0.52));
+  const defaultWriterHeight = Math.min(maxWriterHeight, Math.max(minWriterHeight, viewportHeight * 0.7));
+
   const [activeTab, setActiveTab] = useState<CommunityTab>("음식 후기");
   const [posts, setPosts] = useState<CommunityPostItem[]>(initialPosts);
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
@@ -180,14 +189,50 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
   const [writeTasteScore, setWriteTasteScore] = useState(4.5);
   const [writeValueScore, setWriteValueScore] = useState(4.5);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [writerHeight, setWriterHeight] = useState(defaultWriterHeight);
+  const dragStartHeight = useRef(defaultWriterHeight);
+  const writerHeightRef = useRef(defaultWriterHeight);
 
   const visiblePosts = useMemo(
     () => posts.filter((post) => post.topic === activeTab),
     [activeTab, posts],
   );
 
+  const writerPanResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          Math.abs(gestureState.dy) > 4 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx),
+        onPanResponderGrant: () => {
+          dragStartHeight.current = writerHeightRef.current;
+        },
+        onPanResponderMove: (_, gestureState) => {
+          const nextHeight = clampNumber(dragStartHeight.current - gestureState.dy, minWriterHeight, maxWriterHeight);
+          writerHeightRef.current = nextHeight;
+          setWriterHeight(nextHeight);
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          const nextHeight = clampNumber(dragStartHeight.current - gestureState.dy, minWriterHeight, maxWriterHeight);
+          writerHeightRef.current = nextHeight;
+          setWriterHeight(nextHeight);
+        },
+        onPanResponderTerminationRequest: () => true,
+      }),
+    [maxWriterHeight, minWriterHeight],
+  );
+
+  useEffect(() => {
+    setWriterHeight((currentHeight) => {
+      const nextHeight = clampNumber(currentHeight, minWriterHeight, maxWriterHeight);
+      writerHeightRef.current = nextHeight;
+      return nextHeight;
+    });
+  }, [maxWriterHeight, minWriterHeight]);
+
   function openWriter() {
     setWriteTopic(activeTab === "자유게시판" ? "자유게시판" : "음식 후기");
+    writerHeightRef.current = defaultWriterHeight;
+    setWriterHeight(defaultWriterHeight);
     setWriterOpen(true);
   }
 
@@ -333,8 +378,10 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
       </ScrollView>
 
       {writerOpen ? (
-        <View style={styles.writerSheet}>
-          <View style={styles.writerHandle} />
+        <View style={[styles.writerSheet, { height: writerHeight }]}>
+          <View style={styles.writerDragArea} {...writerPanResponder.panHandlers}>
+            <View style={styles.writerHandle} />
+          </View>
           <View style={styles.writerHeader}>
             <View>
               <Text style={styles.writerEyebrow}>커뮤니티 글쓰기</Text>
@@ -345,111 +392,118 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
             </Pressable>
           </View>
 
-          <Text style={styles.inputLabel}>글쓰기 주제</Text>
-          <View style={styles.topicRow}>
-            {writableTabs.map((topic) => (
-              <Pressable
-                key={topic}
-                style={[styles.topicChip, writeTopic === topic && styles.topicChipActive]}
-                onPress={() => setWriteTopic(topic)}
-              >
-                <Text style={[styles.topicChipText, writeTopic === topic && styles.topicChipTextActive]}>{topic}</Text>
-              </Pressable>
-            ))}
-          </View>
-
-          <Text style={styles.inputLabel}>제목</Text>
-          <TextInput
-            value={writeTitle}
-            onChangeText={setWriteTitle}
-            placeholder="제목을 입력하세요"
-            placeholderTextColor={colors.textSoft}
-            style={styles.writerInput}
-          />
-
-          <Text style={styles.inputLabel}>내용</Text>
-          <TextInput
-            value={writeBody}
-            onChangeText={setWriteBody}
-            placeholder="내용을 입력하세요"
-            placeholderTextColor={colors.textSoft}
-            multiline
-            style={[styles.writerInput, styles.writerTextArea]}
-          />
-
-          {writeTopic === "음식 후기" ? (
-            <View style={styles.ratingPanel}>
-              <View style={styles.ratingHeader}>
-                <Text style={styles.ratingTitle}>후기 점수</Text>
-                <Text style={styles.ratingGuide}>0.5점 단위 · 5점 만점</Text>
-              </View>
-              <View style={styles.ratingRow}>
-                <Text style={styles.ratingLabel}>맛</Text>
-                <View style={styles.ratingStepper}>
-                  <Pressable
-                    style={[styles.ratingButton, writeTasteScore <= minRating && styles.ratingButtonDisabled]}
-                    onPress={() => changeTasteScore(-ratingStep)}
-                  >
-                    <Text style={styles.ratingButtonText}>-</Text>
-                  </Pressable>
-                  <Text style={styles.ratingValue}>{formatRating(writeTasteScore)}</Text>
-                  <Pressable
-                    style={[styles.ratingButton, writeTasteScore >= maxRating && styles.ratingButtonDisabled]}
-                    onPress={() => changeTasteScore(ratingStep)}
-                  >
-                    <Text style={styles.ratingButtonText}>+</Text>
-                  </Pressable>
-                </View>
-              </View>
-              <View style={styles.ratingRow}>
-                <Text style={styles.ratingLabel}>가성비</Text>
-                <View style={styles.ratingStepper}>
-                  <Pressable
-                    style={[styles.ratingButton, writeValueScore <= minRating && styles.ratingButtonDisabled]}
-                    onPress={() => changeValueScore(-ratingStep)}
-                  >
-                    <Text style={styles.ratingButtonText}>-</Text>
-                  </Pressable>
-                  <Text style={styles.ratingValue}>{formatRating(writeValueScore)}</Text>
-                  <Pressable
-                    style={[styles.ratingButton, writeValueScore >= maxRating && styles.ratingButtonDisabled]}
-                    onPress={() => changeValueScore(ratingStep)}
-                  >
-                    <Text style={styles.ratingButtonText}>+</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-          ) : null}
-
-          <Text style={styles.inputLabel}>사진 첨부</Text>
-          <TextInput
-            value={writeImageUrl}
-            onChangeText={setWriteImageUrl}
-            placeholder="이미지 URL 붙여넣기"
-            placeholderTextColor={colors.textSoft}
-            style={styles.writerInput}
-          />
-          <View style={styles.imageAttachRow}>
-            <Pressable
-              style={styles.sampleImageButton}
-              onPress={() =>
-                setWriteImageUrl("https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=700&q=80")
-              }
-            >
-              <Text style={styles.sampleImageButtonText}>샘플 사진 첨부</Text>
-            </Pressable>
-            {writeImageUrl.trim() ? (
-              <Image source={{ uri: writeImageUrl.trim() }} style={styles.writerThumbnail} />
-            ) : null}
-          </View>
-
-          <Pressable
-            style={[styles.submitButton, (!writeTitle.trim() || !writeBody.trim()) && styles.submitButtonDisabled]}
-            onPress={createPost}
+          <ScrollView
+            style={styles.writerScroll}
+            contentContainerStyle={styles.writerScrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
-            <Text style={styles.submitButtonText}>글 올리기</Text>
-          </Pressable>
+            <Text style={styles.inputLabel}>글쓰기 주제</Text>
+            <View style={styles.topicRow}>
+              {writableTabs.map((topic) => (
+                <Pressable
+                  key={topic}
+                  style={[styles.topicChip, writeTopic === topic && styles.topicChipActive]}
+                  onPress={() => setWriteTopic(topic)}
+                >
+                  <Text style={[styles.topicChipText, writeTopic === topic && styles.topicChipTextActive]}>{topic}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Text style={styles.inputLabel}>제목</Text>
+            <TextInput
+              value={writeTitle}
+              onChangeText={setWriteTitle}
+              placeholder="제목을 입력하세요"
+              placeholderTextColor={colors.textSoft}
+              style={styles.writerInput}
+            />
+
+            <Text style={styles.inputLabel}>내용</Text>
+            <TextInput
+              value={writeBody}
+              onChangeText={setWriteBody}
+              placeholder="내용을 입력하세요"
+              placeholderTextColor={colors.textSoft}
+              multiline
+              style={[styles.writerInput, styles.writerTextArea]}
+            />
+
+            {writeTopic === "음식 후기" ? (
+              <View style={styles.ratingPanel}>
+                <View style={styles.ratingHeader}>
+                  <Text style={styles.ratingTitle}>후기 점수</Text>
+                  <Text style={styles.ratingGuide}>0.5점 단위 · 5점 만점</Text>
+                </View>
+                <View style={styles.ratingRow}>
+                  <Text style={styles.ratingLabel}>맛</Text>
+                  <View style={styles.ratingStepper}>
+                    <Pressable
+                      style={[styles.ratingButton, writeTasteScore <= minRating && styles.ratingButtonDisabled]}
+                      onPress={() => changeTasteScore(-ratingStep)}
+                    >
+                      <Text style={styles.ratingButtonText}>-</Text>
+                    </Pressable>
+                    <Text style={styles.ratingValue}>{formatRating(writeTasteScore)}</Text>
+                    <Pressable
+                      style={[styles.ratingButton, writeTasteScore >= maxRating && styles.ratingButtonDisabled]}
+                      onPress={() => changeTasteScore(ratingStep)}
+                    >
+                      <Text style={styles.ratingButtonText}>+</Text>
+                    </Pressable>
+                  </View>
+                </View>
+                <View style={styles.ratingRow}>
+                  <Text style={styles.ratingLabel}>가성비</Text>
+                  <View style={styles.ratingStepper}>
+                    <Pressable
+                      style={[styles.ratingButton, writeValueScore <= minRating && styles.ratingButtonDisabled]}
+                      onPress={() => changeValueScore(-ratingStep)}
+                    >
+                      <Text style={styles.ratingButtonText}>-</Text>
+                    </Pressable>
+                    <Text style={styles.ratingValue}>{formatRating(writeValueScore)}</Text>
+                    <Pressable
+                      style={[styles.ratingButton, writeValueScore >= maxRating && styles.ratingButtonDisabled]}
+                      onPress={() => changeValueScore(ratingStep)}
+                    >
+                      <Text style={styles.ratingButtonText}>+</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+            ) : null}
+
+            <Text style={styles.inputLabel}>사진 첨부</Text>
+            <TextInput
+              value={writeImageUrl}
+              onChangeText={setWriteImageUrl}
+              placeholder="이미지 URL 붙여넣기"
+              placeholderTextColor={colors.textSoft}
+              style={styles.writerInput}
+            />
+            <View style={styles.imageAttachRow}>
+              <Pressable
+                style={styles.sampleImageButton}
+                onPress={() =>
+                  setWriteImageUrl("https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=700&q=80")
+                }
+              >
+                <Text style={styles.sampleImageButtonText}>샘플 사진 첨부</Text>
+              </Pressable>
+              {writeImageUrl.trim() ? (
+                <Image source={{ uri: writeImageUrl.trim() }} style={styles.writerThumbnail} />
+              ) : null}
+            </View>
+
+            <Pressable
+              style={[styles.submitButton, (!writeTitle.trim() || !writeBody.trim()) && styles.submitButtonDisabled]}
+              onPress={createPost}
+            >
+              <Text style={styles.submitButtonText}>글 올리기</Text>
+            </Pressable>
+          </ScrollView>
         </View>
       ) : (
         <Pressable style={styles.writeDock} onPress={openWriter}>
@@ -830,7 +884,8 @@ const styles = StyleSheet.create({
     right: 12,
     bottom: 12,
     zIndex: 20,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
     borderRadius: 28,
     backgroundColor: "#ffffff",
     borderWidth: 1,
@@ -841,11 +896,16 @@ const styles = StyleSheet.create({
     shadowRadius: 28,
     elevation: 10,
   },
+  writerDragArea: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 12,
+    paddingBottom: 10,
+  },
   writerHandle: {
     alignSelf: "center",
     width: 48,
     height: 5,
-    marginBottom: 12,
     borderRadius: 999,
     backgroundColor: "#dcecf5",
   },
@@ -855,6 +915,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 12,
     marginBottom: 12,
+  },
+  writerScroll: {
+    flex: 1,
+  },
+  writerScrollContent: {
+    paddingBottom: 4,
   },
   writerEyebrow: {
     color: colors.primary,
