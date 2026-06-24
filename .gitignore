@@ -3,6 +3,7 @@ dist/
 build/
 .expo/
 .expo-web.*.log
+.codex-expo-web.log
 release/*.apk
 release/*.zip
 .env
