@@ -33,7 +33,6 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
   const isWideLayout = width >= 980;
   const carouselCardWidth = Math.min(width - 62, 282);
   const [liveTick, setLiveTick] = useState(0);
-  const [selectedBuildingId, setSelectedBuildingId] = useState("tip");
   const [activeCategory, setActiveCategory] = useState("전체");
   const [searchQuery, setSearchQuery] = useState("");
   const liveMotion = useRef(new Animated.Value(1)).current;
@@ -175,20 +174,16 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
             key={building.id}
             style={({ pressed }) => [
               styles.restaurantSlide,
-              selectedBuildingId === building.id && styles.restaurantSlideSelected,
               pressed && styles.restaurantSlidePressed,
               { width: carouselCardWidth },
             ]}
-            onPress={() => setSelectedBuildingId(building.id)}
+            onPress={() => navigation.navigate("CampusMap", { buildingId: building.id })}
           >
             <ImageBackground source={{ uri: building.imageUrl }} style={styles.slideImage} imageStyle={styles.slideImageRadius}>
               <View style={styles.slideOverlay} />
               <View style={styles.slideTop}>
                 <Text style={styles.slideRank}>{building.index}</Text>
                 <Text style={styles.heartBadge}>♡</Text>
-              </View>
-              <View style={styles.slideNameBadge}>
-                <Text numberOfLines={1} style={styles.slideNameBadgeText}>{building.displayName}</Text>
               </View>
             </ImageBackground>
             <View style={styles.slideBody}>
@@ -200,12 +195,6 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
                 <Text style={styles.slideMeta}>{building.walkText}</Text>
                 <Text style={styles.slideCrowd}>{building.crowdText}</Text>
               </View>
-              <Pressable
-                style={styles.menuButton}
-                onPress={() => navigation.navigate("CampusMap", { buildingId: building.id })}
-              >
-                <Text style={styles.menuButtonText}>식당 보기</Text>
-              </Pressable>
             </View>
           </Pressable>
         ))}
@@ -1082,10 +1071,6 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 3,
   },
-  restaurantSlideSelected: {
-    borderColor: colors.primary,
-    borderWidth: 2,
-  },
   restaurantSlidePressed: {
     opacity: 0.82,
     transform: [{ scale: 0.98 }],
@@ -1107,23 +1092,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     padding: 10,
-  },
-  slideNameBadge: {
-    position: "absolute",
-    left: 12,
-    right: 12,
-    bottom: 10,
-    alignSelf: "flex-start",
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    borderRadius: 999,
-    backgroundColor: "rgba(255, 255, 255, 0.94)",
-  },
-  slideNameBadgeText: {
-    color: colors.ink,
-    fontSize: 14,
-    fontWeight: "900",
-    lineHeight: 17,
   },
   slideRank: {
     width: 30,
@@ -1188,18 +1156,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#e9f8ee",
     color: colors.success,
     fontSize: 11,
-    fontWeight: "900",
-  },
-  menuButton: {
-    alignItems: "center",
-    marginTop: 13,
-    paddingVertical: 11,
-    borderRadius: 16,
-    backgroundColor: "#edf6fc",
-  },
-  menuButtonText: {
-    color: colors.primary,
-    fontSize: 13,
     fontWeight: "900",
   },
   bottomDock: {
