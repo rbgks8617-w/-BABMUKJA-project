@@ -27,13 +27,24 @@ type CommunityPostItem = {
 
 const tabs: CommunityTab[] = ["음식 후기", "자유게시판", "나랑 밥먹자"];
 const writableTabs: WritableCommunityTab[] = ["음식 후기", "자유게시판"];
+const ratingStep = 0.5;
+const minRating = 0.5;
+const maxRating = 5;
+
+function formatRating(score: number) {
+  return score.toFixed(1);
+}
+
+function clampRating(score: number) {
+  return Math.min(maxRating, Math.max(minRating, Number(score.toFixed(1))));
+}
 
 const initialPosts: CommunityPostItem[] = [
   {
     id: "review-1",
     topic: "음식 후기",
     title: "맘스터치 싸이버거 세트 든든함",
-    meta: "맛 4.6 · 가성비 4.2",
+    meta: "맛 4.5 · 가성비 4.0",
     body: "공강 짧을 때 빨리 먹기 좋고 양도 꽤 괜찮아요.",
     createdAt: "방금",
     isMine: false,
@@ -47,7 +58,7 @@ const initialPosts: CommunityPostItem[] = [
     id: "review-2",
     topic: "음식 후기",
     title: "라온식당 김치찌개 괜찮음",
-    meta: "맛 4.3 · 가성비 4.5",
+    meta: "맛 4.5 · 가성비 4.5",
     body: "종합교육관 쪽 수업이면 이동이 편해서 자주 갈 듯.",
     createdAt: "3분 전",
     isMine: false,
@@ -106,9 +117,7 @@ function PostCard({
             <Text style={styles.postTopicText}>{post.topic}</Text>
           </View>
           <Text style={styles.postTitle}>{post.title}</Text>
-          <Text style={styles.postMeta}>
-            익명{post.meta ? ` · ${post.meta}` : ""} · 댓글 {post.comments.length}
-          </Text>
+          <Text style={styles.postMeta}>{post.meta ? `${post.meta} · ` : ""}댓글 {post.comments.length}</Text>
         </View>
         <View style={styles.postSideMeta}>
           <Text style={styles.postTime}>{post.createdAt}</Text>
@@ -144,7 +153,7 @@ function PostCard({
               <TextInput
                 value={commentDraft}
                 onChangeText={onChangeComment}
-                placeholder="익명으로 댓글 달기"
+                placeholder="댓글 달기"
                 placeholderTextColor={colors.textSoft}
                 style={styles.commentInput}
               />
@@ -168,6 +177,8 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
   const [writeTitle, setWriteTitle] = useState("");
   const [writeBody, setWriteBody] = useState("");
   const [writeImageUrl, setWriteImageUrl] = useState("");
+  const [writeTasteScore, setWriteTasteScore] = useState(4.5);
+  const [writeValueScore, setWriteValueScore] = useState(4.5);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
 
   const visiblePosts = useMemo(
@@ -185,6 +196,8 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
     setWriteTitle("");
     setWriteBody("");
     setWriteImageUrl("");
+    setWriteTasteScore(4.5);
+    setWriteValueScore(4.5);
   }
 
   function createPost() {
@@ -201,6 +214,10 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
       topic: writeTopic,
       title,
       body,
+      meta:
+        writeTopic === "음식 후기"
+          ? `맛 ${formatRating(writeTasteScore)} · 가성비 ${formatRating(writeValueScore)}`
+          : undefined,
       createdAt: "방금",
       isMine: true,
       imageUrl: imageUrl || undefined,
@@ -255,6 +272,14 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
     updateCommentDraft(postId, "");
   }
 
+  function changeTasteScore(delta: number) {
+    setWriteTasteScore((currentScore) => clampRating(currentScore + delta));
+  }
+
+  function changeValueScore(delta: number) {
+    setWriteValueScore((currentScore) => clampRating(currentScore + delta));
+  }
+
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container}>
@@ -273,7 +298,7 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
                 <Text style={styles.mateSymbolText}>밥</Text>
               </View>
               <View style={styles.matePanelCopy}>
-                <Text style={styles.mateEyebrow}>익명 식사 매칭</Text>
+                <Text style={styles.mateEyebrow}>캠퍼스 식사 매칭</Text>
                 <Text style={styles.panelTitle}>오늘 같이 먹을 사람 찾기</Text>
                 <Text style={styles.panelDescription}>시간, 식당, 대화 주제를 정해서 부담 없는 한 끼 모임을 열 수 있어요.</Text>
               </View>
@@ -312,7 +337,7 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
           <View style={styles.writerHandle} />
           <View style={styles.writerHeader}>
             <View>
-              <Text style={styles.writerEyebrow}>익명 글쓰기</Text>
+              <Text style={styles.writerEyebrow}>커뮤니티 글쓰기</Text>
               <Text style={styles.writerTitle}>주제, 제목, 내용을 적어주세요</Text>
             </View>
             <Pressable hitSlop={8} onPress={closeWriter}>
@@ -352,6 +377,51 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
             style={[styles.writerInput, styles.writerTextArea]}
           />
 
+          {writeTopic === "음식 후기" ? (
+            <View style={styles.ratingPanel}>
+              <View style={styles.ratingHeader}>
+                <Text style={styles.ratingTitle}>후기 점수</Text>
+                <Text style={styles.ratingGuide}>0.5점 단위 · 5점 만점</Text>
+              </View>
+              <View style={styles.ratingRow}>
+                <Text style={styles.ratingLabel}>맛</Text>
+                <View style={styles.ratingStepper}>
+                  <Pressable
+                    style={[styles.ratingButton, writeTasteScore <= minRating && styles.ratingButtonDisabled]}
+                    onPress={() => changeTasteScore(-ratingStep)}
+                  >
+                    <Text style={styles.ratingButtonText}>-</Text>
+                  </Pressable>
+                  <Text style={styles.ratingValue}>{formatRating(writeTasteScore)}</Text>
+                  <Pressable
+                    style={[styles.ratingButton, writeTasteScore >= maxRating && styles.ratingButtonDisabled]}
+                    onPress={() => changeTasteScore(ratingStep)}
+                  >
+                    <Text style={styles.ratingButtonText}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
+              <View style={styles.ratingRow}>
+                <Text style={styles.ratingLabel}>가성비</Text>
+                <View style={styles.ratingStepper}>
+                  <Pressable
+                    style={[styles.ratingButton, writeValueScore <= minRating && styles.ratingButtonDisabled]}
+                    onPress={() => changeValueScore(-ratingStep)}
+                  >
+                    <Text style={styles.ratingButtonText}>-</Text>
+                  </Pressable>
+                  <Text style={styles.ratingValue}>{formatRating(writeValueScore)}</Text>
+                  <Pressable
+                    style={[styles.ratingButton, writeValueScore >= maxRating && styles.ratingButtonDisabled]}
+                    onPress={() => changeValueScore(ratingStep)}
+                  >
+                    <Text style={styles.ratingButtonText}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          ) : null}
+
           <Text style={styles.inputLabel}>사진 첨부</Text>
           <TextInput
             value={writeImageUrl}
@@ -378,14 +448,14 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
             style={[styles.submitButton, (!writeTitle.trim() || !writeBody.trim()) && styles.submitButtonDisabled]}
             onPress={createPost}
           >
-            <Text style={styles.submitButtonText}>익명으로 글 올리기</Text>
+            <Text style={styles.submitButtonText}>글 올리기</Text>
           </Pressable>
         </View>
       ) : (
         <Pressable style={styles.writeDock} onPress={openWriter}>
           <View>
             <Text style={styles.writeDockEyebrow}>커뮤니티 글쓰기</Text>
-            <Text style={styles.writeDockTitle}>익명으로 새 글 올리기</Text>
+            <Text style={styles.writeDockTitle}>새 글 올리기</Text>
           </View>
           <Text style={styles.writeDockAction}>글쓰기</Text>
         </Pressable>
@@ -856,6 +926,71 @@ const styles = StyleSheet.create({
   writerTextArea: {
     minHeight: 92,
     textAlignVertical: "top",
+  },
+  ratingPanel: {
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 18,
+    backgroundColor: "#f7fbfe",
+    borderWidth: 1,
+    borderColor: "#d7edf7",
+  },
+  ratingHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    marginBottom: 10,
+  },
+  ratingTitle: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  ratingGuide: {
+    color: colors.textSoft,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  ratingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: 42,
+  },
+  ratingLabel: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  ratingStepper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  ratingButton: {
+    width: 34,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+  },
+  ratingButtonDisabled: {
+    backgroundColor: "#bdd7ea",
+  },
+  ratingButtonText: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "900",
+    lineHeight: 20,
+  },
+  ratingValue: {
+    width: 38,
+    textAlign: "center",
+    color: colors.ink,
+    fontSize: 16,
+    fontWeight: "900",
   },
   imageAttachRow: {
     flexDirection: "row",
