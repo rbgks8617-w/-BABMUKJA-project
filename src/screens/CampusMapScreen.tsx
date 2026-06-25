@@ -53,8 +53,8 @@ export default function CampusMapScreen({ route, navigation }: AppScreenProps<"C
   const [selectedBuildingId, setSelectedBuildingId] = useState(() => getInitialBuildingId(route));
 
   const selectedBuilding = campusMapBuildings.find((building) => building.id === selectedBuildingId) ?? campusMapBuildings[0];
-  const mapWidth = Math.min(Math.max(width - 18, 360), 1180);
-  const mapStageHeight = Math.min(260, mapWidth / mapAspectRatio + 14);
+  const mapWidth = Math.min(Math.max(width - 20, 320), 1180);
+  const mapStageHeight = Math.min(244, mapWidth / mapAspectRatio);
 
   useEffect(() => {
     setSelectedBuildingId(getInitialBuildingId(route));
@@ -74,9 +74,9 @@ export default function CampusMapScreen({ route, navigation }: AppScreenProps<"C
       <View pointerEvents="none" style={styles.skyGlowMiddle} />
       <View pointerEvents="none" style={styles.skyGlowFade} />
       <View style={styles.content}>
-        <View style={[styles.mapStage, { height: mapStageHeight }]}>
-          <View style={[styles.mapCanvas, { width: mapWidth, aspectRatio: mapAspectRatio }]}>
-            <ImageBackground source={campusMapImage} resizeMode="contain" style={styles.mapImage}>
+        <View style={[styles.mapStage, { width: mapWidth, height: mapStageHeight }]}>
+          <View style={styles.mapCanvas}>
+            <ImageBackground source={campusMapImage} resizeMode="cover" style={styles.mapImage}>
               {campusMapBuildings.map((building) => (
                 <Pressable
                   key={`${building.id}-touch`}
@@ -199,8 +199,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
   },
   mapStage: {
+    alignSelf: "center",
     alignItems: "center",
-    justifyContent: "flex-start",
+    justifyContent: "center",
     overflow: "hidden",
     marginTop: 16,
     borderRadius: 22,
@@ -209,8 +210,8 @@ const styles = StyleSheet.create({
     borderColor: "#dcebf2",
   },
   mapCanvas: {
-    maxHeight: "100%",
-    marginTop: 8,
+    width: "100%",
+    height: "100%",
   },
   mapImage: {
     width: "100%",
