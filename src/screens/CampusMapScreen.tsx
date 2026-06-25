@@ -73,7 +73,7 @@ export default function CampusMapScreen({ route, navigation }: AppScreenProps<"C
       <View pointerEvents="none" style={styles.skyGlowTop} />
       <View pointerEvents="none" style={styles.skyGlowMiddle} />
       <View pointerEvents="none" style={styles.skyGlowFade} />
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <View style={styles.content}>
         <View style={[styles.mapStage, { height: mapStageHeight }]}>
           <View style={[styles.mapCanvas, { width: mapWidth, aspectRatio: mapAspectRatio }]}>
             <ImageBackground source={campusMapImage} resizeMode="contain" style={styles.mapImage}>
@@ -128,30 +128,37 @@ export default function CampusMapScreen({ route, navigation }: AppScreenProps<"C
               </View>
               <Text style={styles.sheetCount}>{selectedBuilding.restaurants.length}곳</Text>
             </View>
-            {selectedBuilding.restaurants.map((item) => {
-              const restaurant = getRestaurantById(item.restaurantId);
-              return (
-                <Pressable key={item.restaurantId} style={styles.restaurantCard} onPress={() => openRestaurantDetail(item.restaurantId)}>
-                  <ImageBackground
-                    source={{ uri: restaurant?.imageUrl ?? "" }}
-                    style={styles.restaurantImage}
-                    imageStyle={styles.restaurantImageRadius}
-                  >
-                    <View style={styles.restaurantImageDim} />
-                  </ImageBackground>
-                  <View style={styles.sheetCopy}>
-                    <Text style={styles.sheetName}>{item.label}</Text>
-                    <Text style={styles.sheetMeta}>
-                      {restaurant?.category ?? "식당"} · {item.hours}
-                    </Text>
-                  </View>
-                  <Text style={styles.cardArrow}>›</Text>
-                </Pressable>
-              );
-            })}
+            <ScrollView
+              style={styles.restaurantList}
+              contentContainerStyle={styles.restaurantListContent}
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled
+            >
+              {selectedBuilding.restaurants.map((item) => {
+                const restaurant = getRestaurantById(item.restaurantId);
+                return (
+                  <Pressable key={item.restaurantId} style={styles.restaurantCard} onPress={() => openRestaurantDetail(item.restaurantId)}>
+                    <ImageBackground
+                      source={{ uri: restaurant?.imageUrl ?? "" }}
+                      style={styles.restaurantImage}
+                      imageStyle={styles.restaurantImageRadius}
+                    >
+                      <View style={styles.restaurantImageDim} />
+                    </ImageBackground>
+                    <View style={styles.sheetCopy}>
+                      <Text style={styles.sheetName}>{item.label}</Text>
+                      <Text style={styles.sheetMeta}>
+                        {restaurant?.category ?? "식당"} · {item.hours}
+                      </Text>
+                    </View>
+                    <Text style={styles.cardArrow}>›</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
           </View>
         ) : null}
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -161,10 +168,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8fcff",
   },
-  scrollContent: {
+  content: {
+    flex: 1,
     paddingHorizontal: 8,
     paddingTop: 0,
-    paddingBottom: 18,
+    paddingBottom: 8,
   },
   skyGlowTop: {
     position: "absolute",
@@ -256,6 +264,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   bottomSheet: {
+    flex: 1,
+    minHeight: 0,
     marginTop: 4,
     padding: 13,
     borderRadius: 20,
@@ -269,6 +279,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 12,
     marginBottom: 6,
+  },
+  restaurantList: {
+    flex: 1,
+    minHeight: 0,
+  },
+  restaurantListContent: {
+    paddingBottom: 4,
   },
   sheetEyebrow: {
     color: colors.primary,
