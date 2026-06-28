@@ -268,6 +268,10 @@ function attachRestaurants<T extends { restaurantId: string }>(items: T[]): Rest
 }
 
 export function getCrowdStatus(recentUsers: number): CongestionLevel {
+  if (recentUsers >= 34) {
+    return "매우 혼잡";
+  }
+
   if (recentUsers >= 26) {
     return "혼잡";
   }

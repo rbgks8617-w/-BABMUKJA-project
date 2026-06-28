@@ -15,10 +15,33 @@ import {
 import { useCart } from "../store/CartContext";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
-import type { AppScreenProps, SearchResult } from "../types/app";
+import type { AppScreenProps, CongestionLevel, SearchResult } from "../types/app";
 import { formatPrice } from "../utils/formatPrice";
 
 const categoryTabs = ["전체", "한식", "중식", "분식", "양식", "카페", "가성비", "혼밥"];
+
+const congestionTone: Record<CongestionLevel, { level: number; color: string }> = {
+  원활: { level: 1, color: "#16a872" },
+  보통: { level: 2, color: "#f4a21a" },
+  혼잡: { level: 3, color: "#eb4b26" },
+  "매우 혼잡": { level: 4, color: "#d9261c" },
+};
+
+function getCrowdPillStyle(status: CongestionLevel) {
+  if (status === "매우 혼잡") {
+    return styles.crowdPillVeryBusy;
+  }
+
+  if (status === "혼잡") {
+    return styles.crowdPillBusy;
+  }
+
+  if (status === "보통") {
+    return styles.crowdPillNormal;
+  }
+
+  return styles.crowdPillSmooth;
+}
 
 export default function RestaurantListScreen({ navigation }: AppScreenProps<"RestaurantList">) {
   const { width } = useWindowDimensions();
@@ -109,28 +132,39 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
 
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>최근 10분 혼잡도</Text>
-          {liveCrowdPicks.map((item) => (
-            <Pressable
-              key={item.restaurant.id}
-              style={styles.crowdRow}
-              onPress={() => navigation.navigate("RestaurantDetail", { restaurantId: item.restaurant.id })}
-            >
-              <View style={styles.crowdCopy}>
-                <Text style={styles.crowdName}>{item.restaurant.name}</Text>
-                <Text style={styles.crowdReason}>최근 10분 {item.recentUsers}명 이용 중</Text>
-              </View>
-              <Text
-                style={[
-                  styles.crowdPill,
-                  item.status === "혼잡" && styles.crowdPillBusy,
-                  item.status === "보통" && styles.crowdPillNormal,
-                  item.status === "원활" && styles.crowdPillSmooth,
-                ]}
+          {liveCrowdPicks.map((item) => {
+            const tone = congestionTone[item.status];
+
+            return (
+              <Pressable
+                key={item.restaurant.id}
+                style={styles.crowdRow}
+                onPress={() => navigation.navigate("RestaurantDetail", { restaurantId: item.restaurant.id })}
               >
-                {item.status}
-              </Text>
-            </Pressable>
-          ))}
+                <View style={styles.crowdTopRow}>
+                  <View style={styles.crowdCopy}>
+                    <Text style={styles.crowdName}>{item.restaurant.name}</Text>
+                    <Text style={styles.crowdReason}>최근 10분 {item.recentUsers}명 이용 중</Text>
+                  </View>
+                  <Text style={[styles.crowdPill, getCrowdPillStyle(item.status)]}>{item.status}</Text>
+                </View>
+                <View style={styles.crowdMeter} accessibilityLabel={`${item.status} 혼잡도`}>
+                  {[1, 2, 3, 4].map((step) => (
+                    <View
+                      key={`${item.restaurant.id}-${step}`}
+                      style={[
+                        styles.crowdMeterSegment,
+                        step <= tone.level && {
+                          backgroundColor: tone.color,
+                          opacity: step === tone.level ? 1 : 0.9,
+                        },
+                      ]}
+                    />
+                  ))}
+                </View>
+              </Pressable>
+            );
+          })}
         </View>
 
         <View style={styles.infoCard}>
@@ -975,10 +1009,13 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   crowdRow: {
+    gap: 7,
+    paddingVertical: 8,
+  },
+  crowdTopRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 7,
+    gap: 10,
   },
   crowdCopy: {
     flex: 1,
@@ -997,9 +1034,9 @@ const styles = StyleSheet.create({
   },
   crowdPill: {
     overflow: "hidden",
-    minWidth: 44,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
+    minWidth: 50,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 999,
     fontSize: 11,
     fontWeight: "900",
@@ -1016,6 +1053,22 @@ const styles = StyleSheet.create({
   crowdPillBusy: {
     backgroundColor: "#ffede5",
     color: colors.orange,
+  },
+  crowdPillVeryBusy: {
+    backgroundColor: "#ffe8e7",
+    color: "#d9261c",
+  },
+  crowdMeter: {
+    flexDirection: "row",
+    gap: 7,
+    paddingLeft: 1,
+    paddingRight: 62,
+  },
+  crowdMeterSegment: {
+    flex: 1,
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: "#dfe4e8",
   },
   menuRankRow: {
     flexDirection: "row",

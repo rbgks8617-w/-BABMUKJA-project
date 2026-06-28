@@ -113,7 +113,7 @@ export type PopularMenu = {
   name: string;
 };
 
-export type CongestionLevel = "원활" | "보통" | "혼잡";
+export type CongestionLevel = "원활" | "보통" | "혼잡" | "매우 혼잡";
 
 export type CongestionItem = {
   restaurantId: string;
