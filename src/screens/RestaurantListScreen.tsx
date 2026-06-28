@@ -6,7 +6,6 @@ import {
   getCrowdStatus,
   getMenusByCategory,
   getPopularMenus,
-  getPopularRestaurants,
   getRestaurantById,
   getRestaurantCount,
   getTodayCafeteria,
@@ -46,7 +45,6 @@ function getCrowdPillStyle(status: CongestionLevel) {
 export default function RestaurantListScreen({ navigation }: AppScreenProps<"RestaurantList">) {
   const { width } = useWindowDimensions();
   const todayCafeteria = getTodayCafeteria();
-  const popularRestaurants = getPopularRestaurants();
   const popularMenus = getPopularMenus();
   const restaurantCount = getRestaurantCount();
   const crowdPicks = useMemo(() => getCrowdPicks(), []);
@@ -84,10 +82,6 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
     return () => clearInterval(timerId);
   }, [liveMotion]);
 
-  const livePopularRestaurants = popularRestaurants.map((item, index) => ({
-    ...item,
-    selectedCount: item.selectedCount + ((liveTick + index * 3) % 8),
-  }));
   const liveCrowdPicks = crowdPicks.map((item, index) => {
     const recentUsers = Math.max(1, item.recentUsers + ((liveTick + index * 4) % 7) - 2);
     return {
@@ -110,80 +104,60 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
     navigation.navigate("RestaurantDetail", { restaurantId: result.targetId });
   }
 
+  const crowdPanel = (
+    <Animated.View style={[styles.topCrowdCard, { opacity: liveMotion, transform: [{ translateY: liveTranslateY }] }]}>
+      <Text style={styles.infoTitle}>최근 10분 혼잡도</Text>
+      {liveCrowdPicks.map((item) => {
+        const tone = congestionTone[item.status];
+
+        return (
+          <Pressable
+            key={item.restaurant.id}
+            style={styles.crowdRow}
+            onPress={() => navigation.navigate("RestaurantDetail", { restaurantId: item.restaurant.id })}
+          >
+            <View style={styles.crowdTopRow}>
+              <Text style={styles.crowdName} numberOfLines={1}>{item.restaurant.name}</Text>
+              <Text style={[styles.crowdPill, getCrowdPillStyle(item.status)]}>{item.status}</Text>
+            </View>
+            <View style={styles.crowdMeter} accessibilityLabel={`${item.status} 혼잡도`}>
+              {[1, 2, 3, 4].map((step) => (
+                <View
+                  key={`${item.restaurant.id}-${step}`}
+                  style={[
+                    styles.crowdMeterSegment,
+                    step <= tone.level && {
+                      backgroundColor: tone.color,
+                      opacity: step === tone.level ? 1 : 0.9,
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+          </Pressable>
+        );
+      })}
+    </Animated.View>
+  );
+
   const infoRail = (
     <View style={[styles.infoRail, isWideLayout && styles.infoRailDesktop]}>
-      <View style={styles.railHeaderRow}>
-        <Text style={styles.railLabel}>캠퍼스 LIVE</Text>
-        <Text style={styles.railRefresh}>10초마다 새로고침돼요</Text>
-      </View>
-      <Animated.View style={[styles.liveStack, { opacity: liveMotion, transform: [{ translateY: liveTranslateY }] }]}>
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>실시간 인기</Text>
-          {livePopularRestaurants.map((item) => (
-            <View key={item.restaurantId} style={styles.rankRow}>
-              <Text style={styles.rankNumber}>{item.rank}</Text>
-              <Text style={styles.rankName} numberOfLines={1}>
-                {item.restaurant?.name ?? "식당"}
-              </Text>
-              <Text style={styles.rankCount}>{item.selectedCount}명</Text>
+      <View style={styles.infoCard}>
+        <Text style={styles.infoTitle}>인기 메뉴</Text>
+        {popularMenus.map((item) => (
+          <Pressable
+            key={item.menu.id}
+            style={styles.menuRankRow}
+            onPress={() => navigation.navigate("MenuDetail", { menuId: item.menu.id })}
+          >
+            <Text style={styles.rankNumber}>{item.rank}</Text>
+            <View style={styles.menuRankCopy}>
+              <Text style={styles.menuRankName} numberOfLines={1}>{item.menu.name}</Text>
+              <Text style={styles.menuRankMeta} numberOfLines={1}>{item.restaurant.name}</Text>
             </View>
-          ))}
-        </View>
-
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>최근 10분 혼잡도</Text>
-          {liveCrowdPicks.map((item) => {
-            const tone = congestionTone[item.status];
-
-            return (
-              <Pressable
-                key={item.restaurant.id}
-                style={styles.crowdRow}
-                onPress={() => navigation.navigate("RestaurantDetail", { restaurantId: item.restaurant.id })}
-              >
-                <View style={styles.crowdTopRow}>
-                  <View style={styles.crowdCopy}>
-                    <Text style={styles.crowdName}>{item.restaurant.name}</Text>
-                    <Text style={styles.crowdReason}>최근 10분 {item.recentUsers}명 이용 중</Text>
-                  </View>
-                  <Text style={[styles.crowdPill, getCrowdPillStyle(item.status)]}>{item.status}</Text>
-                </View>
-                <View style={styles.crowdMeter} accessibilityLabel={`${item.status} 혼잡도`}>
-                  {[1, 2, 3, 4].map((step) => (
-                    <View
-                      key={`${item.restaurant.id}-${step}`}
-                      style={[
-                        styles.crowdMeterSegment,
-                        step <= tone.level && {
-                          backgroundColor: tone.color,
-                          opacity: step === tone.level ? 1 : 0.9,
-                        },
-                      ]}
-                    />
-                  ))}
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>인기 메뉴</Text>
-          {popularMenus.map((item) => (
-            <Pressable
-              key={item.menu.id}
-              style={styles.menuRankRow}
-              onPress={() => navigation.navigate("MenuDetail", { menuId: item.menu.id })}
-            >
-              <Text style={styles.rankNumber}>{item.rank}</Text>
-              <View style={styles.menuRankCopy}>
-                <Text style={styles.menuRankName} numberOfLines={1}>{item.menu.name}</Text>
-                <Text style={styles.menuRankMeta} numberOfLines={1}>{item.restaurant.name}</Text>
-              </View>
-            </Pressable>
-          ))}
-        </View>
-      </Animated.View>
+          </Pressable>
+        ))}
+      </View>
     </View>
   );
 
@@ -239,6 +213,8 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={[styles.container, isWideLayout && styles.containerWide]}>
+        {crowdPanel}
+
         <View style={styles.header}>
           <View style={styles.heroRow}>
             <View style={styles.headerCopy}>
@@ -925,20 +901,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "900",
   },
-  railHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  railRefresh: {
-    color: colors.textSoft,
-    fontSize: 10,
-    fontWeight: "800",
-  },
-  liveStack: {
-    gap: 12,
-  },
   contentLayout: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -956,11 +918,18 @@ const styles = StyleSheet.create({
     width: 286,
     marginBottom: 0,
   },
-  railLabel: {
-    color: colors.sky,
-    fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: 0,
+  topCrowdCard: {
+    marginBottom: 14,
+    padding: 14,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.94)",
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 3,
   },
   infoCard: {
     padding: 14,
@@ -980,12 +949,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "900",
   },
-  rankRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 5,
-  },
   rankNumber: {
     width: 24,
     height: 24,
@@ -998,16 +961,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     textAlign: "center",
   },
-  rankName: {
-    flex: 1,
-    color: colors.text,
-    fontWeight: "900",
-  },
-  rankCount: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "800",
-  },
   crowdRow: {
     gap: 7,
     paddingVertical: 8,
@@ -1017,20 +970,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
   },
-  crowdCopy: {
+  crowdName: {
     flex: 1,
     minWidth: 0,
-  },
-  crowdName: {
     color: colors.text,
     fontSize: 14,
     fontWeight: "900",
-  },
-  crowdReason: {
-    marginTop: 3,
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "800",
   },
   crowdPill: {
     overflow: "hidden",
