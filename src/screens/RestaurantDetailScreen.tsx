@@ -1,14 +1,66 @@
-import React from "react";
-import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import MenuCard from "../components/MenuCard";
 import { getMenusByRestaurantId, getRestaurantById } from "../services/restaurantService";
 import { colors } from "../theme/colors";
+import type { Menu } from "../types/app";
 import type { AppScreenProps } from "../types/app";
+
+const MENU_GROUP_KEYWORDS = [
+  "마라탕",
+  "마라샹궈",
+  "볶음밥",
+  "덮밥",
+  "김밥",
+  "돈까스",
+  "오므라이스",
+  "찌개",
+  "라면",
+  "우동",
+  "버거",
+  "도시락",
+  "커피",
+  "음료",
+  "디저트",
+  "빵",
+];
+
+function getMenuGroup(menu: Menu) {
+  const targetText = `${menu.name} ${menu.category} ${menu.description} ${(menu.tags ?? []).join(" ")}`;
+  return MENU_GROUP_KEYWORDS.find((keyword) => targetText.includes(keyword)) ?? menu.category;
+}
+
+function getSignatureMenus(menus: Menu[]) {
+  return menus.filter((menu) => menu.tags?.some((tag) => ["인기", "대표", "BEST", "추천"].includes(tag))).slice(0, 4);
+}
 
 export default function RestaurantDetailScreen({ route, navigation }: AppScreenProps<"RestaurantDetail">) {
   const { restaurantId } = route.params;
   const restaurant = getRestaurantById(restaurantId);
   const menus = getMenusByRestaurantId(restaurantId);
+  const signatureMenus = useMemo(() => {
+    const pickedMenus = getSignatureMenus(menus);
+    return pickedMenus.length > 0 ? pickedMenus : menus.slice(0, 4);
+  }, [menus]);
+  const menuGroups = useMemo(() => Array.from(new Set(menus.map(getMenuGroup))).filter(Boolean), [menus]);
+  const menuFilters = useMemo(() => ["대표메뉴", "전체", ...menuGroups], [menuGroups]);
+  const [selectedFilter, setSelectedFilter] = useState("대표메뉴");
+
+  useEffect(() => {
+    setSelectedFilter("대표메뉴");
+  }, [restaurantId]);
+
+  const visibleMenus = useMemo(() => {
+    if (selectedFilter === "대표메뉴") {
+      return signatureMenus;
+    }
+
+    if (selectedFilter === "전체") {
+      return menus;
+    }
+
+    return menus.filter((menu) => getMenuGroup(menu) === selectedFilter);
+  }, [menus, selectedFilter, signatureMenus]);
 
   if (!restaurant) {
     return (
@@ -36,8 +88,24 @@ export default function RestaurantDetailScreen({ route, navigation }: AppScreenP
       <Text style={styles.description}>{restaurant.description}</Text>
       <Text style={styles.reviewSummary}>{restaurant.reviewSummary ?? "학생 리뷰가 곧 추가될 예정이에요."}</Text>
       <Text style={styles.sectionTitle}>메뉴</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+        {menuFilters.map((filter) => (
+          <Pressable
+            key={filter}
+            style={[styles.filterChip, selectedFilter === filter && styles.filterChipActive]}
+            onPress={() => setSelectedFilter(filter)}
+          >
+            <Text style={[styles.filterText, selectedFilter === filter && styles.filterTextActive]}>{filter}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
 
-      {menus.map((menu) => (
+      <View style={styles.filterSummary}>
+        <Text style={styles.filterSummaryTitle}>{selectedFilter}</Text>
+        <Text style={styles.filterSummaryCount}>{visibleMenus.length}개</Text>
+      </View>
+
+      {visibleMenus.map((menu) => (
         <MenuCard
           key={menu.id}
           menu={menu}
@@ -116,9 +184,56 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     marginTop: 24,
-    marginBottom: 12,
+    marginBottom: 10,
     color: "#222222",
     fontSize: 22,
+    fontWeight: "900",
+  },
+  filterRow: {
+    gap: 8,
+    paddingRight: 12,
+    paddingBottom: 12,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  filterChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  filterTextActive: {
+    color: "#ffffff",
+  },
+  filterSummary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+    paddingHorizontal: 2,
+  },
+  filterSummaryTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  filterSummaryCount: {
+    overflow: "hidden",
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: colors.surfaceWarm,
+    color: colors.primary,
+    fontSize: 12,
     fontWeight: "900",
   },
 });

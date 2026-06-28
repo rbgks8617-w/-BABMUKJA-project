@@ -375,7 +375,7 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
         </Pressable>
         <Pressable style={styles.dockCommunityAction} onPress={() => navigation.navigate("Community")}>
           <Text style={styles.dockCommunityEyebrow}>게시판</Text>
-          <Text style={styles.dockCommunityTitle}>후기 · 자유 · 밥친구</Text>
+          <Text style={styles.dockCommunityTitle}>후기 · 밥친구</Text>
         </Pressable>
       </View>
     </View>

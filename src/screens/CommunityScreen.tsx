@@ -3,13 +3,13 @@ import { Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput
 import { colors } from "../theme/colors";
 import type { AppScreenProps } from "../types/app";
 
-type CommunityTab = "음식 후기" | "자유게시판" | "나랑 밥먹자";
-type WritableCommunityTab = Exclude<CommunityTab, "나랑 밥먹자">;
+type CommunityTab = "음식 후기" | "나랑 밥먹자";
 
 type CommunityComment = {
   id: string;
   body: string;
   byAuthor: boolean;
+  authorKey: string;
   createdAt: string;
 };
 
@@ -25,8 +25,7 @@ type CommunityPostItem = {
   comments: CommunityComment[];
 };
 
-const tabs: CommunityTab[] = ["음식 후기", "자유게시판", "나랑 밥먹자"];
-const writableTabs: WritableCommunityTab[] = ["음식 후기", "자유게시판"];
+const tabs: CommunityTab[] = ["음식 후기", "나랑 밥먹자"];
 const ratingStep = 0.5;
 const minRating = 0.5;
 const maxRating = 5;
@@ -54,8 +53,8 @@ const initialPosts: CommunityPostItem[] = [
     isMine: false,
     imageUrl: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=700&q=80",
     comments: [
-      { id: "review-1-comment-1", body: "감튀까지 먹으면 진짜 든든하더라.", byAuthor: false, createdAt: "방금" },
-      { id: "review-1-comment-2", body: "점심 피크만 피하면 빨라요.", byAuthor: false, createdAt: "방금" },
+      { id: "review-1-comment-1", body: "감튀까지 먹으면 진짜 든든하더라.", byAuthor: false, authorKey: "student-a", createdAt: "방금" },
+      { id: "review-1-comment-2", body: "점심 피크만 피하면 빨라요.", byAuthor: false, authorKey: "student-b", createdAt: "방금" },
     ],
   },
   {
@@ -68,15 +67,6 @@ const initialPosts: CommunityPostItem[] = [
     isMine: false,
     imageUrl: "https://images.unsplash.com/photo-1583224964978-2257b960c3d3?auto=format&fit=crop&w=700&q=80",
     comments: [],
-  },
-  {
-    id: "free-1",
-    topic: "자유게시판",
-    title: "오늘 점심 어디가 덜 붐벼요?",
-    body: "12시 반쯤 TIP 가면 대기 긴지 궁금해요.",
-    createdAt: "7분 전",
-    isMine: false,
-    comments: [{ id: "free-1-comment-1", body: "토마토김밥은 회전 빠른 편이에요.", byAuthor: false, createdAt: "5분 전" }],
   },
   {
     id: "mate-1",
@@ -94,8 +84,14 @@ function getCommentAuthorLabel(post: CommunityPostItem, comment: CommunityCommen
     return "글쓴이";
   }
 
-  const anonymousOrder = post.comments.slice(0, commentIndex + 1).filter((item) => !item.byAuthor).length;
-  return `익명${anonymousOrder}`;
+  const anonymousKeys = post.comments.slice(0, commentIndex + 1).reduce<string[]>((keys, item) => {
+    if (!item.byAuthor && !keys.includes(item.authorKey)) {
+      keys.push(item.authorKey);
+    }
+    return keys;
+  }, []);
+
+  return `익명${anonymousKeys.indexOf(comment.authorKey) + 1}`;
 }
 
 function PostCard({
@@ -182,7 +178,6 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
   const [posts, setPosts] = useState<CommunityPostItem[]>(initialPosts);
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [writerOpen, setWriterOpen] = useState(false);
-  const [writeTopic, setWriteTopic] = useState<WritableCommunityTab>("음식 후기");
   const [writeTitle, setWriteTitle] = useState("");
   const [writeBody, setWriteBody] = useState("");
   const [writeImageUrl, setWriteImageUrl] = useState("");
@@ -230,7 +225,6 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
   }, [maxWriterHeight, minWriterHeight]);
 
   function openWriter() {
-    setWriteTopic(activeTab === "자유게시판" ? "자유게시판" : "음식 후기");
     writerHeightRef.current = defaultWriterHeight;
     setWriterHeight(defaultWriterHeight);
     setWriterOpen(true);
@@ -256,13 +250,10 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
 
     const nextPost: CommunityPostItem = {
       id: `local-post-${Date.now()}`,
-      topic: writeTopic,
+      topic: "음식 후기",
       title,
       body,
-      meta:
-        writeTopic === "음식 후기"
-          ? `맛 ${formatRating(writeTasteScore)} · 가성비 ${formatRating(writeValueScore)}`
-          : undefined,
+      meta: `맛 ${formatRating(writeTasteScore)} · 가성비 ${formatRating(writeValueScore)}`,
       createdAt: "방금",
       isMine: true,
       imageUrl: imageUrl || undefined,
@@ -270,7 +261,7 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
     };
 
     setPosts((currentPosts) => [nextPost, ...currentPosts]);
-    setActiveTab(writeTopic);
+    setActiveTab("음식 후기");
     setSelectedPostId(nextPost.id);
     closeWriter();
   }
@@ -285,6 +276,9 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
   function selectTab(tab: CommunityTab) {
     setActiveTab(tab);
     setSelectedPostId(null);
+    if (tab === "나랑 밥먹자") {
+      setWriterOpen(false);
+    }
   }
 
   function addComment(postId: string) {
@@ -308,6 +302,7 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
               id: `${postId}-comment-${Date.now()}`,
               body,
               byAuthor: post.isMine,
+              authorKey: post.isMine ? "author" : "viewer",
               createdAt: "방금",
             },
           ],
@@ -398,19 +393,6 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            <Text style={styles.inputLabel}>글쓰기 주제</Text>
-            <View style={styles.topicRow}>
-              {writableTabs.map((topic) => (
-                <Pressable
-                  key={topic}
-                  style={[styles.topicChip, writeTopic === topic && styles.topicChipActive]}
-                  onPress={() => setWriteTopic(topic)}
-                >
-                  <Text style={[styles.topicChipText, writeTopic === topic && styles.topicChipTextActive]}>{topic}</Text>
-                </Pressable>
-              ))}
-            </View>
-
             <Text style={styles.inputLabel}>제목</Text>
             <TextInput
               value={writeTitle}
@@ -430,50 +412,48 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
               style={[styles.writerInput, styles.writerTextArea]}
             />
 
-            {writeTopic === "음식 후기" ? (
-              <View style={styles.ratingPanel}>
-                <View style={styles.ratingHeader}>
-                  <Text style={styles.ratingTitle}>후기 점수</Text>
-                  <Text style={styles.ratingGuide}>0.5점 단위 · 5점 만점</Text>
-                </View>
-                <View style={styles.ratingRow}>
-                  <Text style={styles.ratingLabel}>맛</Text>
-                  <View style={styles.ratingStepper}>
-                    <Pressable
-                      style={[styles.ratingButton, writeTasteScore <= minRating && styles.ratingButtonDisabled]}
-                      onPress={() => changeTasteScore(-ratingStep)}
-                    >
-                      <Text style={styles.ratingButtonText}>-</Text>
-                    </Pressable>
-                    <Text style={styles.ratingValue}>{formatRating(writeTasteScore)}</Text>
-                    <Pressable
-                      style={[styles.ratingButton, writeTasteScore >= maxRating && styles.ratingButtonDisabled]}
-                      onPress={() => changeTasteScore(ratingStep)}
-                    >
-                      <Text style={styles.ratingButtonText}>+</Text>
-                    </Pressable>
-                  </View>
-                </View>
-                <View style={styles.ratingRow}>
-                  <Text style={styles.ratingLabel}>가성비</Text>
-                  <View style={styles.ratingStepper}>
-                    <Pressable
-                      style={[styles.ratingButton, writeValueScore <= minRating && styles.ratingButtonDisabled]}
-                      onPress={() => changeValueScore(-ratingStep)}
-                    >
-                      <Text style={styles.ratingButtonText}>-</Text>
-                    </Pressable>
-                    <Text style={styles.ratingValue}>{formatRating(writeValueScore)}</Text>
-                    <Pressable
-                      style={[styles.ratingButton, writeValueScore >= maxRating && styles.ratingButtonDisabled]}
-                      onPress={() => changeValueScore(ratingStep)}
-                    >
-                      <Text style={styles.ratingButtonText}>+</Text>
-                    </Pressable>
-                  </View>
+            <View style={styles.ratingPanel}>
+              <View style={styles.ratingHeader}>
+                <Text style={styles.ratingTitle}>후기 점수</Text>
+                <Text style={styles.ratingGuide}>0.5점 단위 · 5점 만점</Text>
+              </View>
+              <View style={styles.ratingRow}>
+                <Text style={styles.ratingLabel}>맛</Text>
+                <View style={styles.ratingStepper}>
+                  <Pressable
+                    style={[styles.ratingButton, writeTasteScore <= minRating && styles.ratingButtonDisabled]}
+                    onPress={() => changeTasteScore(-ratingStep)}
+                  >
+                    <Text style={styles.ratingButtonText}>-</Text>
+                  </Pressable>
+                  <Text style={styles.ratingValue}>{formatRating(writeTasteScore)}</Text>
+                  <Pressable
+                    style={[styles.ratingButton, writeTasteScore >= maxRating && styles.ratingButtonDisabled]}
+                    onPress={() => changeTasteScore(ratingStep)}
+                  >
+                    <Text style={styles.ratingButtonText}>+</Text>
+                  </Pressable>
                 </View>
               </View>
-            ) : null}
+              <View style={styles.ratingRow}>
+                <Text style={styles.ratingLabel}>가성비</Text>
+                <View style={styles.ratingStepper}>
+                  <Pressable
+                    style={[styles.ratingButton, writeValueScore <= minRating && styles.ratingButtonDisabled]}
+                    onPress={() => changeValueScore(-ratingStep)}
+                  >
+                    <Text style={styles.ratingButtonText}>-</Text>
+                  </Pressable>
+                  <Text style={styles.ratingValue}>{formatRating(writeValueScore)}</Text>
+                  <Pressable
+                    style={[styles.ratingButton, writeValueScore >= maxRating && styles.ratingButtonDisabled]}
+                    onPress={() => changeValueScore(ratingStep)}
+                  >
+                    <Text style={styles.ratingButtonText}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
 
             <Text style={styles.inputLabel}>사진 첨부</Text>
             <TextInput
@@ -505,7 +485,7 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
             </Pressable>
           </ScrollView>
         </View>
-      ) : (
+      ) : activeTab === "음식 후기" ? (
         <Pressable style={styles.writeDock} onPress={openWriter}>
           <View>
             <Text style={styles.writeDockEyebrow}>커뮤니티 글쓰기</Text>
@@ -513,7 +493,7 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
           </View>
           <Text style={styles.writeDockAction}>글쓰기</Text>
         </Pressable>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -951,31 +931,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 12,
     fontWeight: "900",
-  },
-  topicRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  topicChip: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: "#f7fbfe",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  topicChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  topicChipText: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  topicChipTextActive: {
-    color: "#ffffff",
   },
   writerInput: {
     minHeight: 45,

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  Image,
   ImageBackground,
   Pressable,
   ScrollView,
@@ -76,7 +77,8 @@ export default function CampusMapScreen({ route, navigation }: AppScreenProps<"C
       <View style={styles.content}>
         <View style={[styles.mapStage, { width: mapWidth, height: mapStageHeight }]}>
           <View style={styles.mapCanvas}>
-            <ImageBackground source={campusMapImage} resizeMode="cover" style={styles.mapImage}>
+            <Image source={campusMapImage} resizeMode="cover" style={styles.mapImage} />
+            <View style={styles.mapOverlay}>
               {campusMapBuildings.map((building) => (
                 <Pressable
                   key={`${building.id}-touch`}
@@ -115,7 +117,7 @@ export default function CampusMapScreen({ route, navigation }: AppScreenProps<"C
                   </View>
                 );
               })}
-            </ImageBackground>
+            </View>
           </View>
         </View>
 
@@ -216,6 +218,9 @@ const styles = StyleSheet.create({
   mapImage: {
     width: "100%",
     height: "100%",
+  },
+  mapOverlay: {
+    ...StyleSheet.absoluteFillObject,
   },
   touchArea: {
     position: "absolute",

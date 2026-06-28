@@ -43,7 +43,7 @@ applyDefaultFont(TextInput);
 export default function App() {
   const [showStartupSplash, setShowStartupSplash] = useState(true);
   const [fontsLoaded] = useFonts({
-    GowunDodum: require("./assets/fonts/GowunDodum-Regular.ttf"),
+    GabiaSolmee: require("./assets/fonts/gabia_solmee.ttf"),
   });
 
   const hideStartupSplash = useCallback(() => {
@@ -68,7 +68,7 @@ export default function App() {
       textarea,
       button,
       [class*="css-text"] {
-        font-family: "GowunDodum", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif !important;
+        font-family: "GabiaSolmee", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif !important;
       }
       input,
       textarea {
