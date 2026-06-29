@@ -1,4 +1,5 @@
 const fs = require("fs");
+const crypto = require("crypto");
 const path = require("path");
 
 const outputDir = path.join(process.cwd(), "dist-web");
@@ -22,6 +23,15 @@ for (const fileName of fs.readdirSync(jsDir)) {
     .replaceAll('httpServerLocation:"/assets/', 'httpServerLocation:"assets/')
     .replaceAll('httpServerLocation:"./assets/', 'httpServerLocation:"assets/');
   fs.writeFileSync(jsPath, js);
+
+  const fileHash = crypto.createHash("sha256").update(js).digest("hex").slice(0, 16);
+  const cacheSafeFileName = fileName.replace(/-[a-f0-9]{32}\.js$/, `-${fileHash}.js`);
+  if (cacheSafeFileName !== fileName) {
+    const cacheSafePath = path.join(jsDir, cacheSafeFileName);
+    fs.renameSync(jsPath, cacheSafePath);
+    indexHtml = indexHtml.replaceAll(fileName, cacheSafeFileName);
+  }
 }
 
+fs.writeFileSync(indexPath, indexHtml);
 fs.writeFileSync(path.join(outputDir, ".nojekyll"), "");
