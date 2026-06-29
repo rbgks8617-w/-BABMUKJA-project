@@ -33,6 +33,8 @@ const linking = {
   },
 };
 
+const navigationLinking = Platform.OS === "web" ? undefined : linking;
+
 function applyDefaultFont(Component: any) {
   Component.defaultProps = Component.defaultProps || {};
   Component.defaultProps.style = [Component.defaultProps.style, roundedTextStyle];
@@ -93,7 +95,7 @@ export default function App() {
       <FavoriteProvider>
         <CartProvider>
           <View style={{ flex: 1 }}>
-            <NavigationContainer linking={linking}>
+            <NavigationContainer linking={navigationLinking}>
               <StatusBar style="dark" />
               <AppNavigator />
             </NavigationContainer>
