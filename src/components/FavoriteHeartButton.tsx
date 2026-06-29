@@ -1,9 +1,7 @@
 import React, { useRef } from "react";
 import { Animated, Pressable, StyleSheet } from "react-native";
 import type { GestureResponderEvent, StyleProp, ViewStyle } from "react-native";
-
-const emptyHeart = require("../../assets/heart-empty.png");
-const filledHeart = require("../../assets/heart-filled.png");
+import { heartEmptySource, heartFilledSource } from "../utils/staticAssets";
 
 type FavoriteHeartButtonProps = {
   isFavorite: boolean;
@@ -44,7 +42,7 @@ export default function FavoriteHeartButton({ isFavorite, onPress, size = 27, st
       onPress={handlePress}
     >
       <Animated.Image
-        source={isFavorite ? filledHeart : emptyHeart}
+        source={isFavorite ? heartFilledSource : heartEmptySource}
         resizeMode="contain"
         style={[
           styles.image,

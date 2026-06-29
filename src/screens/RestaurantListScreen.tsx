@@ -19,6 +19,7 @@ import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
 import type { AppScreenProps, CongestionLevel, SearchResult } from "../types/app";
 import { formatPrice } from "../utils/formatPrice";
+import { lunchboxRecommendationSource } from "../utils/staticAssets";
 
 const categoryTabs = ["즐겨찾기", "전체", "한식", "중식", "분식", "양식", "카페", "가성비", "혼밥"];
 
@@ -418,7 +419,7 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
       >
         <Pressable style={styles.dockMainAction} onPress={() => navigation.navigate("Recommendation")}>
           <View style={styles.dockIcon}>
-            <Image source={require("../../assets/lunchbox-recommendation.png")} style={styles.dockImage} />
+            <Image source={lunchboxRecommendationSource} style={styles.dockImage} />
           </View>
           <View style={styles.dockCopy}>
             <Text style={styles.dockTitle}>뭐 먹을지 고민될 땐?</Text>

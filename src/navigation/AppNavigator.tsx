@@ -19,6 +19,7 @@ import RestaurantListScreen from "../screens/RestaurantListScreen";
 import { colors } from "../theme/colors";
 import { APP_FONT_FAMILY } from "../theme/typography";
 import type { RootStackParamList } from "../types/app";
+import { tukSymbolSource } from "../utils/staticAssets";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 type AppNavigation = NativeStackNavigationProp<RootStackParamList>;
@@ -72,7 +73,7 @@ function HomeHeaderTitle() {
   return (
     <View style={styles.homeLogo}>
       <View style={styles.homeLogoMark}>
-        <Image source={require("../../assets/tuk-symbol.png")} style={styles.homeLogoImage as ImageStyle} />
+        <Image source={tukSymbolSource} style={styles.homeLogoImage as ImageStyle} />
       </View>
       <View>
         <Text style={styles.homeLogoName}>대학교 밥먹자</Text>

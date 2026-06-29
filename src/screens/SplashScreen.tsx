@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, Easing, Image, StyleSheet, Text, View } from "react-native";
-
-const tukLogo = require("../../assets/tuk-logo.png");
+import { tukLogoSource } from "../utils/staticAssets";
 
 export default function SplashScreen({ navigation }: { navigation: { replace: (screenName: "RestaurantList") => void } }) {
   const logoTranslateX = useRef(new Animated.Value(-90)).current;
@@ -47,7 +46,7 @@ export default function SplashScreen({ navigation }: { navigation: { replace: (s
           },
         ]}
       >
-        <Image source={tukLogo} style={styles.logo} resizeMode="contain" />
+        <Image source={tukLogoSource} style={styles.logo} resizeMode="contain" />
       </Animated.View>
       <View style={styles.shimmerLine} />
       <Text style={styles.caption}>대학교 밥먹자</Text>

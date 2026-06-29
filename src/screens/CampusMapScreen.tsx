@@ -13,8 +13,7 @@ import type { DimensionValue } from "react-native";
 import { campusMapBuildings, getRestaurantById } from "../services/restaurantService";
 import { colors } from "../theme/colors";
 import type { AppScreenProps } from "../types/app";
-
-const campusMapImage = require("../../assets/tuk-campus-map.png");
+import { campusMapSource } from "../utils/staticAssets";
 const mapAspectRatio = 1608 / 978;
 
 type FloatingStyle = {
@@ -77,7 +76,7 @@ export default function CampusMapScreen({ route, navigation }: AppScreenProps<"C
       <View style={styles.content}>
         <View style={[styles.mapStage, { width: mapWidth, height: mapStageHeight }]}>
           <View style={styles.mapCanvas}>
-            <Image source={campusMapImage} resizeMode="contain" style={styles.mapImage} />
+            <Image source={campusMapSource} resizeMode="contain" style={styles.mapImage} />
             <View style={styles.mapOverlay}>
               {campusMapBuildings.map((building) => (
                 <Pressable
