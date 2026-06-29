@@ -966,8 +966,8 @@ const styles = StyleSheet.create({
   },
   compactCrowdPill: {
     overflow: "hidden",
-    minWidth: 28,
-    paddingHorizontal: 5,
+    minWidth: 44,
+    paddingHorizontal: 6,
     paddingVertical: 3,
     borderRadius: 999,
     fontSize: 9,

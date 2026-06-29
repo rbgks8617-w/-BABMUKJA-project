@@ -54,7 +54,7 @@ const quickPickConfigs = [
   },
   {
     restaurantId: "raon-restaurant",
-    recentUsers: 28,
+    recentUsers: 36,
     reason: "종합교육관 수업 전후 동선이 짧아요.",
   },
 ];
