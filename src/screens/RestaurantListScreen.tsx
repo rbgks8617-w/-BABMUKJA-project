@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
-import type { GestureResponderEvent } from "react-native";
+import FavoriteHeartButton from "../components/FavoriteHeartButton";
 import {
   getBuildingCards,
   getCrowdPicks,
@@ -123,8 +123,7 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
     navigation.navigate("RestaurantDetail", { restaurantId: result.targetId });
   }
 
-  function toggleMenuFavorite(menuId: string, event: GestureResponderEvent) {
-    event.stopPropagation();
+  function toggleMenuFavorite(menuId: string) {
     toggleFavoriteMenu(menuId);
   }
 
@@ -327,12 +326,18 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
         <View style={styles.categoryMenuPanel}>
           <View style={styles.categoryMenuHeader}>
             <View>
-              <Text style={styles.categoryMenuEyebrow}>
-                {isFavoriteCategory ? "즐겨찾기" : activeCategory === "전체" ? "바로 고르기" : `${activeCategory} 메뉴`}
-              </Text>
-              <Text style={styles.categoryMenuTitle}>
-                {isFavoriteCategory ? "하트 누른 메뉴" : activeCategory === "전체" ? "지금 먹기 좋은 메뉴" : `${activeCategory} 땡길 때`}
-              </Text>
+              {isFavoriteCategory ? (
+                <Text style={styles.categoryMenuTitle}>즐겨찾기</Text>
+              ) : (
+                <>
+                  <Text style={styles.categoryMenuEyebrow}>
+                    {activeCategory === "전체" ? "바로 고르기" : `${activeCategory} 메뉴`}
+                  </Text>
+                  <Text style={styles.categoryMenuTitle}>
+                    {activeCategory === "전체" ? "지금 먹기 좋은 메뉴" : `${activeCategory} 땡길 때`}
+                  </Text>
+                </>
+              )}
             </View>
             <Text style={styles.categoryMenuCount}>{categoryMenus.length}개</Text>
           </View>
@@ -348,16 +353,12 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
                   <ImageBackground source={{ uri: menu.imageUrl }} style={styles.categoryMenuImage} imageStyle={styles.categoryMenuImageRadius}>
                     <View style={styles.categoryMenuImageDim} />
                     <Text style={styles.categoryMenuBadge}>{menu.category}</Text>
-                    <Pressable
-                      accessibilityLabel={isFavoriteMenu(menu.id) ? "즐겨찾기 해제" : "즐겨찾기 추가"}
-                      hitSlop={8}
+                    <FavoriteHeartButton
+                      isFavorite={isFavoriteMenu(menu.id)}
+                      size={24}
                       style={styles.categoryHeartButton}
-                      onPress={(event) => toggleMenuFavorite(menu.id, event)}
-                    >
-                      <Text style={[styles.categoryHeartText, isFavoriteMenu(menu.id) && styles.categoryHeartTextActive]}>
-                        {isFavoriteMenu(menu.id) ? "♥" : "♡"}
-                      </Text>
-                    </Pressable>
+                      onPress={() => toggleMenuFavorite(menu.id)}
+                    />
                   </ImageBackground>
                   <Text numberOfLines={1} style={styles.categoryMenuName}>{menu.name}</Text>
                   <Text numberOfLines={1} style={styles.categoryMenuRestaurant}>
@@ -370,7 +371,7 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
           ) : (
             <View style={styles.categoryEmpty}>
               <Text style={styles.categoryEmptyText}>
-                {isFavoriteCategory ? "하트를 누른 메뉴가 여기 모여요." : "이 카테고리 메뉴를 곧 채울게요."}
+                {isFavoriteCategory ? "비었어요" : "이 카테고리 메뉴를 곧 채울게요."}
               </Text>
             </View>
           )}
@@ -768,25 +769,6 @@ const styles = StyleSheet.create({
     top: 7,
     right: 7,
     zIndex: 4,
-    width: 30,
-    height: 30,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    borderRadius: 15,
-    backgroundColor: "rgba(255, 255, 255, 0.94)",
-    borderWidth: 1,
-    borderColor: "#dcecf3",
-  },
-  categoryHeartText: {
-    color: colors.textSoft,
-    fontSize: 19,
-    fontWeight: "900",
-    lineHeight: 23,
-    textAlign: "center",
-  },
-  categoryHeartTextActive: {
-    color: "#ef4c58",
   },
   categoryMenuName: {
     marginTop: 8,

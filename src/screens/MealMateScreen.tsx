@@ -91,6 +91,11 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
       return;
     }
 
+    if (posts.some((post) => post.joinedByMe)) {
+      showToast("이미 참여 중인 모임이 있어요. 먼저 나가주세요");
+      return;
+    }
+
     const normalizedTopic = topic.trim() || "편하게 밥 먹기";
     const normalizedTime = time.trim() || "시간 협의";
     const normalizedNote = note.trim() || "부담 없이 와서 밥만 먹고 가도 좋아요.";
@@ -131,6 +136,27 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
     });
   };
 
+  const leavePost = (postId: string) => {
+    const targetPost = posts.find((post) => post.id === postId);
+
+    if (!targetPost?.joinedByMe) {
+      return;
+    }
+
+    setPosts((currentPosts) =>
+      currentPosts.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              currentCount: Math.max(0, post.currentCount - 1),
+              joinedByMe: false,
+            }
+          : post,
+      ),
+    );
+    showToast("모임에서 나갔어요");
+  };
+
   const joinPost = (postId: string) => {
     const targetPost = posts.find((post) => post.id === postId);
 
@@ -138,8 +164,18 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
       return;
     }
 
-    if (targetPost.joinedByMe || targetPost.currentCount >= targetPost.maxCount) {
+    if (targetPost.joinedByMe) {
       openChat(targetPost);
+      return;
+    }
+
+    if (posts.some((post) => post.joinedByMe)) {
+      showToast("이미 참여 중인 모임이 있어요. 먼저 나가주세요");
+      return;
+    }
+
+    if (targetPost.currentCount >= targetPost.maxCount) {
+      showToast("이미 마감된 모임이에요");
       return;
     }
 
@@ -247,7 +283,7 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
 
         {posts.map((post, index) => {
           const isFull = post.currentCount >= post.maxCount;
-          const buttonLabel = post.joinedByMe || isFull ? "채팅방" : "참여하기";
+          const buttonLabel = isFull ? "마감" : "참여하기";
 
           return (
             <View key={post.id} style={styles.postCard}>
@@ -267,9 +303,23 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
               <Text style={styles.postNote}>{post.note}</Text>
               <View style={styles.postFooter}>
                 <Text style={styles.creator}>{post.createdBy ?? anonymousNames[index % anonymousNames.length]}</Text>
-                <Pressable style={styles.joinButton} onPress={() => joinPost(post.id)}>
-                  <Text style={styles.joinButtonText}>{buttonLabel}</Text>
-                </Pressable>
+                {post.joinedByMe ? (
+                  <View style={styles.joinedActions}>
+                    <Pressable style={styles.chatButton} onPress={() => openChat(post)}>
+                      <Text style={styles.joinButtonText}>채팅방</Text>
+                    </Pressable>
+                    <Pressable style={styles.leaveButton} onPress={() => leavePost(post.id)}>
+                      <Text style={styles.leaveButtonText}>나가기</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Pressable
+                    style={[styles.joinButton, isFull && styles.joinButtonDisabled]}
+                    onPress={() => joinPost(post.id)}
+                  >
+                    <Text style={[styles.joinButtonText, isFull && styles.joinButtonTextDisabled]}>{buttonLabel}</Text>
+                  </Pressable>
+                )}
               </View>
             </View>
           );
@@ -524,8 +574,38 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: colors.ink,
   },
+  joinButtonDisabled: {
+    backgroundColor: "#eef3f6",
+  },
+  joinedActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  chatButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: colors.ink,
+  },
+  leaveButton: {
+    paddingHorizontal: 13,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: "#fff0ec",
+    borderWidth: 1,
+    borderColor: "#ffd5c9",
+  },
   joinButtonText: {
     color: "#ffffff",
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  joinButtonTextDisabled: {
+    color: colors.textSoft,
+  },
+  leaveButtonText: {
+    color: "#e34b2f",
     fontSize: 13,
     fontWeight: "900",
   },

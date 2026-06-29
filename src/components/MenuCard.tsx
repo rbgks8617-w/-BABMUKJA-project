@@ -1,6 +1,6 @@
 import React from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import type { GestureResponderEvent } from "react-native";
+import FavoriteHeartButton from "./FavoriteHeartButton";
 import { colors } from "../theme/colors";
 import type { Menu } from "../types/app";
 import { formatPrice } from "../utils/formatPrice";
@@ -13,25 +13,11 @@ type MenuCardProps = {
 };
 
 export default function MenuCard({ menu, onPress, isFavorite = false, onToggleFavorite }: MenuCardProps) {
-  function toggleFavorite(event: GestureResponderEvent) {
-    event.stopPropagation();
-    onToggleFavorite?.();
-  }
-
   return (
     <Pressable style={styles.card} onPress={onPress}>
       <Image source={{ uri: menu.imageUrl }} style={styles.image} />
       {onToggleFavorite ? (
-        <Pressable
-          accessibilityLabel={isFavorite ? "즐겨찾기 해제" : "즐겨찾기 추가"}
-          hitSlop={8}
-          style={styles.favoriteButton}
-          onPress={toggleFavorite}
-        >
-          <Text style={[styles.favoriteText, isFavorite && styles.favoriteTextActive]}>
-            {isFavorite ? "♥" : "♡"}
-          </Text>
-        </Pressable>
+        <FavoriteHeartButton isFavorite={isFavorite} style={styles.favoriteButton} onPress={onToggleFavorite} />
       ) : null}
       <View style={styles.content}>
         <Text style={styles.name}>{menu.name}</Text>
@@ -69,25 +55,6 @@ const styles = StyleSheet.create({
     top: 10,
     right: 10,
     zIndex: 3,
-    width: 30,
-    height: 30,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    borderRadius: 15,
-    backgroundColor: "rgba(255, 255, 255, 0.94)",
-    borderWidth: 1,
-    borderColor: "#dcecf3",
-  },
-  favoriteText: {
-    color: colors.textSoft,
-    fontSize: 19,
-    fontWeight: "900",
-    lineHeight: 23,
-    textAlign: "center",
-  },
-  favoriteTextActive: {
-    color: "#ef4c58",
   },
   content: {
     flex: 1,
