@@ -20,8 +20,8 @@ export default function MenuCard({ menu, onPress, isFavorite = false, onToggleFa
         <FavoriteHeartButton isFavorite={isFavorite} style={styles.favoriteButton} onPress={onToggleFavorite} />
       ) : null}
       <View style={styles.content}>
-        <Text style={styles.name}>{menu.name}</Text>
-        <Text style={styles.description}>{menu.description}</Text>
+        <Text numberOfLines={1} style={styles.name}>{menu.name}</Text>
+        <Text numberOfLines={2} style={styles.description}>{menu.description}</Text>
         <View style={styles.scoreRow}>
           <Text style={styles.scoreText}>맛 {menu.tasteScore ?? "4.3"}</Text>
           <Text style={styles.scoreText}>양 {menu.portionScore ?? "4.4"}</Text>
@@ -37,17 +37,17 @@ const styles = StyleSheet.create({
   card: {
     position: "relative",
     flexDirection: "row",
-    gap: 14,
-    marginBottom: 14,
-    padding: 12,
+    gap: 12,
+    marginBottom: 12,
+    padding: 11,
     borderRadius: 14,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
   image: {
-    width: 96,
-    height: 96,
+    width: 88,
+    height: 88,
     borderRadius: 10,
   },
   favoriteButton: {
@@ -58,15 +58,17 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    minWidth: 0,
   },
   name: {
     color: colors.text,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "800",
   },
   description: {
-    marginTop: 6,
+    marginTop: 5,
     color: colors.textMuted,
+    fontSize: 13,
     lineHeight: 19,
   },
   price: {

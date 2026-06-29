@@ -12,7 +12,7 @@ type FavoriteHeartButtonProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-export default function FavoriteHeartButton({ isFavorite, onPress, size = 25, style }: FavoriteHeartButtonProps) {
+export default function FavoriteHeartButton({ isFavorite, onPress, size = 27, style }: FavoriteHeartButtonProps) {
   const scale = useRef(new Animated.Value(1)).current;
 
   function handlePress(event: GestureResponderEvent) {
@@ -21,7 +21,7 @@ export default function FavoriteHeartButton({ isFavorite, onPress, size = 25, st
     scale.setValue(0.84);
     Animated.sequence([
       Animated.spring(scale, {
-        toValue: 1.22,
+        toValue: 1.28,
         friction: 3,
         tension: 190,
         useNativeDriver: true,
@@ -39,7 +39,7 @@ export default function FavoriteHeartButton({ isFavorite, onPress, size = 25, st
   return (
     <Pressable
       accessibilityLabel={isFavorite ? "즐겨찾기 해제" : "즐겨찾기 추가"}
-      hitSlop={8}
+      hitSlop={10}
       style={[styles.button, style]}
       onPress={handlePress}
     >
@@ -61,12 +61,12 @@ export default function FavoriteHeartButton({ isFavorite, onPress, size = 25, st
 
 const styles = StyleSheet.create({
   button: {
-    width: 30,
-    height: 30,
+    width: 34,
+    height: 34,
     alignItems: "center",
     justifyContent: "center",
-    overflow: "hidden",
-    borderRadius: 15,
+    overflow: "visible",
+    borderRadius: 17,
     backgroundColor: "rgba(255, 255, 255, 0.94)",
     borderWidth: 1,
     borderColor: "#dcecf3",

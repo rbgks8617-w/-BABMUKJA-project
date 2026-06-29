@@ -56,7 +56,7 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
   const { favoriteMenuIds, isFavoriteMenu, toggleFavoriteMenu } = useFavorites();
   const { unreadCount } = useNotifications();
   const isWideLayout = width >= 980;
-  const carouselCardWidth = Math.min(width - 62, 282);
+  const carouselCardWidth = Math.min(width - 48, 300);
   const [liveTick, setLiveTick] = useState(0);
   const [activeCategory, setActiveCategory] = useState("전체");
   const [searchQuery, setSearchQuery] = useState("");
@@ -236,7 +236,10 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={[styles.container, isWideLayout && styles.containerWide]}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={[styles.container, isWideLayout && styles.containerWide]}
+      >
         {crowdPanel}
 
         <View style={styles.header}>
@@ -438,9 +441,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   container: {
-    paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 118,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 146,
     backgroundColor: colors.background,
   },
   containerWide: {
@@ -449,7 +452,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   header: {
-    marginBottom: 14,
+    marginBottom: 12,
   },
   heroRow: {
     flexDirection: "row",
@@ -533,9 +536,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    marginBottom: 12,
+    marginBottom: 10,
     paddingHorizontal: 16,
-    paddingVertical: 13,
+    paddingVertical: 12,
     borderRadius: 999,
     backgroundColor: "#ffffff",
     borderWidth: 1,
@@ -654,19 +657,19 @@ const styles = StyleSheet.create({
   categoryRow: {
     alignItems: "center",
     gap: 8,
-    paddingBottom: 0,
+    paddingBottom: 2,
   },
   categoryScroller: {
     flexGrow: 0,
-    height: 34,
-    marginBottom: 10,
+    height: 42,
+    marginBottom: 8,
   },
   categoryChip: {
-    height: 32,
-    minWidth: 58,
+    height: 38,
+    minWidth: 62,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 13,
+    paddingHorizontal: 14,
     paddingVertical: 0,
     borderRadius: 999,
     backgroundColor: "#ffffff",
@@ -687,9 +690,9 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
   categoryMenuPanel: {
-    marginBottom: 14,
-    paddingVertical: 13,
-    borderRadius: 24,
+    marginBottom: 12,
+    paddingVertical: 12,
+    borderRadius: 22,
     backgroundColor: "rgba(255, 255, 255, 0.72)",
     borderWidth: 1,
     borderColor: "#cdeaf7",
@@ -728,7 +731,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   categoryMenuCard: {
-    width: 132,
+    width: 138,
     padding: 8,
     borderRadius: 18,
     backgroundColor: "#ffffff",
@@ -740,7 +743,7 @@ const styles = StyleSheet.create({
     opacity: 0.88,
   },
   categoryMenuImage: {
-    height: 88,
+    height: 92,
     justifyContent: "flex-start",
     alignItems: "flex-start",
     overflow: "hidden",
@@ -804,8 +807,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginBottom: 14,
-    padding: 16,
+    marginBottom: 12,
+    padding: 14,
     borderRadius: 24,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -841,9 +844,9 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   todayTitle: {
-    marginTop: 13,
+    marginTop: 10,
     color: colors.text,
-    fontSize: 27,
+    fontSize: 24,
     fontWeight: "900",
   },
   todayMenu: {
@@ -875,8 +878,8 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   todayImage: {
-    width: 124,
-    height: 104,
+    width: 112,
+    height: 98,
     overflow: "hidden",
     borderRadius: 24,
   },
@@ -1113,8 +1116,8 @@ const styles = StyleSheet.create({
   },
   restaurantCarousel: {
     gap: 14,
-    paddingRight: 18,
-    paddingBottom: 4,
+    paddingRight: 16,
+    paddingBottom: 8,
   },
   restaurantSlide: {
     overflow: "hidden",
@@ -1133,7 +1136,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   slideImage: {
-    height: 112,
+    height: 118,
     justifyContent: "space-between",
   },
   slideImageRadius: {
@@ -1205,9 +1208,9 @@ const styles = StyleSheet.create({
   },
   bottomDock: {
     position: "absolute",
-    left: 18,
-    right: 18,
-    bottom: 16,
+    left: 14,
+    right: 14,
+    bottom: 14,
     zIndex: 10,
     flexDirection: "row",
     alignItems: "center",
@@ -1232,6 +1235,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     paddingVertical: 4,
+    minHeight: 58,
   },
   dockIcon: {
     width: 50,
@@ -1275,9 +1279,9 @@ const styles = StyleSheet.create({
   dockCommunityAction: {
     alignSelf: "stretch",
     justifyContent: "center",
-    minWidth: 96,
-    maxWidth: 132,
-    paddingHorizontal: 12,
+    minWidth: 88,
+    maxWidth: 116,
+    paddingHorizontal: 10,
     borderRadius: 22,
     backgroundColor: "#edf6fc",
     borderWidth: 1,

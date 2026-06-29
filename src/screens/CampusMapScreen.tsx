@@ -55,7 +55,7 @@ export default function CampusMapScreen({ route, navigation }: AppScreenProps<"C
 
   const selectedBuilding = campusMapBuildings.find((building) => building.id === selectedBuildingId) ?? campusMapBuildings[0];
   const mapWidth = Math.min(Math.max(width - 20, 320), 1180);
-  const mapStageHeight = Math.min(244, mapWidth / mapAspectRatio);
+  const mapStageHeight = Math.min(520, Math.max(220, mapWidth / mapAspectRatio));
 
   useEffect(() => {
     setSelectedBuildingId(getInitialBuildingId(route));
@@ -77,7 +77,7 @@ export default function CampusMapScreen({ route, navigation }: AppScreenProps<"C
       <View style={styles.content}>
         <View style={[styles.mapStage, { width: mapWidth, height: mapStageHeight }]}>
           <View style={styles.mapCanvas}>
-            <Image source={campusMapImage} resizeMode="cover" style={styles.mapImage} />
+            <Image source={campusMapImage} resizeMode="contain" style={styles.mapImage} />
             <View style={styles.mapOverlay}>
               {campusMapBuildings.map((building) => (
                 <Pressable
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    marginTop: 16,
+    marginTop: 12,
     borderRadius: 22,
     backgroundColor: "rgba(255, 255, 255, 0.78)",
     borderWidth: 1,
@@ -272,8 +272,8 @@ const styles = StyleSheet.create({
   bottomSheet: {
     flex: 1,
     minHeight: 0,
-    marginTop: 4,
-    padding: 13,
+    marginTop: 8,
+    padding: 12,
     borderRadius: 20,
     backgroundColor: "#ffffff",
     borderWidth: 1,
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 11,
     marginTop: 8,
-    padding: 9,
+    padding: 10,
     borderRadius: 18,
     backgroundColor: "#f7fbfe",
     borderWidth: 1,

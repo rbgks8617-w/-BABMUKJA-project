@@ -73,7 +73,7 @@ export default function RestaurantDetailScreen({ route, navigation }: AppScreenP
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.container}>
       <Image source={{ uri: restaurant.imageUrl }} style={styles.heroImage} />
       <Text style={styles.name}>{restaurant.name}</Text>
       <View style={styles.scoreRow}>
@@ -122,7 +122,9 @@ export default function RestaurantDetailScreen({ route, navigation }: AppScreenP
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 28,
   },
   empty: {
     flex: 1,
@@ -131,13 +133,13 @@ const styles = StyleSheet.create({
   },
   heroImage: {
     width: "100%",
-    height: 210,
-    borderRadius: 14,
-    marginBottom: 18,
+    height: 196,
+    borderRadius: 22,
+    marginBottom: 16,
   },
   name: {
     color: "#222222",
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "900",
   },
   location: {
@@ -165,7 +167,7 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 14,
     padding: 14,
-    borderRadius: 14,
+    borderRadius: 18,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -187,7 +189,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   sectionTitle: {
-    marginTop: 24,
+    marginTop: 22,
     marginBottom: 10,
     color: "#222222",
     fontSize: 22,
@@ -200,7 +202,7 @@ const styles = StyleSheet.create({
   },
   filterChip: {
     paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderRadius: 999,
     backgroundColor: "#ffffff",
     borderWidth: 1,

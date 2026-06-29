@@ -63,7 +63,7 @@ export default function MealMateChatScreen({ route }: AppScreenProps<"MealMateCh
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.messageList}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.messageList}>
         {messages.map((message) => {
           const isMe = message.sender === "익명 나";
 
@@ -100,9 +100,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   roomHeader: {
-    margin: 18,
+    margin: 16,
     marginBottom: 8,
-    padding: 18,
+    padding: 16,
     borderRadius: 24,
     backgroundColor: "#eaf7fc",
     borderWidth: 1,
@@ -126,7 +126,9 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   messageList: {
-    paddingHorizontal: 18,
+    flexGrow: 1,
+    justifyContent: "flex-end",
+    paddingHorizontal: 16,
     paddingVertical: 10,
     gap: 10,
   },
@@ -170,7 +172,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    padding: 14,
+    padding: 12,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     backgroundColor: "#ffffff",
@@ -178,7 +180,8 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    minHeight: 44,
+    paddingVertical: 10,
     borderRadius: 999,
     backgroundColor: colors.background,
     borderWidth: 1,
@@ -188,6 +191,8 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   sendButton: {
+    minHeight: 44,
+    justifyContent: "center",
     paddingHorizontal: 15,
     paddingVertical: 12,
     borderRadius: 999,

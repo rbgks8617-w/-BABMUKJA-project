@@ -47,14 +47,14 @@ export default function NotificationsScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 18,
-    paddingTop: 18,
+    paddingHorizontal: 16,
+    paddingTop: 14,
     paddingBottom: 36,
     backgroundColor: colors.background,
   },
   hero: {
-    marginBottom: 16,
-    padding: 18,
+    marginBottom: 14,
+    padding: 16,
     borderRadius: 24,
     backgroundColor: "#eaf7fc",
     borderWidth: 1,
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   },
   noticeCard: {
     marginBottom: 12,
-    padding: 15,
+    padding: 14,
     borderRadius: 22,
     backgroundColor: "#ffffff",
     borderWidth: 1,
@@ -115,6 +115,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    minHeight: 24,
   },
   noticeDot: {
     width: 9,

@@ -208,7 +208,7 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.container}>
         <View style={styles.hero}>
           <Text style={styles.eyebrow}>나랑 밥먹자</Text>
           <Text style={styles.title}>익명으로 편하게 밥 약속 잡기</Text>
@@ -352,12 +352,12 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 18,
     paddingTop: 18,
-    paddingBottom: 96,
+    paddingBottom: 118,
     backgroundColor: colors.background,
   },
   hero: {
-    marginBottom: 16,
-    padding: 18,
+    marginBottom: 14,
+    padding: 16,
     borderRadius: 24,
     backgroundColor: "#eaf7fc",
     borderWidth: 1,
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
   },
   formCard: {
     marginBottom: 14,
-    padding: 14,
+    padding: 15,
     borderRadius: 24,
     backgroundColor: "#ffffff",
     borderWidth: 1,
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
   },
   postCard: {
     marginBottom: 12,
-    padding: 15,
+    padding: 14,
     borderRadius: 22,
     backgroundColor: "#ffffff",
     borderWidth: 1,
@@ -564,11 +564,14 @@ const styles = StyleSheet.create({
   },
   creator: {
     flex: 1,
+    minWidth: 0,
     color: colors.textSoft,
     fontSize: 12,
     fontWeight: "800",
   },
   joinButton: {
+    minHeight: 42,
+    justifyContent: "center",
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 999,
@@ -581,14 +584,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
+    flexShrink: 0,
   },
   chatButton: {
+    minHeight: 42,
+    justifyContent: "center",
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 999,
     backgroundColor: colors.ink,
   },
   leaveButton: {
+    minHeight: 42,
+    justifyContent: "center",
     paddingHorizontal: 13,
     paddingVertical: 10,
     borderRadius: 999,
@@ -613,7 +621,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 18,
     right: 18,
-    bottom: 22,
+    bottom: 18,
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 13,

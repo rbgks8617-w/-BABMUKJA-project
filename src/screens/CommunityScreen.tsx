@@ -322,7 +322,7 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.container}>
         <View style={styles.tabRow}>
           {tabs.map((tab) => (
             <Pressable key={tab} style={[styles.tab, activeTab === tab && styles.tabActive]} onPress={() => selectTab(tab)}>
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 18,
     paddingTop: 18,
-    paddingBottom: 138,
+    paddingBottom: 152,
     backgroundColor: colors.background,
   },
   tabRow: {
@@ -517,7 +517,9 @@ const styles = StyleSheet.create({
   tab: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 11,
+    justifyContent: "center",
+    minHeight: 42,
+    paddingVertical: 10,
     borderRadius: 999,
     backgroundColor: "#ffffff",
     borderWidth: 1,
@@ -647,7 +649,7 @@ const styles = StyleSheet.create({
   },
   postCard: {
     marginBottom: 12,
-    padding: 14,
+    padding: 13,
     borderRadius: 22,
     backgroundColor: "#ffffff",
     borderWidth: 1,
@@ -658,6 +660,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     justifyContent: "space-between",
     gap: 12,
+    minHeight: 74,
   },
   postSummaryCopy: {
     flex: 1,
@@ -818,15 +821,15 @@ const styles = StyleSheet.create({
   },
   writeDock: {
     position: "absolute",
-    left: 18,
-    right: 18,
-    bottom: 16,
+    left: 14,
+    right: 14,
+    bottom: 14,
     zIndex: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    padding: 14,
+    padding: 13,
     borderRadius: 28,
     backgroundColor: "rgba(255, 255, 255, 0.96)",
     borderWidth: 1,
