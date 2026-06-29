@@ -11,10 +11,10 @@ import { NotificationProvider } from "./src/store/NotificationContext";
 import { colors } from "./src/theme/colors";
 import { roundedTextStyle } from "./src/theme/typography";
 
-const webOrigin = typeof window === "undefined" ? "" : window.location.origin;
+const webBaseUrl = typeof window === "undefined" ? "" : new URL("./", window.location.href).href;
 
 const linking = {
-  prefixes: ["babmukja://", webOrigin].filter(Boolean),
+  prefixes: ["babmukja://", webBaseUrl].filter(Boolean),
   config: {
     screens: {
       RestaurantList: "home",
