@@ -1,11 +1,12 @@
-import React, { useMemo, useRef, useState } from "react";
-import { Animated, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import { Animated, FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { getRestaurants } from "../services/restaurantService";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
 import type { AppScreenProps, Restaurant } from "../types/app";
 
 const anonymousNames = ["익명 01", "익명 02", "익명 03", "익명 04", "익명 05"];
+const maxLocalMealMatePosts = 60;
 
 type MealMateLocalPost = {
   id: string;
@@ -111,7 +112,8 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
       joinedByMe: true,
     };
 
-    setPosts((currentPosts) => [nextPost, ...currentPosts]);
+    // Temporary guard until meal-mate rooms are paginated by the server.
+    setPosts((currentPosts) => [nextPost, ...currentPosts].slice(0, maxLocalMealMatePosts));
     setTopic("");
     setTime("");
     setNote("");
@@ -206,125 +208,157 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
     outputRange: [28, 0],
   });
 
-  return (
-    <View style={styles.screen}>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.container}>
-        <View style={styles.hero}>
-          <Text style={styles.eyebrow}>나랑 밥먹자</Text>
-          <Text style={styles.title}>익명으로 편하게 밥 약속 잡기</Text>
-          <Text style={styles.description}>실명 없이 대화 주제와 시간을 직접 적고, 모임이 생기면 채팅방에서 장소를 맞춰요.</Text>
-        </View>
+  const renderRestaurantChip = useCallback(
+    ({ item: restaurant }: { item: Restaurant }) => {
+      const isSelected = restaurant.id === restaurantId;
 
-        <View style={styles.formCard}>
-          <Text style={styles.sectionTitle}>모집글 만들기</Text>
-          <TextInput
-            style={styles.input}
-            value={topic}
-            onChangeText={setTopic}
-            placeholder="대화 주제 직접 입력"
-            placeholderTextColor={colors.textSoft}
-          />
-          <TextInput
-            style={styles.input}
-            value={time}
-            onChangeText={setTime}
-            placeholder="시간 직접 입력 예: 오늘 12:30"
-            placeholderTextColor={colors.textSoft}
-          />
-          <TextInput
-            style={[styles.input, styles.noteInput]}
-            value={note}
-            onChangeText={setNote}
-            placeholder="모임 설명을 적어주세요"
-            placeholderTextColor={colors.textSoft}
-            multiline
-          />
+      return (
+        <Pressable
+          style={[styles.restaurantChip, isSelected && styles.restaurantChipSelected]}
+          onPress={() => setRestaurantId(restaurant.id)}
+        >
+          <Text style={[styles.restaurantChipText, isSelected && styles.restaurantChipTextSelected]}>
+            {restaurant.name}
+          </Text>
+        </Pressable>
+      );
+    },
+    [restaurantId],
+  );
 
-          <View style={styles.countRow}>
-            <Text style={styles.fieldLabel}>모집 인원</Text>
-            <View style={styles.stepper}>
-              <Pressable style={styles.stepButton} onPress={() => setMaxCount((count) => Math.max(2, count - 1))}>
-                <Text style={styles.stepText}>-</Text>
-              </Pressable>
-              <Text style={styles.countValue}>{maxCount}명</Text>
-              <Pressable style={styles.stepButton} onPress={() => setMaxCount((count) => Math.min(6, count + 1))}>
-                <Text style={styles.stepText}>+</Text>
-              </Pressable>
+  const renderPost = useCallback(
+    ({ item: post, index }: { item: MealMateLocalPost; index: number }) => {
+      const isFull = post.currentCount >= post.maxCount;
+      const buttonLabel = isFull ? "마감" : "참여하기";
+
+      return (
+        <View style={styles.postCard}>
+          <View style={styles.postTop}>
+            <View style={styles.postTitleBlock}>
+              <Text style={styles.postRestaurant}>{post.restaurant?.name ?? "식당"}</Text>
+              <Text style={styles.postMeta}>
+                {post.time} · {post.topic}
+              </Text>
+            </View>
+            <View style={[styles.countPill, isFull && styles.countPillFull]}>
+              <Text style={[styles.countText, isFull && styles.countTextFull]}>
+                {post.currentCount}/{post.maxCount}
+              </Text>
             </View>
           </View>
-
-          <Text style={styles.fieldLabel}>식당 선택</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.restaurantChips}>
-            {restaurants.map((restaurant) => {
-              const isSelected = restaurant.id === restaurantId;
-              return (
-                <Pressable
-                  key={restaurant.id}
-                  style={[styles.restaurantChip, isSelected && styles.restaurantChipSelected]}
-                  onPress={() => setRestaurantId(restaurant.id)}
-                >
-                  <Text style={[styles.restaurantChipText, isSelected && styles.restaurantChipTextSelected]}>
-                    {restaurant.name}
-                  </Text>
+          <Text style={styles.postNote}>{post.note}</Text>
+          <View style={styles.postFooter}>
+            <Text style={styles.creator}>{post.createdBy ?? anonymousNames[index % anonymousNames.length]}</Text>
+            {post.joinedByMe ? (
+              <View style={styles.joinedActions}>
+                <Pressable style={styles.chatButton} onPress={() => openChat(post)}>
+                  <Text style={styles.joinButtonText}>채팅방</Text>
                 </Pressable>
-              );
-            })}
-          </ScrollView>
+                <Pressable style={styles.leaveButton} onPress={() => leavePost(post.id)}>
+                  <Text style={styles.leaveButtonText}>나가기</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                style={[styles.joinButton, isFull && styles.joinButtonDisabled]}
+                onPress={() => joinPost(post.id)}
+              >
+                <Text style={[styles.joinButtonText, isFull && styles.joinButtonTextDisabled]}>{buttonLabel}</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      );
+    },
+    [posts],
+  );
 
-          <Pressable style={styles.createButton} onPress={createPost}>
-            <Text style={styles.createButtonText}>익명으로 모집 올리기</Text>
-          </Pressable>
+  const listHeader = (
+    <>
+      <View style={styles.hero}>
+        <Text style={styles.eyebrow}>나랑 밥먹자</Text>
+        <Text style={styles.title}>익명으로 편하게 밥 약속 잡기</Text>
+        <Text style={styles.description}>실명 없이 대화 주제와 시간을 직접 적고, 모임이 생기면 채팅방에서 장소를 맞춰요.</Text>
+      </View>
+
+      <View style={styles.formCard}>
+        <Text style={styles.sectionTitle}>모집글 만들기</Text>
+        <TextInput
+          style={styles.input}
+          value={topic}
+          onChangeText={setTopic}
+          placeholder="대화 주제 직접 입력"
+          placeholderTextColor={colors.textSoft}
+        />
+        <TextInput
+          style={styles.input}
+          value={time}
+          onChangeText={setTime}
+          placeholder="시간 직접 입력 예: 오늘 12:30"
+          placeholderTextColor={colors.textSoft}
+        />
+        <TextInput
+          style={[styles.input, styles.noteInput]}
+          value={note}
+          onChangeText={setNote}
+          placeholder="모임 설명을 적어주세요"
+          placeholderTextColor={colors.textSoft}
+          multiline
+        />
+
+        <View style={styles.countRow}>
+          <Text style={styles.fieldLabel}>모집 인원</Text>
+          <View style={styles.stepper}>
+            <Pressable style={styles.stepButton} onPress={() => setMaxCount((count) => Math.max(2, count - 1))}>
+              <Text style={styles.stepText}>-</Text>
+            </Pressable>
+            <Text style={styles.countValue}>{maxCount}명</Text>
+            <Pressable style={styles.stepButton} onPress={() => setMaxCount((count) => Math.min(6, count + 1))}>
+              <Text style={styles.stepText}>+</Text>
+            </Pressable>
+          </View>
         </View>
 
-        <View style={styles.boardHeader}>
-          <Text style={styles.sectionTitle}>현재 모집 중</Text>
-          <Text style={styles.boardMeta}>{posts.length}개</Text>
-        </View>
+        <Text style={styles.fieldLabel}>식당 선택</Text>
+        <FlatList
+          horizontal
+          data={restaurants}
+          keyExtractor={(restaurant) => restaurant.id}
+          renderItem={renderRestaurantChip}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.restaurantChips}
+          initialNumToRender={5}
+          maxToRenderPerBatch={5}
+          windowSize={3}
+          removeClippedSubviews
+        />
 
-        {posts.map((post, index) => {
-          const isFull = post.currentCount >= post.maxCount;
-          const buttonLabel = isFull ? "마감" : "참여하기";
+        <Pressable style={styles.createButton} onPress={createPost}>
+          <Text style={styles.createButtonText}>익명으로 모집 올리기</Text>
+        </Pressable>
+      </View>
 
-          return (
-            <View key={post.id} style={styles.postCard}>
-              <View style={styles.postTop}>
-                <View style={styles.postTitleBlock}>
-                  <Text style={styles.postRestaurant}>{post.restaurant?.name ?? "식당"}</Text>
-                  <Text style={styles.postMeta}>
-                    {post.time} · {post.topic}
-                  </Text>
-                </View>
-                <View style={[styles.countPill, isFull && styles.countPillFull]}>
-                  <Text style={[styles.countText, isFull && styles.countTextFull]}>
-                    {post.currentCount}/{post.maxCount}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.postNote}>{post.note}</Text>
-              <View style={styles.postFooter}>
-                <Text style={styles.creator}>{post.createdBy ?? anonymousNames[index % anonymousNames.length]}</Text>
-                {post.joinedByMe ? (
-                  <View style={styles.joinedActions}>
-                    <Pressable style={styles.chatButton} onPress={() => openChat(post)}>
-                      <Text style={styles.joinButtonText}>채팅방</Text>
-                    </Pressable>
-                    <Pressable style={styles.leaveButton} onPress={() => leavePost(post.id)}>
-                      <Text style={styles.leaveButtonText}>나가기</Text>
-                    </Pressable>
-                  </View>
-                ) : (
-                  <Pressable
-                    style={[styles.joinButton, isFull && styles.joinButtonDisabled]}
-                    onPress={() => joinPost(post.id)}
-                  >
-                    <Text style={[styles.joinButtonText, isFull && styles.joinButtonTextDisabled]}>{buttonLabel}</Text>
-                  </Pressable>
-                )}
-              </View>
-            </View>
-          );
-        })}
-      </ScrollView>
+      <View style={styles.boardHeader}>
+        <Text style={styles.sectionTitle}>현재 모집 중</Text>
+        <Text style={styles.boardMeta}>{posts.length}개</Text>
+      </View>
+    </>
+  );
+
+  return (
+    <View style={styles.screen}>
+      <FlatList
+        data={posts}
+        keyExtractor={(post) => post.id}
+        renderItem={renderPost}
+        ListHeaderComponent={listHeader}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.container}
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={7}
+        removeClippedSubviews
+      />
 
       {toastMessage ? (
         <Animated.View

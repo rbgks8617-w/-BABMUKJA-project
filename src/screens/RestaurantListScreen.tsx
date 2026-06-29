@@ -1,6 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Animated, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
+import CachedRemoteImage from "../components/CachedRemoteImage";
 import FavoriteHeartButton from "../components/FavoriteHeartButton";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import {
   getBuildingCards,
   getCrowdPicks,
@@ -46,21 +48,14 @@ function getCrowdPillStyle(status: CongestionLevel) {
   return styles.crowdPillSmooth;
 }
 
-export default function RestaurantListScreen({ navigation }: AppScreenProps<"RestaurantList">) {
-  const { width } = useWindowDimensions();
-  const todayCafeteria = getTodayCafeteria();
-  const popularMenus = getPopularMenus();
-  const restaurantCount = getRestaurantCount();
-  const crowdPicks = useMemo(() => getCrowdPicks(), []);
-  const buildingCards = useMemo(() => getBuildingCards(), []);
-  const { totalQuantity } = useCart();
-  const { favoriteMenuIds, isFavoriteMenu, toggleFavoriteMenu } = useFavorites();
-  const { unreadCount } = useNotifications();
-  const isWideLayout = width >= 980;
-  const carouselCardWidth = Math.min(width - 48, 300);
+const CrowdPanel = memo(function CrowdPanel({
+  crowdPicks,
+  onOpenRestaurant,
+}: {
+  crowdPicks: ReturnType<typeof getCrowdPicks>;
+  onOpenRestaurant: (restaurantId: string) => void;
+}) {
   const [liveTick, setLiveTick] = useState(0);
-  const [activeCategory, setActiveCategory] = useState("전체");
-  const [searchQuery, setSearchQuery] = useState("");
   const liveMotion = useRef(new Animated.Value(1)).current;
   const liveTranslateY = liveMotion.interpolate({
     inputRange: [0, 1],
@@ -87,48 +82,20 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
     return () => clearInterval(timerId);
   }, [liveMotion]);
 
-  const liveCrowdPicks = crowdPicks.map((item, index) => {
-    const recentUsers = Math.max(1, item.recentUsers + ((liveTick + index * 4) % 7) - 2);
-    return {
-      ...item,
-      recentUsers,
-      status: getCrowdStatus(recentUsers),
-    };
-  });
-  const todayImage = getRestaurantById(todayCafeteria.restaurantId)?.imageUrl ?? buildingCards[0]?.imageUrl;
-  const favoriteMenus = useMemo(
+  const liveCrowdPicks = useMemo(
     () =>
-      favoriteMenuIds
-        .map((menuId) => getMenuById(menuId))
-        .filter((menu): menu is NonNullable<ReturnType<typeof getMenuById>> => Boolean(menu))
-        .map((menu) => ({
-          ...menu,
-          restaurant: getRestaurantById(menu.restaurantId),
-        })),
-    [favoriteMenuIds],
+      crowdPicks.map((item, index) => {
+        const recentUsers = Math.max(1, item.recentUsers + ((liveTick + index * 4) % 7) - 2);
+        return {
+          ...item,
+          recentUsers,
+          status: getCrowdStatus(recentUsers),
+        };
+      }),
+    [crowdPicks, liveTick],
   );
-  const categoryMenus = useMemo(
-    () => (activeCategory === "즐겨찾기" ? favoriteMenus : getMenusByCategory(activeCategory)),
-    [activeCategory, favoriteMenus],
-  );
-  const searchResults = useMemo(() => searchCampusFood(searchQuery), [searchQuery]);
-  const trimmedSearchQuery = searchQuery.trim();
-  const isFavoriteCategory = activeCategory === "즐겨찾기";
 
-  function openSearchResult(result: SearchResult) {
-    if (result.type === "menu") {
-      navigation.navigate("MenuDetail", { menuId: result.targetId });
-      return;
-    }
-
-    navigation.navigate("RestaurantDetail", { restaurantId: result.targetId });
-  }
-
-  function toggleMenuFavorite(menuId: string) {
-    toggleFavoriteMenu(menuId);
-  }
-
-  const crowdPanel = (
+  return (
     <Animated.View style={[styles.topCrowdCard, { opacity: liveMotion, transform: [{ translateY: liveTranslateY }] }]}>
       <Text style={styles.topCrowdTitle}>최근 10분 혼잡도</Text>
       <View style={styles.compactCrowdList}>
@@ -139,7 +106,7 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
             <Pressable
               key={item.restaurant.id}
               style={styles.compactCrowdItem}
-              onPress={() => navigation.navigate("RestaurantDetail", { restaurantId: item.restaurant.id })}
+              onPress={() => onOpenRestaurant(item.restaurant.id)}
             >
               <View style={styles.compactCrowdTop}>
                 <Text style={styles.compactCrowdName} numberOfLines={1}>{item.restaurant.name}</Text>
@@ -165,6 +132,62 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
       </View>
     </Animated.View>
   );
+});
+export default function RestaurantListScreen({ navigation }: AppScreenProps<"RestaurantList">) {
+  const { width } = useWindowDimensions();
+  const todayCafeteria = getTodayCafeteria();
+  const popularMenus = getPopularMenus();
+  const restaurantCount = getRestaurantCount();
+  const crowdPicks = useMemo(() => getCrowdPicks(), []);
+  const buildingCards = useMemo(() => getBuildingCards(), []);
+  const { totalQuantity } = useCart();
+  const { favoriteMenuIds, isFavoriteMenu, toggleFavoriteMenu } = useFavorites();
+  const { unreadCount } = useNotifications();
+  const isWideLayout = width >= 980;
+  const carouselCardWidth = Math.min(width - 48, 300);
+  const [activeCategory, setActiveCategory] = useState("전체");
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, 250);
+
+  const todayImage = getRestaurantById(todayCafeteria.restaurantId)?.imageUrl ?? buildingCards[0]?.imageUrl;
+  const favoriteMenus = useMemo(
+    () =>
+      favoriteMenuIds
+        .map((menuId) => getMenuById(menuId))
+        .filter((menu): menu is NonNullable<ReturnType<typeof getMenuById>> => Boolean(menu))
+        .map((menu) => ({
+          ...menu,
+          restaurant: getRestaurantById(menu.restaurantId),
+        })),
+    [favoriteMenuIds],
+  );
+  const categoryMenus = useMemo(
+    () => (activeCategory === "즐겨찾기" ? favoriteMenus : getMenusByCategory(activeCategory)),
+    [activeCategory, favoriteMenus],
+  );
+  const searchResults = useMemo(() => searchCampusFood(debouncedSearchQuery), [debouncedSearchQuery]);
+  const trimmedSearchQuery = searchQuery.trim();
+  const isFavoriteCategory = activeCategory === "즐겨찾기";
+
+  const openRestaurantDetail = useCallback(
+    (restaurantId: string) => navigation.navigate("RestaurantDetail", { restaurantId }),
+    [navigation],
+  );
+
+  function openSearchResult(result: SearchResult) {
+    if (result.type === "menu") {
+      navigation.navigate("MenuDetail", { menuId: result.targetId });
+      return;
+    }
+
+    openRestaurantDetail(result.targetId);
+  }
+
+  function toggleMenuFavorite(menuId: string) {
+    toggleFavoriteMenu(menuId);
+  }
+
+  const crowdPanel = <CrowdPanel crowdPicks={crowdPicks} onOpenRestaurant={openRestaurantDetail} />;
 
   const infoRail = (
     <View style={[styles.infoRail, isWideLayout && styles.infoRailDesktop]}>
@@ -196,16 +219,20 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
         </View>
       </View>
 
-      <ScrollView
+      <FlatList
         horizontal
+        data={buildingCards}
+        keyExtractor={(building) => building.id}
         showsHorizontalScrollIndicator={false}
         snapToInterval={carouselCardWidth + 14}
         decelerationRate="fast"
         contentContainerStyle={styles.restaurantCarousel}
-      >
-        {buildingCards.map((building) => (
+        initialNumToRender={3}
+        maxToRenderPerBatch={3}
+        windowSize={3}
+        removeClippedSubviews
+        renderItem={({ item: building }) => (
           <Pressable
-            key={building.id}
             style={({ pressed }) => [
               styles.restaurantSlide,
               pressed && styles.restaurantSlidePressed,
@@ -213,12 +240,13 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
             ]}
             onPress={() => navigation.navigate("CampusMap", { buildingId: building.id })}
           >
-            <ImageBackground source={{ uri: building.imageUrl }} style={styles.slideImage} imageStyle={styles.slideImageRadius}>
+            <View style={styles.slideImage}>
+              {building.imageUrl ? <CachedRemoteImage uri={building.imageUrl} style={styles.slideImageFill} /> : null}
               <View style={styles.slideOverlay} />
               <View style={styles.slideTop}>
                 <Text style={styles.slideRank}>{building.index}</Text>
               </View>
-            </ImageBackground>
+            </View>
             <View style={styles.slideBody}>
               <Text numberOfLines={1} style={styles.slideTitle}>{building.displayName} 식당</Text>
               <Text style={styles.slideMenu} numberOfLines={1}>
@@ -230,8 +258,8 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
               </View>
             </View>
           </Pressable>
-        ))}
-      </ScrollView>
+        )}
+      />
     </View>
   );
 
@@ -292,7 +320,7 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
             {searchResults.length > 0 ? (
               searchResults.map((result) => (
                 <Pressable key={result.id} style={styles.searchResultRow} onPress={() => openSearchResult(result)}>
-                  <Image source={{ uri: result.imageUrl }} style={styles.searchResultImage} />
+                  <CachedRemoteImage uri={result.imageUrl} style={styles.searchResultImage} />
                   <View style={styles.searchResultCopy}>
                     <Text numberOfLines={1} style={styles.searchResultTitle}>{result.title}</Text>
                     <Text numberOfLines={1} style={styles.searchResultSubtitle}>{result.subtitle}</Text>
@@ -302,21 +330,25 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
               ))
             ) : (
               <View style={styles.searchEmpty}>
-                <Text style={styles.searchEmptyText}>검색 결과가 없어요.</Text>
+                <Text style={styles.searchEmptyText}>검색 결과가 없어요</Text>
               </View>
             )}
           </View>
         ) : null}
 
-        <ScrollView
+        <FlatList
           horizontal
+          data={categoryTabs}
+          keyExtractor={(tab) => tab}
           showsHorizontalScrollIndicator={false}
           style={styles.categoryScroller}
           contentContainerStyle={styles.categoryRow}
-        >
-          {categoryTabs.map((tab, index) => (
+          initialNumToRender={7}
+          maxToRenderPerBatch={7}
+          windowSize={3}
+          removeClippedSubviews
+          renderItem={({ item: tab }) => (
             <Pressable
-              key={tab}
               style={[styles.categoryChip, activeCategory === tab && styles.categoryChipActive]}
               onPress={() => setActiveCategory(tab)}
             >
@@ -324,8 +356,8 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
                 {tab}
               </Text>
             </Pressable>
-          ))}
-        </ScrollView>
+          )}
+        />
 
         <View style={styles.categoryMenuPanel}>
           <View style={styles.categoryMenuHeader}>
@@ -338,7 +370,7 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
                     {activeCategory === "전체" ? "바로 고르기" : `${activeCategory} 메뉴`}
                   </Text>
                   <Text style={styles.categoryMenuTitle}>
-                    {activeCategory === "전체" ? "지금 먹기 좋은 메뉴" : `${activeCategory} 땡길 때`}
+                    {activeCategory === "전체" ? "지금 먹기 좋은 메뉴" : `${activeCategory} 추천`}
                   </Text>
                 </>
               )}
@@ -347,14 +379,23 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
           </View>
 
           {categoryMenus.length > 0 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryMenuList}>
-              {categoryMenus.map((menu) => (
+            <FlatList
+              horizontal
+              data={categoryMenus}
+              keyExtractor={(menu) => menu.id}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryMenuList}
+              initialNumToRender={4}
+              maxToRenderPerBatch={4}
+              windowSize={5}
+              removeClippedSubviews
+              renderItem={({ item: menu }) => (
                 <Pressable
-                  key={menu.id}
                   style={({ pressed }) => [styles.categoryMenuCard, pressed && styles.categoryMenuCardPressed]}
                   onPress={() => navigation.navigate("MenuDetail", { menuId: menu.id })}
                 >
-                  <ImageBackground source={{ uri: menu.imageUrl }} style={styles.categoryMenuImage} imageStyle={styles.categoryMenuImageRadius}>
+                  <View style={styles.categoryMenuImage}>
+                    <CachedRemoteImage uri={menu.imageUrl} style={styles.categoryMenuImageFill} />
                     <View style={styles.categoryMenuImageDim} />
                     <Text style={styles.categoryMenuBadge}>{menu.category}</Text>
                     <FavoriteHeartButton
@@ -363,15 +404,15 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
                       style={styles.categoryHeartButton}
                       onPress={() => toggleMenuFavorite(menu.id)}
                     />
-                  </ImageBackground>
+                  </View>
                   <Text numberOfLines={1} style={styles.categoryMenuName}>{menu.name}</Text>
                   <Text numberOfLines={1} style={styles.categoryMenuRestaurant}>
                     {menu.restaurant?.name ?? "학교 식당"}
                   </Text>
                   <Text style={styles.categoryMenuPrice}>{formatPrice(menu.price)}</Text>
                 </Pressable>
-              ))}
-            </ScrollView>
+              )}
+            />
           ) : (
             <View style={styles.categoryEmpty}>
               <Text style={styles.categoryEmptyText}>
@@ -395,9 +436,10 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
             </View>
           </View>
           {todayImage ? (
-            <ImageBackground source={{ uri: todayImage }} style={styles.todayImage} imageStyle={styles.todayImageRadius}>
+            <View style={styles.todayImage}>
+              <CachedRemoteImage uri={todayImage} style={styles.todayImageFill} />
               <View style={styles.todayImageGloss} />
-            </ImageBackground>
+            </View>
           ) : null}
         </View>
 
@@ -753,6 +795,10 @@ const styles = StyleSheet.create({
   categoryMenuImageRadius: {
     borderRadius: 14,
   },
+  categoryMenuImageFill: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 14,
+  },
   categoryMenuImageDim: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(7, 26, 43, 0.12)",
@@ -885,6 +931,10 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   todayImageRadius: {
+    borderRadius: 24,
+  },
+  todayImageFill: {
+    ...StyleSheet.absoluteFillObject,
     borderRadius: 24,
   },
   todayImageGloss: {
@@ -1139,8 +1189,14 @@ const styles = StyleSheet.create({
   slideImage: {
     height: 118,
     justifyContent: "space-between",
+    overflow: "hidden",
   },
   slideImageRadius: {
+    borderTopLeftRadius: 23,
+    borderTopRightRadius: 23,
+  },
+  slideImageFill: {
+    ...StyleSheet.absoluteFillObject,
     borderTopLeftRadius: 23,
     borderTopRightRadius: 23,
   },

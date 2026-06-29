@@ -1,5 +1,6 @@
 import React from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import CachedRemoteImage from "./CachedRemoteImage";
 import FavoriteHeartButton from "./FavoriteHeartButton";
 import { colors } from "../theme/colors";
 import type { Menu } from "../types/app";
@@ -15,7 +16,7 @@ type MenuCardProps = {
 export default function MenuCard({ menu, onPress, isFavorite = false, onToggleFavorite }: MenuCardProps) {
   return (
     <Pressable style={styles.card} onPress={onPress}>
-      <Image source={{ uri: menu.imageUrl }} style={styles.image} />
+      <CachedRemoteImage uri={menu.imageUrl} style={styles.image} />
       {onToggleFavorite ? (
         <FavoriteHeartButton isFavorite={isFavorite} style={styles.favoriteButton} onPress={onToggleFavorite} />
       ) : null}

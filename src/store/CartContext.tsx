@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { CartItem, MenuOption } from "../types/app";
 
@@ -49,7 +49,7 @@ function withCalculatedTotal<T extends Omit<CartItem, "unitPrice" | "totalPrice"
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  function addToCart(item: AddToCartInput) {
+  const addToCart = useCallback((item: AddToCartInput) => {
     const selectedOptions = normalizeOptions(item.selectedOptions);
     const cartId = createCartKey(item.menuId, selectedOptions);
     const normalizedItem = withCalculatedTotal({
@@ -76,9 +76,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         });
       });
     });
-  }
+  }, []);
 
-  function changeCartItemQuantity(cartId: string, amount: number) {
+  const changeCartItemQuantity = useCallback((cartId: string, amount: number) => {
     setCartItems((prevItems) =>
       prevItems.map((item) => {
         if (item.cartId !== cartId) {
@@ -91,13 +91,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
         });
       }),
     );
-  }
+  }, []);
 
-  function removeFromCart(cartId: string) {
+  const removeFromCart = useCallback((cartId: string) => {
     setCartItems((prevItems) => prevItems.filter((item) => item.cartId !== cartId));
-  }
+  }, []);
 
-  function splitCartItemWithOptions(cartId: string, nextSelectedOptions: MenuOption[] = []) {
+  const splitCartItemWithOptions = useCallback((cartId: string, nextSelectedOptions: MenuOption[] = []) => {
     const selectedOptions = normalizeOptions(nextSelectedOptions);
 
     setCartItems((prevItems) => {
@@ -141,11 +141,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       return mergedIntoExistingItem ? nextItems : [...nextItems, splitItem];
     });
-  }
+  }, []);
 
-  function clearCart() {
+  const clearCart = useCallback(() => {
     setCartItems([]);
-  }
+  }, []);
 
   const totalPrice = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.totalPrice, 0),
@@ -157,16 +157,28 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [cartItems],
   );
 
-  const value = {
-    cartItems,
-    totalPrice,
-    totalQuantity,
-    addToCart,
-    changeCartItemQuantity,
-    removeFromCart,
-    splitCartItemWithOptions,
-    clearCart,
-  };
+  const value = useMemo(
+    () => ({
+      cartItems,
+      totalPrice,
+      totalQuantity,
+      addToCart,
+      changeCartItemQuantity,
+      removeFromCart,
+      splitCartItemWithOptions,
+      clearCart,
+    }),
+    [
+      addToCart,
+      cartItems,
+      changeCartItemQuantity,
+      clearCart,
+      removeFromCart,
+      splitCartItemWithOptions,
+      totalPrice,
+      totalQuantity,
+    ],
+  );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

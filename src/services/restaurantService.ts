@@ -23,6 +23,20 @@ export { campusMapBuildings };
 const restaurantById = new Map(restaurants.map((restaurant) => [restaurant.id, restaurant]));
 const menuById = new Map(menus.map((menu) => [menu.id, menu]));
 
+const restaurantSearchIndex = restaurants.map((restaurant) => ({
+  restaurant,
+  keyword: normalizeKeyword([restaurant.name, restaurant.category, restaurant.location, restaurant.description].join(" ")),
+}));
+
+const menuSearchIndex = menus.map((menu) => {
+  const restaurant = getRestaurantById(menu.restaurantId);
+  return {
+    menu,
+    restaurant,
+    keyword: normalizeKeyword([menu.name, menu.category, menu.description, restaurant?.name, ...(menu.tags ?? [])].join(" ")),
+  };
+});
+
 type RestaurantAttached<T> = T & { restaurant: Restaurant };
 type ScoredMenu = {
   menu: Menu;
@@ -147,13 +161,9 @@ export function searchCampusFood(query: string): SearchResult[] {
     return [];
   }
 
-  const restaurantResults = restaurants
-    .filter((restaurant) => {
-      return [restaurant.name, restaurant.category, restaurant.location, restaurant.description]
-        .filter(Boolean)
-        .some((value) => normalizeKeyword(value).includes(keyword));
-    })
-    .map((restaurant) => ({
+  const restaurantResults = restaurantSearchIndex
+    .filter((item) => item.keyword.includes(keyword))
+    .map(({ restaurant }) => ({
       id: `restaurant-${restaurant.id}`,
       type: "restaurant" as const,
       title: restaurant.name,
@@ -162,15 +172,9 @@ export function searchCampusFood(query: string): SearchResult[] {
       targetId: restaurant.id,
     }));
 
-  const menuResults = menus
-    .filter((menu) => {
-      const restaurant = getRestaurantById(menu.restaurantId);
-      return [menu.name, menu.category, menu.description, restaurant?.name, ...(menu.tags ?? [])]
-        .filter(Boolean)
-        .some((value) => normalizeKeyword(value).includes(keyword));
-    })
-    .map((menu) => {
-      const restaurant = getRestaurantById(menu.restaurantId);
+  const menuResults = menuSearchIndex
+    .filter((item) => item.keyword.includes(keyword))
+    .map(({ menu, restaurant }) => {
       return {
         id: `menu-${menu.id}`,
         type: "menu" as const,

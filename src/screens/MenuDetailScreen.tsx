@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import CachedRemoteImage from "../components/CachedRemoteImage";
 import PriceSummary from "../components/PriceSummary";
 import QuantitySelector from "../components/QuantitySelector";
 import { getMenuById } from "../services/restaurantService";
@@ -28,6 +29,14 @@ export default function MenuDetailScreen({ route, navigation }: AppScreenProps<"
     [normalizedSelectedOptions],
   );
 
+  useEffect(() => {
+    return () => {
+      if (toastAnimation.current) {
+        toastAnimation.current.stop();
+      }
+    };
+  }, []);
+
   if (!menu) {
     return (
       <View style={styles.empty}>
@@ -39,14 +48,6 @@ export default function MenuDetailScreen({ route, navigation }: AppScreenProps<"
   const currentMenu = menu;
   const unitPrice = currentMenu.price + optionTotal;
   const totalPrice = unitPrice * quantity;
-
-  useEffect(() => {
-    return () => {
-      if (toastAnimation.current) {
-        toastAnimation.current.stop();
-      }
-    };
-  }, []);
 
   function toggleOption(option: MenuOption) {
     setAddedMessage("");
@@ -133,7 +134,7 @@ export default function MenuDetailScreen({ route, navigation }: AppScreenProps<"
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Image source={{ uri: currentMenu.imageUrl }} style={styles.image} />
+        <CachedRemoteImage uri={currentMenu.imageUrl} style={styles.image} />
         <Text style={styles.category}>{currentMenu.category}</Text>
         <Text style={styles.name}>{currentMenu.name}</Text>
         <Text style={styles.price}>{formatPrice(currentMenu.price)}</Text>

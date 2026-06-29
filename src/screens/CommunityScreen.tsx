@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FlatList, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
+import CachedRemoteImage from "../components/CachedRemoteImage";
 import { colors } from "../theme/colors";
 import type { AppScreenProps } from "../types/app";
 
@@ -29,6 +30,8 @@ const tabs: CommunityTab[] = ["음식 후기", "나랑 밥먹자"];
 const ratingStep = 0.5;
 const minRating = 0.5;
 const maxRating = 5;
+const maxLocalPosts = 80;
+const maxLocalComments = 60;
 
 function formatRating(score: number) {
   return score.toFixed(1);
@@ -121,7 +124,7 @@ function PostCard({
         </View>
         <View style={styles.postSideMeta}>
           <Text style={styles.postTime}>{post.createdAt}</Text>
-          {post.imageUrl ? <Image source={{ uri: post.imageUrl }} style={styles.postThumbnail} /> : null}
+          {post.imageUrl ? <CachedRemoteImage uri={post.imageUrl} style={styles.postThumbnail} /> : null}
           <Text style={styles.expandHint}>{isExpanded ? "닫기" : "보기"}</Text>
         </View>
       </Pressable>
@@ -129,7 +132,7 @@ function PostCard({
       {isExpanded ? (
         <View style={styles.postDetail}>
           <Text style={styles.postBody}>{post.body}</Text>
-          {post.imageUrl ? <Image source={{ uri: post.imageUrl }} style={styles.postDetailImage} /> : null}
+          {post.imageUrl ? <CachedRemoteImage uri={post.imageUrl} style={styles.postDetailImage} /> : null}
 
           <View style={styles.commentBlock}>
             <Text style={styles.commentTitle}>댓글</Text>
@@ -260,7 +263,8 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
       comments: [],
     };
 
-    setPosts((currentPosts) => [nextPost, ...currentPosts]);
+    // Temporary guard until these community posts are paginated by the server.
+    setPosts((currentPosts) => [nextPost, ...currentPosts].slice(0, maxLocalPosts));
     setActiveTab("음식 후기");
     setSelectedPostId(nextPost.id);
     closeWriter();
@@ -305,7 +309,7 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
               authorKey: post.isMine ? "author" : "viewer",
               createdAt: "방금",
             },
-          ],
+          ].slice(-maxLocalComments),
         };
       }),
     );
@@ -320,57 +324,74 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
     setWriteValueScore((currentScore) => clampRating(currentScore + delta));
   }
 
+  const renderPost = useCallback(
+    ({ item: post }: { item: CommunityPostItem }) => (
+      <PostCard
+        post={post}
+        commentDraft={commentDrafts[post.id] ?? ""}
+        isExpanded={selectedPostId === post.id}
+        onChangeComment={(value) => updateCommentDraft(post.id, value)}
+        onSubmitComment={() => addComment(post.id)}
+        onToggle={() => setSelectedPostId((currentId) => (currentId === post.id ? null : post.id))}
+      />
+    ),
+    [commentDrafts, selectedPostId],
+  );
+
+  const listHeader = (
+    <>
+      <View style={styles.tabRow}>
+        {tabs.map((tab) => (
+          <Pressable key={tab} style={[styles.tab, activeTab === tab && styles.tabActive]} onPress={() => selectTab(tab)}>
+            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {activeTab === "나랑 밥먹자" ? (
+        <View style={styles.matePanel}>
+          <View style={styles.matePanelTop}>
+            <View style={styles.mateSymbol}>
+              <Text style={styles.mateSymbolText}>밥</Text>
+            </View>
+            <View style={styles.matePanelCopy}>
+              <Text style={styles.mateEyebrow}>캠퍼스 식사 매칭</Text>
+              <Text style={styles.panelTitle}>오늘 같이 먹을 사람 찾기</Text>
+              <Text style={styles.panelDescription}>시간, 식당, 대화 주제를 정해서 부담 없는 한 끼 모임을 열 수 있어요.</Text>
+            </View>
+          </View>
+          <View style={styles.mateFeatureRow}>
+            <Text style={styles.mateFeature}>실명 없음</Text>
+            <Text style={styles.mateFeature}>채팅방 연결</Text>
+            <Text style={styles.mateFeature}>인원 마감</Text>
+          </View>
+          <Pressable style={styles.primaryButton} onPress={() => navigation.navigate("MealMate")}>
+            <Text style={styles.primaryButtonText}>나랑 밥먹자 열기</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>{activeTab}</Text>
+        <Text style={styles.sectionCount}>{visiblePosts.length}개</Text>
+      </View>
+    </>
+  );
+
   return (
     <View style={styles.screen}>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.container}>
-        <View style={styles.tabRow}>
-          {tabs.map((tab) => (
-            <Pressable key={tab} style={[styles.tab, activeTab === tab && styles.tabActive]} onPress={() => selectTab(tab)}>
-              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {activeTab === "나랑 밥먹자" ? (
-          <View style={styles.matePanel}>
-            <View style={styles.matePanelTop}>
-              <View style={styles.mateSymbol}>
-                <Text style={styles.mateSymbolText}>밥</Text>
-              </View>
-              <View style={styles.matePanelCopy}>
-                <Text style={styles.mateEyebrow}>캠퍼스 식사 매칭</Text>
-                <Text style={styles.panelTitle}>오늘 같이 먹을 사람 찾기</Text>
-                <Text style={styles.panelDescription}>시간, 식당, 대화 주제를 정해서 부담 없는 한 끼 모임을 열 수 있어요.</Text>
-              </View>
-            </View>
-            <View style={styles.mateFeatureRow}>
-              <Text style={styles.mateFeature}>실명 없음</Text>
-              <Text style={styles.mateFeature}>채팅방 연결</Text>
-              <Text style={styles.mateFeature}>인원 마감</Text>
-            </View>
-            <Pressable style={styles.primaryButton} onPress={() => navigation.navigate("MealMate")}>
-              <Text style={styles.primaryButtonText}>나랑 밥먹자 열기</Text>
-            </Pressable>
-          </View>
-        ) : null}
-
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{activeTab}</Text>
-          <Text style={styles.sectionCount}>{visiblePosts.length}개</Text>
-        </View>
-
-        {visiblePosts.map((post) => (
-          <PostCard
-            key={post.id}
-            post={post}
-            commentDraft={commentDrafts[post.id] ?? ""}
-            isExpanded={selectedPostId === post.id}
-            onChangeComment={(value) => updateCommentDraft(post.id, value)}
-            onSubmitComment={() => addComment(post.id)}
-            onToggle={() => setSelectedPostId((currentId) => (currentId === post.id ? null : post.id))}
-          />
-        ))}
-      </ScrollView>
+      <FlatList
+        data={visiblePosts}
+        keyExtractor={(post) => post.id}
+        renderItem={renderPost}
+        ListHeaderComponent={listHeader}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.container}
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={7}
+        removeClippedSubviews
+      />
 
       {writerOpen ? (
         <View style={[styles.writerSheet, { height: writerHeight }]}>
@@ -473,7 +494,7 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
                 <Text style={styles.sampleImageButtonText}>샘플 사진 첨부</Text>
               </Pressable>
               {writeImageUrl.trim() ? (
-                <Image source={{ uri: writeImageUrl.trim() }} style={styles.writerThumbnail} />
+                <CachedRemoteImage uri={writeImageUrl.trim()} style={styles.writerThumbnail} />
               ) : null}
             </View>
 

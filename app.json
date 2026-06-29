@@ -6,7 +6,16 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "platforms": ["ios", "android", "web"],
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "assets/app-icon.png",
+      "assets/tuk-logo.png",
+      "assets/tuk-symbol.png",
+      "assets/heart-empty.png",
+      "assets/heart-filled.png",
+      "assets/lunchbox-recommendation.png",
+      "assets/tuk-campus-map.png",
+      "assets/fonts/*"
+    ],
     "icon": "./assets/app-icon.png",
     "splash": {
       "image": "./assets/app-icon.png",

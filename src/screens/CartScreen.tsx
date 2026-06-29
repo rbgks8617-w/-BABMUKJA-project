@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useState } from "react";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import PriceSummary from "../components/PriceSummary";
 import QuantitySelector from "../components/QuantitySelector";
 import { getMenuById } from "../services/restaurantService";
@@ -20,13 +20,14 @@ export default function CartScreen({ navigation }: AppScreenProps<"Cart">) {
   const { cartItems, changeCartItemQuantity, removeFromCart, splitCartItemWithOptions, totalPrice } = useCart();
   const [optionDrafts, setOptionDrafts] = useState<Record<string, MenuOption[]>>({});
 
-  function getDraftOptions(item: CartItem) {
-    return optionDrafts[item.cartId] ?? item.selectedOptions;
-  }
+  const getDraftOptions = useCallback(
+    (item: CartItem) => optionDrafts[item.cartId] ?? item.selectedOptions,
+    [optionDrafts],
+  );
 
-  function toggleOption(item: CartItem, option: MenuOption) {
+  const toggleOption = useCallback((item: CartItem, option: MenuOption) => {
     setOptionDrafts((currentDrafts) => {
-      const currentOptions = getDraftOptionsFromState(currentDrafts, item);
+      const currentOptions = currentDrafts[item.cartId] ?? item.selectedOptions;
       const optionExists = currentOptions.some((selectedOption) => selectedOption.id === option.id);
       const nextOptions = optionExists
         ? currentOptions.filter((selectedOption) => selectedOption.id !== option.id)
@@ -37,20 +38,109 @@ export default function CartScreen({ navigation }: AppScreenProps<"Cart">) {
         [item.cartId]: normalizeOptions(nextOptions),
       };
     });
-  }
+  }, []);
 
-  function getDraftOptionsFromState(drafts: Record<string, MenuOption[]>, item: CartItem) {
-    return drafts[item.cartId] ?? item.selectedOptions;
-  }
+  const applyOptionChange = useCallback(
+    (item: CartItem) => {
+      splitCartItemWithOptions(item.cartId, getDraftOptions(item));
+      setOptionDrafts((currentDrafts) => {
+        const nextDrafts = { ...currentDrafts };
+        delete nextDrafts[item.cartId];
+        return nextDrafts;
+      });
+    },
+    [getDraftOptions, splitCartItemWithOptions],
+  );
 
-  function applyOptionChange(item: CartItem) {
-    splitCartItemWithOptions(item.cartId, getDraftOptions(item));
-    setOptionDrafts((currentDrafts) => {
-      const nextDrafts = { ...currentDrafts };
-      delete nextDrafts[item.cartId];
-      return nextDrafts;
-    });
-  }
+  const renderCartItem = useCallback(
+    ({ item }: { item: CartItem }) => {
+      const menu = getMenuById(item.menuId);
+      const availableOptions = menu?.options ?? [];
+      const draftOptions = getDraftOptions(item);
+      const hasOptionChange = optionKey(draftOptions) !== optionKey(item.selectedOptions);
+      const applyLabel = item.quantity > 1 ? "이 옵션으로 1개 따로 담기" : "이 옵션으로 적용";
+
+      return (
+        <View style={styles.item}>
+          <Pressable
+            accessibilityLabel={`${item.name} 삭제`}
+            style={styles.deleteButton}
+            onPress={() => removeFromCart(item.cartId)}
+          >
+            <Text style={styles.deleteButtonText}>삭제</Text>
+          </Pressable>
+
+          <View style={styles.itemHeader}>
+            <View style={styles.itemTitleArea}>
+              <Text style={styles.itemName}>{item.name}</Text>
+              <Text style={styles.itemMeta}>개당 {formatPrice(item.unitPrice ?? item.basePrice)}</Text>
+            </View>
+          </View>
+
+          {item.selectedOptions.length > 0 ? (
+            <Text style={styles.itemMeta}>
+              옵션: {item.selectedOptions.map((option) => option.name).join(", ")}
+            </Text>
+          ) : (
+            <Text style={styles.itemMeta}>옵션 없음</Text>
+          )}
+
+          {availableOptions.length > 0 ? (
+            <View style={styles.optionPanel}>
+              <View style={styles.optionPanelHeader}>
+                <Text style={styles.optionPanelTitle}>옵션 변경</Text>
+                <Text style={styles.optionPanelHint}>선택한 옵션은 1개만 분리돼요</Text>
+              </View>
+              <View style={styles.optionChips}>
+                {availableOptions.map((option) => {
+                  const isSelected = draftOptions.some((selectedOption) => selectedOption.id === option.id);
+                  return (
+                    <Pressable
+                      key={option.id}
+                      style={[styles.optionChip, isSelected && styles.optionChipSelected]}
+                      onPress={() => toggleOption(item, option)}
+                    >
+                      <Text style={[styles.optionChipText, isSelected && styles.optionChipTextSelected]}>
+                        {option.name}
+                      </Text>
+                      <Text style={[styles.optionChipPrice, isSelected && styles.optionChipTextSelected]}>
+                        +{formatPrice(option.price)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Pressable
+                disabled={!hasOptionChange}
+                style={[styles.optionApplyButton, !hasOptionChange && styles.optionApplyButtonDisabled]}
+                onPress={() => applyOptionChange(item)}
+              >
+                <Text style={[styles.optionApplyText, !hasOptionChange && styles.optionApplyTextDisabled]}>
+                  {applyLabel}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          <View style={styles.quantityPanel}>
+            <Text style={styles.quantityLabel}>수량</Text>
+            <QuantitySelector
+              quantity={item.quantity}
+              onDecrease={() => changeCartItemQuantity(item.cartId, -1)}
+              onIncrease={() => changeCartItemQuantity(item.cartId, 1)}
+            />
+          </View>
+        </View>
+      );
+    },
+    [
+      applyOptionChange,
+      changeCartItemQuantity,
+      getDraftOptions,
+      removeFromCart,
+      toggleOption,
+    ],
+  );
 
   if (cartItems.length === 0) {
     return (
@@ -64,103 +154,40 @@ export default function CartScreen({ navigation }: AppScreenProps<"Cart">) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {cartItems.map((item) => {
-        const menu = getMenuById(item.menuId);
-        const availableOptions = menu?.options ?? [];
-        const draftOptions = getDraftOptions(item);
-        const hasOptionChange = optionKey(draftOptions) !== optionKey(item.selectedOptions);
-        const applyLabel = item.quantity > 1 ? "이 옵션으로 1개 따로 담기" : "이 옵션으로 적용";
-
-        return (
-          <View key={item.cartId} style={styles.item}>
-            <Pressable
-              accessibilityLabel={`${item.name} 삭제`}
-              style={styles.deleteButton}
-              onPress={() => removeFromCart(item.cartId)}
-            >
-              <Text style={styles.deleteButtonText}>삭제</Text>
-            </Pressable>
-
-            <View style={styles.itemHeader}>
-              <View style={styles.itemTitleArea}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemMeta}>개당 {formatPrice(item.unitPrice ?? item.basePrice)}</Text>
-              </View>
-            </View>
-
-            {item.selectedOptions.length > 0 ? (
-              <Text style={styles.itemMeta}>
-                옵션: {item.selectedOptions.map((option) => option.name).join(", ")}
-              </Text>
-            ) : (
-              <Text style={styles.itemMeta}>옵션 없음</Text>
-            )}
-
-            {availableOptions.length > 0 ? (
-              <View style={styles.optionPanel}>
-                <View style={styles.optionPanelHeader}>
-                  <Text style={styles.optionPanelTitle}>옵션 변경</Text>
-                  <Text style={styles.optionPanelHint}>선택한 옵션은 1개만 분리돼요</Text>
-                </View>
-                <View style={styles.optionChips}>
-                  {availableOptions.map((option) => {
-                    const isSelected = draftOptions.some((selectedOption) => selectedOption.id === option.id);
-                    return (
-                      <Pressable
-                        key={option.id}
-                        style={[styles.optionChip, isSelected && styles.optionChipSelected]}
-                        onPress={() => toggleOption(item, option)}
-                      >
-                        <Text style={[styles.optionChipText, isSelected && styles.optionChipTextSelected]}>
-                          {option.name}
-                        </Text>
-                        <Text style={[styles.optionChipPrice, isSelected && styles.optionChipTextSelected]}>
-                          +{formatPrice(option.price)}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                <Pressable
-                  disabled={!hasOptionChange}
-                  style={[styles.optionApplyButton, !hasOptionChange && styles.optionApplyButtonDisabled]}
-                  onPress={() => applyOptionChange(item)}
-                >
-                  <Text style={[styles.optionApplyText, !hasOptionChange && styles.optionApplyTextDisabled]}>
-                    {applyLabel}
-                  </Text>
-                </Pressable>
-              </View>
-            ) : null}
-
-            <View style={styles.quantityPanel}>
-              <Text style={styles.quantityLabel}>수량</Text>
-              <QuantitySelector
-                quantity={item.quantity}
-                onDecrease={() => changeCartItemQuantity(item.cartId, -1)}
-                onIncrease={() => changeCartItemQuantity(item.cartId, 1)}
-              />
-            </View>
-          </View>
-        );
-      })}
-
-      <PriceSummary price={totalPrice} />
-      <Pressable
-        style={styles.primaryButton}
-        onPress={() => navigation.navigate("Payment", { orderItems: cartItems })}
-      >
-        <Text style={styles.primaryButtonText}>결제하기</Text>
-      </Pressable>
-    </ScrollView>
+    <FlatList
+      data={cartItems}
+      keyExtractor={(item) => item.cartId}
+      renderItem={renderCartItem}
+      contentContainerStyle={styles.container}
+      ItemSeparatorComponent={() => <View style={styles.listGap} />}
+      initialNumToRender={6}
+      maxToRenderPerBatch={6}
+      windowSize={7}
+      removeClippedSubviews
+      ListFooterComponent={
+        <View style={styles.footer}>
+          <PriceSummary price={totalPrice} />
+          <Pressable
+            style={styles.primaryButton}
+            onPress={() => navigation.navigate("Payment", { orderItems: cartItems })}
+          >
+            <Text style={styles.primaryButtonText}>결제하기</Text>
+          </Pressable>
+        </View>
+      }
+    />
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    gap: 14,
+  },
+  listGap: {
+    height: 14,
+  },
+  footer: {
+    paddingTop: 14,
   },
   empty: {
     flex: 1,

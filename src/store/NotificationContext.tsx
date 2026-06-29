@@ -13,6 +13,7 @@ type NotificationContextValue = {
 };
 
 const NotificationContext = createContext<NotificationContextValue | null>(null);
+const MAX_NOTIFICATIONS = 50;
 
 const initialNotifications: CampusNotification[] = [
   {
@@ -44,7 +45,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       createdAt: notification.createdAt ?? "방금",
     };
 
-    setNotifications((currentNotifications) => [nextNotification, ...currentNotifications]);
+    // Temporary guard until server-side notification pagination exists.
+    setNotifications((currentNotifications) => [nextNotification, ...currentNotifications].slice(0, MAX_NOTIFICATIONS));
   }, []);
 
   const markAllRead = useCallback(() => {
@@ -61,12 +63,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     [notifications],
   );
 
-  const value = {
-    notifications,
-    unreadCount,
-    addNotification,
-    markAllRead,
-  };
+  const value = useMemo(
+    () => ({
+      notifications,
+      unreadCount,
+      addNotification,
+      markAllRead,
+    }),
+    [addNotification, markAllRead, notifications, unreadCount],
+  );
 
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
 }

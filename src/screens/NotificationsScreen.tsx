@@ -1,7 +1,8 @@
 import React, { useEffect } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { FlatList, StyleSheet, Text, View } from "react-native";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
+import type { CampusNotification } from "../types/app";
 
 export default function NotificationsScreen() {
   const { notifications, markAllRead, unreadCount } = useNotifications();
@@ -11,37 +12,46 @@ export default function NotificationsScreen() {
     return () => clearTimeout(timerId);
   }, [markAllRead]);
 
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.hero}>
-        <View style={styles.heroTop}>
-          <Text style={styles.eyebrow}>캠퍼스 알림</Text>
-          <View style={styles.countBadge}>
-            <Text style={styles.countBadgeText}>{unreadCount}</Text>
-          </View>
-        </View>
-        <Text style={styles.title}>놓치면 아쉬운 소식만 모았어요</Text>
-        <Text style={styles.description}>음식 준비, 모임 참여, 모집 마감 같은 중요한 알림을 여기에서 확인해요.</Text>
+  const renderNotification = ({ item: notification }: { item: CampusNotification }) => (
+    <View style={[styles.noticeCard, !notification.isRead && styles.noticeCardUnread]}>
+      <View style={styles.noticeTop}>
+        <View style={[styles.noticeDot, notification.type === "order" && styles.noticeDotOrder]} />
+        <Text style={styles.noticeTitle}>{notification.title}</Text>
+        <Text style={styles.noticeTime}>{notification.createdAt}</Text>
       </View>
+      <Text style={styles.noticeMessage}>{notification.message}</Text>
+    </View>
+  );
 
-      {notifications.length === 0 ? (
+  return (
+    <FlatList
+      data={notifications}
+      keyExtractor={(notification) => notification.id}
+      renderItem={renderNotification}
+      ListHeaderComponent={
+        <View style={styles.hero}>
+          <View style={styles.heroTop}>
+            <Text style={styles.eyebrow}>캠퍼스 알림</Text>
+            <View style={styles.countBadge}>
+              <Text style={styles.countBadgeText}>{unreadCount}</Text>
+            </View>
+          </View>
+          <Text style={styles.title}>놓치면 아쉬운 소식만 모았어요</Text>
+          <Text style={styles.description}>학식 준비, 모임 참여, 모집 마감 같은 중요한 알림을 여기에서 확인해요.</Text>
+        </View>
+      }
+      ListEmptyComponent={
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>아직 알림이 없어요</Text>
           <Text style={styles.emptyText}>주문이나 나랑 밥먹자 활동이 생기면 바로 알려줄게요.</Text>
         </View>
-      ) : (
-        notifications.map((notification) => (
-          <View key={notification.id} style={[styles.noticeCard, !notification.isRead && styles.noticeCardUnread]}>
-            <View style={styles.noticeTop}>
-              <View style={[styles.noticeDot, notification.type === "order" && styles.noticeDotOrder]} />
-              <Text style={styles.noticeTitle}>{notification.title}</Text>
-              <Text style={styles.noticeTime}>{notification.createdAt}</Text>
-            </View>
-            <Text style={styles.noticeMessage}>{notification.message}</Text>
-          </View>
-        ))
-      )}
-    </ScrollView>
+      }
+      contentContainerStyle={styles.container}
+      initialNumToRender={8}
+      maxToRenderPerBatch={8}
+      windowSize={7}
+      removeClippedSubviews
+    />
   );
 }
 
@@ -161,5 +171,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
     color: colors.textMuted,
     fontWeight: "800",
+    textAlign: "center",
   },
 });

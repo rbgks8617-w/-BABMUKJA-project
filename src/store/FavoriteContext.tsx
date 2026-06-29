@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 type FavoriteContextValue = {
   favoriteMenuIds: string[];
@@ -11,19 +11,23 @@ const FavoriteContext = createContext<FavoriteContextValue | null>(null);
 export function FavoriteProvider({ children }: { children: React.ReactNode }) {
   const [favoriteMenuIds, setFavoriteMenuIds] = useState<string[]>([]);
 
+  const isFavoriteMenu = useCallback((menuId: string) => favoriteMenuIds.includes(menuId), [favoriteMenuIds]);
+
+  const toggleFavoriteMenu = useCallback((menuId: string) => {
+    setFavoriteMenuIds((currentIds) =>
+      currentIds.includes(menuId)
+        ? currentIds.filter((currentId) => currentId !== menuId)
+        : [menuId, ...currentIds],
+    );
+  }, []);
+
   const value = useMemo<FavoriteContextValue>(
     () => ({
       favoriteMenuIds,
-      isFavoriteMenu: (menuId: string) => favoriteMenuIds.includes(menuId),
-      toggleFavoriteMenu: (menuId: string) => {
-        setFavoriteMenuIds((currentIds) =>
-          currentIds.includes(menuId)
-            ? currentIds.filter((currentId) => currentId !== menuId)
-            : [menuId, ...currentIds],
-        );
-      },
+      isFavoriteMenu,
+      toggleFavoriteMenu,
     }),
-    [favoriteMenuIds],
+    [favoriteMenuIds, isFavoriteMenu, toggleFavoriteMenu],
   );
 
   return <FavoriteContext.Provider value={value}>{children}</FavoriteContext.Provider>;
