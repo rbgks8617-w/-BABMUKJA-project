@@ -17,7 +17,10 @@ for (const fileName of fs.readdirSync(jsDir)) {
   }
 
   const jsPath = path.join(jsDir, fileName);
-  const js = fs.readFileSync(jsPath, "utf8").replaceAll('httpServerLocation:"/assets/', 'httpServerLocation:"./assets/');
+  const js = fs
+    .readFileSync(jsPath, "utf8")
+    .replaceAll('httpServerLocation:"/assets/', 'httpServerLocation:"assets/')
+    .replaceAll('httpServerLocation:"./assets/', 'httpServerLocation:"assets/');
   fs.writeFileSync(jsPath, js);
 }
 
