@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
+import type { GestureResponderEvent } from "react-native";
 import {
   getBuildingCards,
   getCrowdPicks,
   getCrowdStatus,
+  getMenuById,
   getMenusByCategory,
   getPopularMenus,
   getRestaurantById,
@@ -12,12 +14,13 @@ import {
   searchCampusFood,
 } from "../services/restaurantService";
 import { useCart } from "../store/CartContext";
+import { useFavorites } from "../store/FavoriteContext";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
 import type { AppScreenProps, CongestionLevel, SearchResult } from "../types/app";
 import { formatPrice } from "../utils/formatPrice";
 
-const categoryTabs = ["전체", "한식", "중식", "분식", "양식", "카페", "가성비", "혼밥"];
+const categoryTabs = ["즐겨찾기", "전체", "한식", "중식", "분식", "양식", "카페", "가성비", "혼밥"];
 
 const congestionTone: Record<CongestionLevel, { level: number; color: string }> = {
   원활: { level: 1, color: "#16a872" },
@@ -50,6 +53,7 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
   const crowdPicks = useMemo(() => getCrowdPicks(), []);
   const buildingCards = useMemo(() => getBuildingCards(), []);
   const { totalQuantity } = useCart();
+  const { favoriteMenuIds, isFavoriteMenu, toggleFavoriteMenu } = useFavorites();
   const { unreadCount } = useNotifications();
   const isWideLayout = width >= 980;
   const carouselCardWidth = Math.min(width - 62, 282);
@@ -91,9 +95,24 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
     };
   });
   const todayImage = getRestaurantById(todayCafeteria.restaurantId)?.imageUrl ?? buildingCards[0]?.imageUrl;
-  const categoryMenus = useMemo(() => getMenusByCategory(activeCategory), [activeCategory]);
+  const favoriteMenus = useMemo(
+    () =>
+      favoriteMenuIds
+        .map((menuId) => getMenuById(menuId))
+        .filter((menu): menu is NonNullable<ReturnType<typeof getMenuById>> => Boolean(menu))
+        .map((menu) => ({
+          ...menu,
+          restaurant: getRestaurantById(menu.restaurantId),
+        })),
+    [favoriteMenuIds],
+  );
+  const categoryMenus = useMemo(
+    () => (activeCategory === "즐겨찾기" ? favoriteMenus : getMenusByCategory(activeCategory)),
+    [activeCategory, favoriteMenus],
+  );
   const searchResults = useMemo(() => searchCampusFood(searchQuery), [searchQuery]);
   const trimmedSearchQuery = searchQuery.trim();
+  const isFavoriteCategory = activeCategory === "즐겨찾기";
 
   function openSearchResult(result: SearchResult) {
     if (result.type === "menu") {
@@ -102,6 +121,11 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
     }
 
     navigation.navigate("RestaurantDetail", { restaurantId: result.targetId });
+  }
+
+  function toggleMenuFavorite(menuId: string, event: GestureResponderEvent) {
+    event.stopPropagation();
+    toggleFavoriteMenu(menuId);
   }
 
   const crowdPanel = (
@@ -193,7 +217,6 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
               <View style={styles.slideOverlay} />
               <View style={styles.slideTop}>
                 <Text style={styles.slideRank}>{building.index}</Text>
-                <Text style={styles.heartBadge}>♡</Text>
               </View>
             </ImageBackground>
             <View style={styles.slideBody}>
@@ -304,9 +327,11 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
         <View style={styles.categoryMenuPanel}>
           <View style={styles.categoryMenuHeader}>
             <View>
-              <Text style={styles.categoryMenuEyebrow}>{activeCategory === "전체" ? "바로 고르기" : `${activeCategory} 메뉴`}</Text>
+              <Text style={styles.categoryMenuEyebrow}>
+                {isFavoriteCategory ? "즐겨찾기" : activeCategory === "전체" ? "바로 고르기" : `${activeCategory} 메뉴`}
+              </Text>
               <Text style={styles.categoryMenuTitle}>
-                {activeCategory === "전체" ? "지금 먹기 좋은 메뉴" : `${activeCategory} 땡길 때`}
+                {isFavoriteCategory ? "하트 누른 메뉴" : activeCategory === "전체" ? "지금 먹기 좋은 메뉴" : `${activeCategory} 땡길 때`}
               </Text>
             </View>
             <Text style={styles.categoryMenuCount}>{categoryMenus.length}개</Text>
@@ -323,6 +348,16 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
                   <ImageBackground source={{ uri: menu.imageUrl }} style={styles.categoryMenuImage} imageStyle={styles.categoryMenuImageRadius}>
                     <View style={styles.categoryMenuImageDim} />
                     <Text style={styles.categoryMenuBadge}>{menu.category}</Text>
+                    <Pressable
+                      accessibilityLabel={isFavoriteMenu(menu.id) ? "즐겨찾기 해제" : "즐겨찾기 추가"}
+                      hitSlop={8}
+                      style={styles.categoryHeartButton}
+                      onPress={(event) => toggleMenuFavorite(menu.id, event)}
+                    >
+                      <Text style={[styles.categoryHeartText, isFavoriteMenu(menu.id) && styles.categoryHeartTextActive]}>
+                        {isFavoriteMenu(menu.id) ? "♥" : "♡"}
+                      </Text>
+                    </Pressable>
                   </ImageBackground>
                   <Text numberOfLines={1} style={styles.categoryMenuName}>{menu.name}</Text>
                   <Text numberOfLines={1} style={styles.categoryMenuRestaurant}>
@@ -334,7 +369,9 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
             </ScrollView>
           ) : (
             <View style={styles.categoryEmpty}>
-              <Text style={styles.categoryEmptyText}>이 카테고리 메뉴를 곧 채울게요.</Text>
+              <Text style={styles.categoryEmptyText}>
+                {isFavoriteCategory ? "하트를 누른 메뉴가 여기 모여요." : "이 카테고리 메뉴를 곧 채울게요."}
+              </Text>
             </View>
           )}
         </View>
@@ -726,6 +763,31 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "900",
   },
+  categoryHeartButton: {
+    position: "absolute",
+    top: 7,
+    right: 7,
+    zIndex: 4,
+    width: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    borderRadius: 15,
+    backgroundColor: "rgba(255, 255, 255, 0.94)",
+    borderWidth: 1,
+    borderColor: "#dcecf3",
+  },
+  categoryHeartText: {
+    color: colors.textSoft,
+    fontSize: 19,
+    fontWeight: "900",
+    lineHeight: 23,
+    textAlign: "center",
+  },
+  categoryHeartTextActive: {
+    color: "#ef4c58",
+  },
   categoryMenuName: {
     marginTop: 8,
     color: colors.text,
@@ -1103,7 +1165,7 @@ const styles = StyleSheet.create({
   slideTop: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     padding: 10,
   },
   slideRank: {
@@ -1114,18 +1176,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     color: "#ffffff",
     fontSize: 15,
-    fontWeight: "900",
-    lineHeight: 30,
-    textAlign: "center",
-  },
-  heartBadge: {
-    width: 30,
-    height: 30,
-    overflow: "hidden",
-    borderRadius: 15,
-    backgroundColor: "rgba(255,255,255,0.92)",
-    color: colors.textSoft,
-    fontSize: 19,
     fontWeight: "900",
     lineHeight: 30,
     textAlign: "center",

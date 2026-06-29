@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import MenuCard from "../components/MenuCard";
 import { getMenusByRestaurantId, getRestaurantById } from "../services/restaurantService";
+import { useFavorites } from "../store/FavoriteContext";
 import { colors } from "../theme/colors";
 import type { Menu } from "../types/app";
 import type { AppScreenProps } from "../types/app";
@@ -38,6 +39,7 @@ export default function RestaurantDetailScreen({ route, navigation }: AppScreenP
   const { restaurantId } = route.params;
   const restaurant = getRestaurantById(restaurantId);
   const menus = getMenusByRestaurantId(restaurantId);
+  const { isFavoriteMenu, toggleFavoriteMenu } = useFavorites();
   const signatureMenus = useMemo(() => {
     const pickedMenus = getSignatureMenus(menus);
     return pickedMenus.length > 0 ? pickedMenus : menus.slice(0, 4);
@@ -109,6 +111,8 @@ export default function RestaurantDetailScreen({ route, navigation }: AppScreenP
         <MenuCard
           key={menu.id}
           menu={menu}
+          isFavorite={isFavoriteMenu(menu.id)}
+          onToggleFavorite={() => toggleFavoriteMenu(menu.id)}
           onPress={() => navigation.navigate("MenuDetail", { menuId: menu.id })}
         />
       ))}

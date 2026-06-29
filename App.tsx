@@ -6,6 +6,7 @@ import { StatusBar } from "expo-status-bar";
 import StartupSplash from "./src/components/StartupSplash";
 import AppNavigator from "./src/navigation/AppNavigator";
 import { CartProvider } from "./src/store/CartContext";
+import { FavoriteProvider } from "./src/store/FavoriteContext";
 import { NotificationProvider } from "./src/store/NotificationContext";
 import { colors } from "./src/theme/colors";
 import { roundedTextStyle } from "./src/theme/typography";
@@ -89,15 +90,17 @@ export default function App() {
 
   return (
     <NotificationProvider>
-      <CartProvider>
-        <View style={{ flex: 1 }}>
-          <NavigationContainer linking={linking}>
-            <StatusBar style="dark" />
-            <AppNavigator />
-          </NavigationContainer>
-          {showStartupSplash ? <StartupSplash onDone={hideStartupSplash} /> : null}
-        </View>
-      </CartProvider>
+      <FavoriteProvider>
+        <CartProvider>
+          <View style={{ flex: 1 }}>
+            <NavigationContainer linking={linking}>
+              <StatusBar style="dark" />
+              <AppNavigator />
+            </NavigationContainer>
+            {showStartupSplash ? <StartupSplash onDone={hideStartupSplash} /> : null}
+          </View>
+        </CartProvider>
+      </FavoriteProvider>
     </NotificationProvider>
   );
 }
