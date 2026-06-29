@@ -106,37 +106,39 @@ export default function RestaurantListScreen({ navigation }: AppScreenProps<"Res
 
   const crowdPanel = (
     <Animated.View style={[styles.topCrowdCard, { opacity: liveMotion, transform: [{ translateY: liveTranslateY }] }]}>
-      <Text style={styles.infoTitle}>최근 10분 혼잡도</Text>
-      {liveCrowdPicks.map((item) => {
-        const tone = congestionTone[item.status];
+      <Text style={styles.topCrowdTitle}>최근 10분 혼잡도</Text>
+      <View style={styles.compactCrowdList}>
+        {liveCrowdPicks.map((item) => {
+          const tone = congestionTone[item.status];
 
-        return (
-          <Pressable
-            key={item.restaurant.id}
-            style={styles.crowdRow}
-            onPress={() => navigation.navigate("RestaurantDetail", { restaurantId: item.restaurant.id })}
-          >
-            <View style={styles.crowdTopRow}>
-              <Text style={styles.crowdName} numberOfLines={1}>{item.restaurant.name}</Text>
-              <Text style={[styles.crowdPill, getCrowdPillStyle(item.status)]}>{item.status}</Text>
-            </View>
-            <View style={styles.crowdMeter} accessibilityLabel={`${item.status} 혼잡도`}>
-              {[1, 2, 3, 4].map((step) => (
-                <View
-                  key={`${item.restaurant.id}-${step}`}
-                  style={[
-                    styles.crowdMeterSegment,
-                    step <= tone.level && {
-                      backgroundColor: tone.color,
-                      opacity: step === tone.level ? 1 : 0.9,
-                    },
-                  ]}
-                />
-              ))}
-            </View>
-          </Pressable>
-        );
-      })}
+          return (
+            <Pressable
+              key={item.restaurant.id}
+              style={styles.compactCrowdItem}
+              onPress={() => navigation.navigate("RestaurantDetail", { restaurantId: item.restaurant.id })}
+            >
+              <View style={styles.compactCrowdTop}>
+                <Text style={styles.compactCrowdName} numberOfLines={1}>{item.restaurant.name}</Text>
+                <Text style={[styles.compactCrowdPill, getCrowdPillStyle(item.status)]}>{item.status}</Text>
+              </View>
+              <View style={styles.compactCrowdMeter} accessibilityLabel={`${item.status} 혼잡도`}>
+                {[1, 2, 3, 4].map((step) => (
+                  <View
+                    key={`${item.restaurant.id}-${step}`}
+                    style={[
+                      styles.compactCrowdSegment,
+                      step <= tone.level && {
+                        backgroundColor: tone.color,
+                        opacity: step === tone.level ? 1 : 0.9,
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
     </Animated.View>
   );
 
@@ -919,17 +921,68 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   topCrowdCard: {
-    marginBottom: 14,
-    padding: 14,
-    borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.94)",
+    alignSelf: "flex-start",
+    width: "100%",
+    maxWidth: 520,
+    marginBottom: 10,
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+    borderRadius: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderWidth: 1,
     borderColor: colors.border,
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  topCrowdTitle: {
+    marginBottom: 7,
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  compactCrowdList: {
+    flexDirection: "row",
+    gap: 7,
+  },
+  compactCrowdItem: {
+    flex: 1,
+    minWidth: 0,
+    gap: 5,
+  },
+  compactCrowdTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  compactCrowdName: {
+    flex: 1,
+    minWidth: 0,
+    color: colors.text,
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  compactCrowdPill: {
+    overflow: "hidden",
+    minWidth: 28,
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    borderRadius: 999,
+    fontSize: 9,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  compactCrowdMeter: {
+    flexDirection: "row",
+    gap: 3,
+  },
+  compactCrowdSegment: {
+    flex: 1,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: "#dfe4e8",
   },
   infoCard: {
     padding: 14,
@@ -961,32 +1014,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     textAlign: "center",
   },
-  crowdRow: {
-    gap: 7,
-    paddingVertical: 8,
-  },
-  crowdTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  crowdName: {
-    flex: 1,
-    minWidth: 0,
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  crowdPill: {
-    overflow: "hidden",
-    minWidth: 50,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: "900",
-    textAlign: "center",
-  },
   crowdPillSmooth: {
     backgroundColor: "#e9f8ee",
     color: colors.success,
@@ -1002,18 +1029,6 @@ const styles = StyleSheet.create({
   crowdPillVeryBusy: {
     backgroundColor: "#ffe8e7",
     color: "#d9261c",
-  },
-  crowdMeter: {
-    flexDirection: "row",
-    gap: 7,
-    paddingLeft: 1,
-    paddingRight: 62,
-  },
-  crowdMeterSegment: {
-    flex: 1,
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: "#dfe4e8",
   },
   menuRankRow: {
     flexDirection: "row",
