@@ -2,7 +2,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 export type RootStackParamList = {
   RestaurantList: undefined;
-  Community: undefined;
+  Community: { postId?: string; tab?: "음식 후기" | "나랑 밥먹자" } | undefined;
   Recommendation: undefined;
   RestaurantDetail: { restaurantId: string };
   MenuDetail: { menuId: string };
@@ -208,6 +208,10 @@ export type CampusNotification = {
   message: string;
   createdAt: string;
   isRead: boolean;
+  target?: {
+    screen: keyof RootStackParamList;
+    params?: RootStackParamList[keyof RootStackParamList];
+  };
 };
 
 export type SearchResult = {

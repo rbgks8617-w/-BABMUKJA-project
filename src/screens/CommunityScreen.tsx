@@ -7,6 +7,7 @@ import {
   fetchCommunityReviews,
   type CommunityReviewDto,
 } from "../services/communityApi";
+import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
 import type { AppScreenProps } from "../types/app";
 
@@ -38,6 +39,7 @@ const minRating = 0.5;
 const maxRating = 5;
 const maxLocalPosts = 80;
 const maxLocalComments = 60;
+const authoredReviewStorageKey = "babmukja-authored-review-ids";
 
 function formatRating(score: number) {
   return score.toFixed(1);
@@ -93,6 +95,28 @@ function mapReviewToPost(review: CommunityReviewDto): CommunityPostItem {
       createdAt: formatServerTime(comment.createdAt),
     })),
   };
+}
+
+function readAuthoredReviewIds() {
+  if (typeof globalThis.localStorage === "undefined") {
+    return new Set<string>();
+  }
+
+  try {
+    const rawValue = globalThis.localStorage.getItem(authoredReviewStorageKey);
+    const ids = rawValue ? (JSON.parse(rawValue) as string[]) : [];
+    return new Set(ids.filter((id) => typeof id === "string"));
+  } catch {
+    return new Set<string>();
+  }
+}
+
+function writeAuthoredReviewIds(ids: Set<string>) {
+  if (typeof globalThis.localStorage === "undefined") {
+    return;
+  }
+
+  globalThis.localStorage.setItem(authoredReviewStorageKey, JSON.stringify(Array.from(ids).slice(-120)));
 }
 
 const initialPosts: CommunityPostItem[] = [
@@ -223,7 +247,7 @@ function PostCard({
   );
 }
 
-export default function CommunityScreen({ navigation }: AppScreenProps<"Community">) {
+export default function CommunityScreen({ navigation, route }: AppScreenProps<"Community">) {
   const { height: viewportHeight } = useWindowDimensions();
   const maxWriterHeight = Math.max(360, viewportHeight - 28);
   const minWriterHeight = Math.min(maxWriterHeight, Math.max(320, viewportHeight * 0.52));
@@ -243,6 +267,10 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
   const [writerHeight, setWriterHeight] = useState(defaultWriterHeight);
   const dragStartHeight = useRef(defaultWriterHeight);
   const writerHeightRef = useRef(defaultWriterHeight);
+  const { addNotification } = useNotifications();
+  const authoredReviewIdsRef = useRef<Set<string>>(readAuthoredReviewIds());
+  const knownCommentIdsRef = useRef<Set<string>>(new Set());
+  const hasLoadedServerReviewsRef = useRef(false);
 
   const visiblePosts = useMemo(
     () => posts.filter((post) => post.topic === activeTab),
@@ -283,16 +311,65 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
   const loadReviews = useCallback(async () => {
     try {
       const reviews = await fetchCommunityReviews();
+      const nextKnownCommentIds = new Set<string>();
+
+      if (hasLoadedServerReviewsRef.current) {
+        reviews.forEach((review) => {
+          if (!authoredReviewIdsRef.current.has(review.id)) {
+            return;
+          }
+
+          review.comments.forEach((comment) => {
+            nextKnownCommentIds.add(comment.id);
+
+            if (knownCommentIdsRef.current.has(comment.id)) {
+              return;
+            }
+
+            addNotification({
+              type: "system",
+              title: "내 글에 댓글이 달렸어요",
+              message: `${review.title} · ${comment.body}`,
+              target: {
+                screen: "Community",
+                params: {
+                  tab: "음식 후기",
+                  postId: review.id,
+                },
+              },
+            });
+          });
+        });
+      } else {
+        reviews.forEach((review) => {
+          review.comments.forEach((comment) => nextKnownCommentIds.add(comment.id));
+        });
+        hasLoadedServerReviewsRef.current = true;
+      }
+
+      knownCommentIdsRef.current = nextKnownCommentIds;
       setPosts([...reviews.map(mapReviewToPost), ...matePosts]);
       setServerError("");
     } catch {
       setServerError("서버 연결을 확인하고 있어요");
     }
-  }, []);
+  }, [addNotification]);
 
   useEffect(() => {
     loadReviews();
+    const timerId = setInterval(loadReviews, 5000);
+    return () => clearInterval(timerId);
   }, [loadReviews]);
+
+  useEffect(() => {
+    if (route.params?.tab) {
+      setActiveTab(route.params.tab);
+    }
+
+    if (route.params?.postId) {
+      setSelectedPostId(route.params.postId);
+    }
+  }, [route.params?.postId, route.params?.tab]);
 
   function openWriter() {
     writerHeightRef.current = defaultWriterHeight;
@@ -344,6 +421,8 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
         imageUrl: imageUrl || undefined,
       });
       const savedPost = mapReviewToPost(savedReview);
+      authoredReviewIdsRef.current.add(savedPost.id);
+      writeAuthoredReviewIds(authoredReviewIdsRef.current);
       setPosts((currentPosts) =>
         [savedPost, ...currentPosts.filter((post) => post.id !== optimisticPost.id)].slice(0, maxLocalPosts),
       );
@@ -404,6 +483,7 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
         anonymousKey: "viewer",
       });
       const savedPost = mapReviewToPost(savedReview);
+      savedReview.comments.forEach((comment) => knownCommentIdsRef.current.add(comment.id));
       setPosts((currentPosts) => currentPosts.map((post) => (post.id === postId ? savedPost : post)));
       setServerError("");
     } catch {
@@ -467,7 +547,10 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
       ) : null}
 
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{activeTab}</Text>
+        <View>
+          <Text style={styles.sectionTitle}>{activeTab}</Text>
+          {activeTab === "음식 후기" ? <Text style={styles.liveCaption}>실시간 댓글 갱신 중</Text> : null}
+        </View>
         <Text style={styles.sectionCount}>{visiblePosts.length}개</Text>
       </View>
       {serverError ? (
@@ -756,6 +839,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: colors.text,
     fontSize: 19,
+    fontWeight: "900",
+  },
+  liveCaption: {
+    marginTop: 3,
+    color: colors.primary,
+    fontSize: 11,
     fontWeight: "900",
   },
   sectionCount: {

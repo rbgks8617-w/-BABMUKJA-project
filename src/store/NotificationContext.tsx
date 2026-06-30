@@ -9,6 +9,7 @@ type NotificationContextValue = {
   notifications: CampusNotification[];
   unreadCount: number;
   addNotification: (notification: AddNotificationInput) => void;
+  markRead: (notificationId: string) => void;
   markAllRead: () => void;
 };
 
@@ -58,6 +59,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const markRead = useCallback((notificationId: string) => {
+    setNotifications((currentNotifications) =>
+      currentNotifications.map((notification) =>
+        notification.id === notificationId
+          ? {
+              ...notification,
+              isRead: true,
+            }
+          : notification,
+      ),
+    );
+  }, []);
+
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !notification.isRead).length,
     [notifications],
@@ -68,9 +82,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       notifications,
       unreadCount,
       addNotification,
+      markRead,
       markAllRead,
     }),
-    [addNotification, markAllRead, notifications, unreadCount],
+    [addNotification, markAllRead, markRead, notifications, unreadCount],
   );
 
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;

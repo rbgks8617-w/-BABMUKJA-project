@@ -1,26 +1,45 @@
 import React, { useEffect } from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
-import type { CampusNotification } from "../types/app";
+import type { AppScreenProps, CampusNotification, RootStackParamList } from "../types/app";
 
-export default function NotificationsScreen() {
-  const { notifications, markAllRead, unreadCount } = useNotifications();
+export default function NotificationsScreen({ navigation }: AppScreenProps<"Notifications">) {
+  const { notifications, markAllRead, markRead, unreadCount } = useNotifications();
 
   useEffect(() => {
     const timerId = setTimeout(markAllRead, 900);
     return () => clearTimeout(timerId);
   }, [markAllRead]);
 
+  function openNotification(notification: CampusNotification) {
+    markRead(notification.id);
+
+    if (!notification.target) {
+      return;
+    }
+
+    if (notification.target.screen === "Community") {
+      navigation.navigate("Community", notification.target.params as RootStackParamList["Community"]);
+    }
+  }
+
   const renderNotification = ({ item: notification }: { item: CampusNotification }) => (
-    <View style={[styles.noticeCard, !notification.isRead && styles.noticeCardUnread]}>
+    <Pressable
+      style={({ pressed }) => [
+        styles.noticeCard,
+        !notification.isRead && styles.noticeCardUnread,
+        pressed && styles.noticeCardPressed,
+      ]}
+      onPress={() => openNotification(notification)}
+    >
       <View style={styles.noticeTop}>
         <View style={[styles.noticeDot, notification.type === "order" && styles.noticeDotOrder]} />
         <Text style={styles.noticeTitle}>{notification.title}</Text>
         <Text style={styles.noticeTime}>{notification.createdAt}</Text>
       </View>
       <Text style={styles.noticeMessage}>{notification.message}</Text>
-    </View>
+    </Pressable>
   );
 
   return (
@@ -120,6 +139,10 @@ const styles = StyleSheet.create({
   noticeCardUnread: {
     borderColor: "#9ed9f0",
     backgroundColor: "#fbfeff",
+  },
+  noticeCardPressed: {
+    opacity: 0.78,
+    transform: [{ scale: 0.99 }],
   },
   noticeTop: {
     flexDirection: "row",
