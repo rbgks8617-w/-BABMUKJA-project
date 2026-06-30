@@ -1,5 +1,11 @@
-import React, { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { getParticipantKey } from "../services/clientIdentity";
+import {
+  createMealMateMessage,
+  fetchMealMateMessages,
+  type MealMateMessageDto,
+} from "../services/mealMateApi";
 import { colors } from "../theme/colors";
 import type { AppScreenProps } from "../types/app";
 
@@ -7,51 +13,102 @@ type ChatMessage = {
   id: string;
   sender: string;
   message: string;
+  isMe: boolean;
 };
+
+function mapMessage(message: MealMateMessageDto): ChatMessage {
+  return {
+    id: message.id,
+    sender: message.anonymousLabel,
+    message: message.body,
+    isMe: message.isMine,
+  };
+}
 
 export default function MealMateChatScreen({ route }: AppScreenProps<"MealMateChat">) {
   const room = route.params?.room ?? {
+    id: "",
     title: "나랑 밥먹자",
     topic: "편하게 밥 먹기",
     time: "시간 협의",
     members: 1,
     maxCount: 3,
   };
-  const initialMessages = useMemo<ChatMessage[]>(
-    () => [
-      {
-        id: "message-1",
-        sender: "익명 방장",
-        message: `${room.time}에 ${room.title}에서 만나는 걸로 생각하고 있어요.`,
-      },
-      {
-        id: "message-2",
-        sender: "익명 02",
-        message: "좋아요. 도착하면 여기 채팅으로 알려주세요.",
-      },
-    ],
-    [room.time, room.title],
-  );
-  const [messages, setMessages] = useState(initialMessages);
+  const participantKey = useMemo(() => getParticipantKey(), []);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
+  const [serverError, setServerError] = useState("");
 
-  const sendMessage = () => {
-    const text = draft.trim();
-
-    if (!text) {
+  const loadMessages = useCallback(async () => {
+    if (!room.id) {
       return;
     }
 
+    try {
+      const serverMessages = await fetchMealMateMessages(room.id, participantKey);
+      setMessages(serverMessages.map(mapMessage));
+      setServerError("");
+    } catch {
+      setServerError("채팅 서버 연결을 확인하고 있어요");
+    }
+  }, [participantKey, room.id]);
+
+  useEffect(() => {
+    loadMessages();
+    const timerId = setInterval(loadMessages, 3000);
+    return () => clearInterval(timerId);
+  }, [loadMessages]);
+
+  const sendMessage = async () => {
+    const text = draft.trim();
+
+    if (!text || !room.id) {
+      return;
+    }
+
+    const optimisticId = `local-message-${Date.now()}`;
     setMessages((currentMessages) => [
       ...currentMessages,
       {
-        id: `local-message-${Date.now()}`,
+        id: optimisticId,
         sender: "익명 나",
         message: text,
+        isMe: true,
       },
     ]);
     setDraft("");
+
+    try {
+      const savedMessage = await createMealMateMessage(room.id, {
+        body: text,
+        participantKey,
+      });
+      setMessages((currentMessages) => [
+        ...currentMessages.filter((message) => message.id !== optimisticId),
+        {
+          id: savedMessage.id,
+          sender: savedMessage.anonymousLabel,
+          message: savedMessage.body,
+          isMe: true,
+        },
+      ]);
+      setServerError("");
+    } catch {
+      setServerError("메시지 전송에 실패했어요");
+    }
   };
+
+  const renderMessage = useCallback(
+    ({ item: message }: { item: ChatMessage }) => (
+      <View style={[styles.messageRow, message.isMe && styles.messageRowMe]}>
+        <View style={[styles.messageBubble, message.isMe && styles.messageBubbleMe]}>
+          <Text style={[styles.sender, message.isMe && styles.senderMe]}>{message.isMe ? "나" : message.sender}</Text>
+          <Text style={[styles.messageText, message.isMe && styles.messageTextMe]}>{message.message}</Text>
+        </View>
+      </View>
+    ),
+    [],
+  );
 
   return (
     <View style={styles.screen}>
@@ -63,20 +120,23 @@ export default function MealMateChatScreen({ route }: AppScreenProps<"MealMateCh
         </Text>
       </View>
 
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.messageList}>
-        {messages.map((message) => {
-          const isMe = message.sender === "익명 나";
+      {serverError ? (
+        <View style={styles.serverNotice}>
+          <Text style={styles.serverNoticeText}>{serverError}</Text>
+        </View>
+      ) : null}
 
-          return (
-            <View key={message.id} style={[styles.messageRow, isMe && styles.messageRowMe]}>
-              <View style={[styles.messageBubble, isMe && styles.messageBubbleMe]}>
-                <Text style={[styles.sender, isMe && styles.senderMe]}>{message.sender}</Text>
-                <Text style={[styles.messageText, isMe && styles.messageTextMe]}>{message.message}</Text>
-              </View>
-            </View>
-          );
-        })}
-      </ScrollView>
+      <FlatList
+        data={messages}
+        keyExtractor={(message) => message.id}
+        renderItem={renderMessage}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.messageList}
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        windowSize={7}
+        removeClippedSubviews
+      />
 
       <View style={styles.composer}>
         <TextInput
@@ -124,6 +184,21 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
     fontWeight: "800",
+  },
+  serverNotice: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 16,
+    backgroundColor: "#fff7ed",
+    borderWidth: 1,
+    borderColor: "#fed7aa",
+  },
+  serverNoticeText: {
+    color: "#c2410c",
+    fontSize: 12,
+    fontWeight: "900",
   },
   messageList: {
     flexGrow: 1,

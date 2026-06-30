@@ -45,48 +45,81 @@ model Menu {
 }
 
 model Review {
-  id         String          @id
-  title      String
-  body       String
-  tasteScore Decimal         @map("taste_score") @db.Decimal(2, 1)
-  valueScore Decimal         @map("value_score") @db.Decimal(2, 1)
-  imageUrl   String?         @map("image_url")
-  createdAt  DateTime        @default(now()) @map("created_at")
-  updatedAt  DateTime        @updatedAt @map("updated_at")
-  comments   ReviewComment[]
+  id        String          @id
+  title     String
+  body      String
+  authorKey String?         @map("author_key")
+  tasteScore Decimal        @map("taste_score") @db.Decimal(2, 1)
+  valueScore Decimal        @map("value_score") @db.Decimal(2, 1)
+  imageUrl  String?         @map("image_url")
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+  comments  ReviewComment[]
 
   @@index([createdAt])
   @@map("reviews")
 }
 
 model ReviewComment {
-  id           String   @id
-  reviewId     String   @map("review_id")
-  body         String
-  anonymousKey String   @map("anonymous_key")
-  createdAt    DateTime @default(now()) @map("created_at")
-  review       Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  id              String   @id
+  reviewId        String   @map("review_id")
+  body            String
+  anonymousKey    String   @map("anonymous_key")
+  participantKey  String   @default("legacy-viewer") @map("participant_key")
+  anonymousNumber Int      @default(1) @map("anonymous_number")
+  createdAt       DateTime @default(now()) @map("created_at")
+  review          Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
   @@index([reviewId])
+  @@index([reviewId, participantKey])
   @@index([createdAt])
   @@map("review_comments")
 }
 
 model MealMateRoom {
-  id           String     @id
-  restaurantId String     @map("restaurant_id")
+  id           String            @id
+  restaurantId String            @map("restaurant_id")
   time         String
   topic        String
-  note         String     @default("")
-  currentCount Int        @default(1) @map("current_count")
-  maxCount     Int        @map("max_count")
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
+  note         String            @default("")
+  creatorKey   String?           @map("creator_key")
+  currentCount Int               @default(1) @map("current_count")
+  maxCount     Int               @map("max_count")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+  restaurant   Restaurant        @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
+  members      MealMateMember[]
+  messages     MealMateMessage[]
 
   @@index([restaurantId])
   @@index([createdAt])
   @@map("meal_mate_rooms")
+}
+
+model MealMateMember {
+  id              String       @id @default(cuid())
+  roomId          String       @map("room_id")
+  participantKey  String       @map("participant_key")
+  anonymousNumber Int          @map("anonymous_number")
+  joinedAt        DateTime     @default(now()) @map("joined_at")
+  room            MealMateRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, participantKey])
+  @@index([participantKey])
+  @@map("meal_mate_members")
+}
+
+model MealMateMessage {
+  id              String       @id
+  roomId          String       @map("room_id")
+  body            String
+  participantKey  String       @map("participant_key")
+  anonymousNumber Int          @map("anonymous_number")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  room            MealMateRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, createdAt])
+  @@map("meal_mate_messages")
 }
 
 model Order {

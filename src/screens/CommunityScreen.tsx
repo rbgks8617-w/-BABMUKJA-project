@@ -4,9 +4,11 @@ import CachedRemoteImage from "../components/CachedRemoteImage";
 import {
   createCommunityComment,
   createCommunityReview,
+  deleteCommunityReview,
   fetchCommunityReviews,
   type CommunityReviewDto,
 } from "../services/communityApi";
+import { getParticipantKey } from "../services/clientIdentity";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
 import type { AppScreenProps } from "../types/app";
@@ -18,6 +20,7 @@ type CommunityComment = {
   body: string;
   byAuthor: boolean;
   authorKey: string;
+  authorLabel?: string;
   createdAt: string;
 };
 
@@ -77,7 +80,7 @@ function formatServerTime(value: string) {
   return `${Math.floor(minutes / 1440)}일 전`;
 }
 
-function mapReviewToPost(review: CommunityReviewDto): CommunityPostItem {
+function mapReviewToPost(review: CommunityReviewDto, participantKey = ""): CommunityPostItem {
   return {
     id: review.id,
     topic: "음식 후기",
@@ -85,13 +88,14 @@ function mapReviewToPost(review: CommunityReviewDto): CommunityPostItem {
     body: review.body,
     meta: `맛 ${formatRating(review.tasteScore)} · 가성비 ${formatRating(review.valueScore)}`,
     createdAt: formatServerTime(review.createdAt),
-    isMine: false,
+    isMine: Boolean(participantKey && review.authorKey === participantKey),
     imageUrl: review.imageUrl ?? undefined,
     comments: review.comments.map((comment) => ({
       id: comment.id,
       body: comment.body,
       byAuthor: false,
       authorKey: comment.anonymousKey,
+      authorLabel: comment.anonymousLabel,
       createdAt: formatServerTime(comment.createdAt),
     })),
   };
@@ -159,6 +163,10 @@ const initialPosts: CommunityPostItem[] = [
 const matePosts = initialPosts.filter((post) => post.topic === "나랑 밥먹자");
 
 function getCommentAuthorLabel(post: CommunityPostItem, comment: CommunityComment, commentIndex: number) {
+  if (comment.authorLabel) {
+    return comment.authorLabel;
+  }
+
   if (comment.byAuthor) {
     return "글쓴이";
   }
@@ -178,6 +186,7 @@ function PostCard({
   commentDraft,
   isExpanded,
   onChangeComment,
+  onDelete,
   onSubmitComment,
   onToggle,
 }: {
@@ -185,6 +194,7 @@ function PostCard({
   commentDraft: string;
   isExpanded: boolean;
   onChangeComment: (value: string) => void;
+  onDelete: () => void;
   onSubmitComment: () => void;
   onToggle: () => void;
 }) {
@@ -207,6 +217,11 @@ function PostCard({
 
       {isExpanded ? (
         <View style={styles.postDetail}>
+          {post.isMine ? (
+            <Pressable style={styles.deleteButton} onPress={onDelete}>
+              <Text style={styles.deleteButtonText}>게시글 삭제</Text>
+            </Pressable>
+          ) : null}
           <Text style={styles.postBody}>{post.body}</Text>
           {post.imageUrl ? <CachedRemoteImage uri={post.imageUrl} style={styles.postDetailImage} /> : null}
 
@@ -268,6 +283,7 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
   const dragStartHeight = useRef(defaultWriterHeight);
   const writerHeightRef = useRef(defaultWriterHeight);
   const { addNotification } = useNotifications();
+  const participantKey = useMemo(() => getParticipantKey(), []);
   const authoredReviewIdsRef = useRef<Set<string>>(readAuthoredReviewIds());
   const knownCommentIdsRef = useRef<Set<string>>(new Set());
   const hasLoadedServerReviewsRef = useRef(false);
@@ -348,12 +364,12 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
       }
 
       knownCommentIdsRef.current = nextKnownCommentIds;
-      setPosts([...reviews.map(mapReviewToPost), ...matePosts]);
+      setPosts([...reviews.map((review) => mapReviewToPost(review, participantKey)), ...matePosts]);
       setServerError("");
     } catch {
       setServerError("서버 연결을 확인하고 있어요");
     }
-  }, [addNotification]);
+  }, [addNotification, participantKey]);
 
   useEffect(() => {
     loadReviews();
@@ -416,11 +432,12 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
       const savedReview = await createCommunityReview({
         title,
         body,
+        participantKey,
         tasteScore: writeTasteScore,
         valueScore: writeValueScore,
         imageUrl: imageUrl || undefined,
       });
-      const savedPost = mapReviewToPost(savedReview);
+      const savedPost = mapReviewToPost(savedReview, participantKey);
       authoredReviewIdsRef.current.add(savedPost.id);
       writeAuthoredReviewIds(authoredReviewIdsRef.current);
       setPosts((currentPosts) =>
@@ -459,7 +476,8 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
       id: `${postId}-comment-${Date.now()}`,
       body,
       byAuthor: false,
-      authorKey: "viewer",
+      authorKey: participantKey,
+      authorLabel: "익명?",
       createdAt: "방금",
     };
 
@@ -480,9 +498,9 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
     try {
       const savedReview = await createCommunityComment(postId, {
         body,
-        anonymousKey: "viewer",
+        participantKey,
       });
-      const savedPost = mapReviewToPost(savedReview);
+      const savedPost = mapReviewToPost(savedReview, participantKey);
       savedReview.comments.forEach((comment) => knownCommentIdsRef.current.add(comment.id));
       setPosts((currentPosts) => currentPosts.map((post) => (post.id === postId ? savedPost : post)));
       setServerError("");
@@ -493,6 +511,27 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
 
   function changeTasteScore(delta: number) {
     setWriteTasteScore((currentScore) => clampRating(currentScore + delta));
+  }
+
+  async function deletePost(postId: string) {
+    const targetPost = posts.find((post) => post.id === postId);
+
+    if (!targetPost?.isMine) {
+      return;
+    }
+
+    setPosts((currentPosts) => currentPosts.filter((post) => post.id !== postId));
+    setSelectedPostId(null);
+    authoredReviewIdsRef.current.delete(postId);
+    writeAuthoredReviewIds(authoredReviewIdsRef.current);
+
+    try {
+      await deleteCommunityReview(postId, participantKey);
+      setServerError("");
+    } catch {
+      setServerError("게시글 삭제에 실패했어요. 서버를 확인해주세요.");
+      loadReviews();
+    }
   }
 
   function changeValueScore(delta: number) {
@@ -506,6 +545,7 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
         commentDraft={commentDrafts[post.id] ?? ""}
         isExpanded={selectedPostId === post.id}
         onChangeComment={(value) => updateCommentDraft(post.id, value)}
+        onDelete={() => deletePost(post.id)}
         onSubmitComment={() => addComment(post.id)}
         onToggle={() => setSelectedPostId((currentId) => (currentId === post.id ? null : post.id))}
       />
@@ -954,6 +994,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     lineHeight: 20,
+  },
+  deleteButton: {
+    alignSelf: "flex-end",
+    marginBottom: 10,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: "#fff1f2",
+    borderWidth: 1,
+    borderColor: "#fecdd3",
+  },
+  deleteButtonText: {
+    color: "#e11d48",
+    fontSize: 11,
+    fontWeight: "900",
   },
   postDetailImage: {
     width: "100%",

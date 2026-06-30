@@ -1,5 +1,13 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { getParticipantKey } from "../services/clientIdentity";
+import {
+  createMealMateRoom,
+  fetchMealMateRooms,
+  joinMealMateRoom,
+  leaveMealMateRoom,
+  type MealMateRoomDto,
+} from "../services/mealMateApi";
 import { getRestaurants } from "../services/restaurantService";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
@@ -54,9 +62,42 @@ function buildInitialPosts(restaurants: Restaurant[]): MealMateLocalPost[] {
   ];
 }
 
+function mapRoomToPost(room: MealMateRoomDto, restaurants: Restaurant[]): MealMateLocalPost {
+  const restaurant = restaurants.find((item) => item.id === room.restaurantId) ?? {
+    id: room.restaurantId,
+    name: room.restaurantName,
+    category: "",
+    rating: 0,
+    tasteScore: 0,
+    portionScore: 0,
+    valueScore: 0,
+    imageUrl: "",
+    location: "",
+    phone: "",
+    openingHours: "",
+    isOpen: true,
+    reviewSummary: "",
+    description: "",
+  };
+
+  return {
+    id: room.id,
+    restaurant,
+    time: room.time,
+    topic: room.topic,
+    currentCount: room.currentCount,
+    maxCount: room.maxCount,
+    note: room.note,
+    createdBy: "익명1",
+    joinedByMe: room.joinedByMe,
+  };
+}
+
 export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate">) {
   const restaurants = useMemo(() => getRestaurants().slice(0, 8), []);
+  const participantKey = useMemo(() => getParticipantKey(), []);
   const [posts, setPosts] = useState(() => buildInitialPosts(restaurants));
+  const [serverError, setServerError] = useState("");
   const [topic, setTopic] = useState("");
   const [time, setTime] = useState("");
   const [note, setNote] = useState("");
@@ -67,6 +108,22 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
   const { addNotification } = useNotifications();
 
   const selectedRestaurant = restaurants.find((restaurant) => restaurant.id === restaurantId) ?? restaurants[0];
+
+  const loadRooms = useCallback(async () => {
+    try {
+      const rooms = await fetchMealMateRooms(participantKey);
+      setPosts(rooms.map((room) => mapRoomToPost(room, restaurants)));
+      setServerError("");
+    } catch {
+      setServerError("서버 연결을 확인하고 있어요");
+    }
+  }, [participantKey, restaurants]);
+
+  useEffect(() => {
+    loadRooms();
+    const timerId = setInterval(loadRooms, 5000);
+    return () => clearInterval(timerId);
+  }, [loadRooms]);
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -87,7 +144,7 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
     ]).start();
   };
 
-  const createPost = () => {
+  const createPost = async () => {
     if (!selectedRestaurant) {
       return;
     }
@@ -100,29 +157,31 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
     const normalizedTopic = topic.trim() || "편하게 밥 먹기";
     const normalizedTime = time.trim() || "시간 협의";
     const normalizedNote = note.trim() || "부담 없이 와서 밥만 먹고 가도 좋아요.";
-    const nextPost = {
-      id: `local-${Date.now()}`,
-      restaurant: selectedRestaurant,
-      time: normalizedTime,
-      topic: normalizedTopic,
-      currentCount: 1,
-      maxCount,
-      note: normalizedNote,
-      createdBy: "익명 방장",
-      joinedByMe: true,
-    };
+    try {
+      const savedRoom = await createMealMateRoom({
+        restaurantId: selectedRestaurant.id,
+        time: normalizedTime,
+        topic: normalizedTopic,
+        note: normalizedNote,
+        maxCount,
+        participantKey,
+      });
+      const nextPost = mapRoomToPost(savedRoom, restaurants);
 
-    // Temporary guard until meal-mate rooms are paginated by the server.
-    setPosts((currentPosts) => [nextPost, ...currentPosts].slice(0, maxLocalMealMatePosts));
-    setTopic("");
-    setTime("");
-    setNote("");
-    addNotification({
-      type: "mate",
-      title: "나랑 밥먹자 모집 시작",
-      message: `${normalizedTime} ${selectedRestaurant.name} 모임이 만들어졌어요.`,
-    });
-    showToast("나랑 밥먹자 모집글을 올렸어요");
+      setPosts((currentPosts) => [nextPost, ...currentPosts].slice(0, maxLocalMealMatePosts));
+      setTopic("");
+      setTime("");
+      setNote("");
+      addNotification({
+        type: "mate",
+        title: "나랑 밥먹자 모집 시작",
+        message: `${normalizedTime} ${selectedRestaurant.name} 모임이 만들어졌어요.`,
+      });
+      showToast("나랑 밥먹자 모집글을 올렸어요");
+    } catch {
+      showToast("모집글 저장에 실패했어요");
+      setServerError("서버 연결을 확인하고 있어요");
+    }
   };
 
   const openChat = (post: MealMateLocalPost) => {
@@ -138,28 +197,27 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
     });
   };
 
-  const leavePost = (postId: string) => {
+  const leavePost = async (postId: string) => {
     const targetPost = posts.find((post) => post.id === postId);
 
     if (!targetPost?.joinedByMe) {
       return;
     }
 
-    setPosts((currentPosts) =>
-      currentPosts.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              currentCount: Math.max(0, post.currentCount - 1),
-              joinedByMe: false,
-            }
-          : post,
-      ),
-    );
-    showToast("모임에서 나갔어요");
+    try {
+      const savedRoom = await leaveMealMateRoom(postId, participantKey);
+      const nextPost = mapRoomToPost(savedRoom, restaurants);
+
+      setPosts((currentPosts) => currentPosts.map((post) => (post.id === postId ? nextPost : post)));
+      showToast("모임에서 나갔어요");
+      setServerError("");
+    } catch {
+      showToast("나가기에 실패했어요");
+      setServerError("서버 연결을 확인하고 있어요");
+    }
   };
 
-  const joinPost = (postId: string) => {
+  const joinPost = async (postId: string) => {
     const targetPost = posts.find((post) => post.id === postId);
 
     if (!targetPost) {
@@ -181,26 +239,28 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
       return;
     }
 
-    const nextCount = Math.min(targetPost.currentCount + 1, targetPost.maxCount);
-    const isFull = nextCount >= targetPost.maxCount;
-    const updatedPost = {
-      ...targetPost,
-      currentCount: nextCount,
-      joinedByMe: true,
-    };
+    try {
+      const savedRoom = await joinMealMateRoom(postId, participantKey);
+      const updatedPost = mapRoomToPost(savedRoom, restaurants);
+      const isFull = updatedPost.currentCount >= updatedPost.maxCount;
 
-    setPosts((currentPosts) => currentPosts.map((post) => (post.id === postId ? updatedPost : post)));
+      setPosts((currentPosts) => currentPosts.map((post) => (post.id === postId ? updatedPost : post)));
 
-    addNotification({
-      type: "mate",
-      title: isFull ? "나랑 밥먹자 모집 마감" : "나랑 밥먹자 참여 알림",
-      message: isFull
-        ? `${targetPost.time} ${targetPost.restaurant?.name ?? "식당"} 모임 인원이 다 찼어요.`
-        : `${targetPost.time} ${targetPost.restaurant?.name ?? "식당"} 모임에 익명 학생이 참여했어요.`,
-    });
+      addNotification({
+        type: "mate",
+        title: isFull ? "나랑 밥먹자 모집 마감" : "나랑 밥먹자 참여 알림",
+        message: isFull
+          ? `${targetPost.time} ${targetPost.restaurant?.name ?? "식당"} 모임 인원이 다 찼어요.`
+          : `${targetPost.time} ${targetPost.restaurant?.name ?? "식당"} 모임에 익명 학생이 참여했어요.`,
+      });
 
-    showToast(isFull ? "모집 인원이 다 찼어요" : "참여했어요. 채팅방이 열렸어요");
-    openChat(updatedPost);
+      showToast(isFull ? "모집 인원이 다 찼어요" : "참여했어요. 채팅방이 열렸어요");
+      setServerError("");
+      openChat(updatedPost);
+    } catch {
+      showToast("참여에 실패했어요");
+      setServerError("서버 연결을 확인하고 있어요");
+    }
   };
 
   const toastTranslateY = toastMotion.interpolate({
@@ -342,6 +402,11 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
         <Text style={styles.sectionTitle}>현재 모집 중</Text>
         <Text style={styles.boardMeta}>{posts.length}개</Text>
       </View>
+      {serverError ? (
+        <View style={styles.serverNotice}>
+          <Text style={styles.serverNoticeText}>{serverError}</Text>
+        </View>
+      ) : null}
     </>
   );
 
@@ -534,6 +599,20 @@ const styles = StyleSheet.create({
   },
   boardMeta: {
     color: colors.textSoft,
+    fontWeight: "900",
+  },
+  serverNotice: {
+    marginBottom: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 16,
+    backgroundColor: "#fff7ed",
+    borderWidth: 1,
+    borderColor: "#fed7aa",
+  },
+  serverNoticeText: {
+    color: "#c2410c",
+    fontSize: 12,
     fontWeight: "900",
   },
   postCard: {

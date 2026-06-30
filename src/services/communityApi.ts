@@ -8,10 +8,13 @@ export type CommunityReviewDto = {
   valueScore: number;
   imageUrl?: string | null;
   createdAt: string;
+  authorKey?: string | null;
   comments: Array<{
     id: string;
     body: string;
     anonymousKey: string;
+    anonymousNumber?: number;
+    anonymousLabel?: string;
     createdAt: string;
   }>;
 };
@@ -33,6 +36,10 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(`API request failed: ${response.status}`);
   }
 
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return response.json() as Promise<T>;
 }
 
@@ -44,6 +51,7 @@ export async function fetchCommunityReviews() {
 export async function createCommunityReview(input: {
   title: string;
   body: string;
+  participantKey: string;
   tasteScore: number;
   valueScore: number;
   imageUrl?: string;
@@ -55,10 +63,17 @@ export async function createCommunityReview(input: {
   return response.data;
 }
 
-export async function createCommunityComment(reviewId: string, input: { body: string; anonymousKey: string }) {
+export async function createCommunityComment(reviewId: string, input: { body: string; participantKey: string }) {
   const response = await requestJson<ApiResponse<CommunityReviewDto>>(`/api/community/reviews/${reviewId}/comments`, {
     method: "POST",
     body: JSON.stringify(input),
   });
   return response.data;
+}
+
+export async function deleteCommunityReview(reviewId: string, participantKey: string) {
+  await requestJson<void>(`/api/community/reviews/${reviewId}`, {
+    method: "DELETE",
+    body: JSON.stringify({ participantKey }),
+  });
 }
