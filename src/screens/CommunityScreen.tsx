@@ -1,6 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import CachedRemoteImage from "../components/CachedRemoteImage";
+import {
+  createCommunityComment,
+  createCommunityReview,
+  fetchCommunityReviews,
+  type CommunityReviewDto,
+} from "../services/communityApi";
 import { colors } from "../theme/colors";
 import type { AppScreenProps } from "../types/app";
 
@@ -45,6 +51,50 @@ function clampNumber(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+function formatServerTime(value: string) {
+  const createdAt = new Date(value);
+
+  if (Number.isNaN(createdAt.getTime())) {
+    return "방금";
+  }
+
+  const minutes = Math.max(0, Math.floor((Date.now() - createdAt.getTime()) / 60000));
+
+  if (minutes < 1) {
+    return "방금";
+  }
+
+  if (minutes < 60) {
+    return `${minutes}분 전`;
+  }
+
+  if (minutes < 1440) {
+    return `${Math.floor(minutes / 60)}시간 전`;
+  }
+
+  return `${Math.floor(minutes / 1440)}일 전`;
+}
+
+function mapReviewToPost(review: CommunityReviewDto): CommunityPostItem {
+  return {
+    id: review.id,
+    topic: "음식 후기",
+    title: review.title,
+    body: review.body,
+    meta: `맛 ${formatRating(review.tasteScore)} · 가성비 ${formatRating(review.valueScore)}`,
+    createdAt: formatServerTime(review.createdAt),
+    isMine: false,
+    imageUrl: review.imageUrl ?? undefined,
+    comments: review.comments.map((comment) => ({
+      id: comment.id,
+      body: comment.body,
+      byAuthor: false,
+      authorKey: comment.anonymousKey,
+      createdAt: formatServerTime(comment.createdAt),
+    })),
+  };
+}
+
 const initialPosts: CommunityPostItem[] = [
   {
     id: "review-1",
@@ -81,6 +131,8 @@ const initialPosts: CommunityPostItem[] = [
     comments: [],
   },
 ];
+
+const matePosts = initialPosts.filter((post) => post.topic === "나랑 밥먹자");
 
 function getCommentAuthorLabel(post: CommunityPostItem, comment: CommunityComment, commentIndex: number) {
   if (comment.byAuthor) {
@@ -179,6 +231,7 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
 
   const [activeTab, setActiveTab] = useState<CommunityTab>("음식 후기");
   const [posts, setPosts] = useState<CommunityPostItem[]>(initialPosts);
+  const [serverError, setServerError] = useState("");
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [writerOpen, setWriterOpen] = useState(false);
   const [writeTitle, setWriteTitle] = useState("");
@@ -227,6 +280,20 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
     });
   }, [maxWriterHeight, minWriterHeight]);
 
+  const loadReviews = useCallback(async () => {
+    try {
+      const reviews = await fetchCommunityReviews();
+      setPosts([...reviews.map(mapReviewToPost), ...matePosts]);
+      setServerError("");
+    } catch {
+      setServerError("서버 연결을 확인하고 있어요");
+    }
+  }, []);
+
+  useEffect(() => {
+    loadReviews();
+  }, [loadReviews]);
+
   function openWriter() {
     writerHeightRef.current = defaultWriterHeight;
     setWriterHeight(defaultWriterHeight);
@@ -242,7 +309,7 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
     setWriteValueScore(4.5);
   }
 
-  function createPost() {
+  async function createPost() {
     const title = writeTitle.trim();
     const body = writeBody.trim();
     const imageUrl = writeImageUrl.trim();
@@ -251,8 +318,8 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
       return;
     }
 
-    const nextPost: CommunityPostItem = {
-      id: `local-post-${Date.now()}`,
+    const optimisticPost: CommunityPostItem = {
+      id: `pending-post-${Date.now()}`,
       topic: "음식 후기",
       title,
       body,
@@ -263,11 +330,28 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
       comments: [],
     };
 
-    // Temporary guard until these community posts are paginated by the server.
-    setPosts((currentPosts) => [nextPost, ...currentPosts].slice(0, maxLocalPosts));
+    setPosts((currentPosts) => [optimisticPost, ...currentPosts].slice(0, maxLocalPosts));
     setActiveTab("음식 후기");
-    setSelectedPostId(nextPost.id);
+    setSelectedPostId(optimisticPost.id);
     closeWriter();
+
+    try {
+      const savedReview = await createCommunityReview({
+        title,
+        body,
+        tasteScore: writeTasteScore,
+        valueScore: writeValueScore,
+        imageUrl: imageUrl || undefined,
+      });
+      const savedPost = mapReviewToPost(savedReview);
+      setPosts((currentPosts) =>
+        [savedPost, ...currentPosts.filter((post) => post.id !== optimisticPost.id)].slice(0, maxLocalPosts),
+      );
+      setSelectedPostId(savedPost.id);
+      setServerError("");
+    } catch {
+      setServerError("글 저장에 실패했어요. 서버를 확인해주세요.");
+    }
   }
 
   function updateCommentDraft(postId: string, value: string) {
@@ -285,12 +369,20 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
     }
   }
 
-  function addComment(postId: string) {
+  async function addComment(postId: string) {
     const body = commentDrafts[postId]?.trim();
 
     if (!body) {
       return;
     }
+
+    const optimisticComment: CommunityComment = {
+      id: `${postId}-comment-${Date.now()}`,
+      body,
+      byAuthor: false,
+      authorKey: "viewer",
+      createdAt: "방금",
+    };
 
     setPosts((currentPosts) =>
       currentPosts.map((post) => {
@@ -300,20 +392,23 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
 
         return {
           ...post,
-          comments: [
-            ...post.comments,
-            {
-              id: `${postId}-comment-${Date.now()}`,
-              body,
-              byAuthor: post.isMine,
-              authorKey: post.isMine ? "author" : "viewer",
-              createdAt: "방금",
-            },
-          ].slice(-maxLocalComments),
+          comments: [...post.comments, optimisticComment].slice(-maxLocalComments),
         };
       }),
     );
     updateCommentDraft(postId, "");
+
+    try {
+      const savedReview = await createCommunityComment(postId, {
+        body,
+        anonymousKey: "viewer",
+      });
+      const savedPost = mapReviewToPost(savedReview);
+      setPosts((currentPosts) => currentPosts.map((post) => (post.id === postId ? savedPost : post)));
+      setServerError("");
+    } catch {
+      setServerError("댓글 저장에 실패했어요. 서버를 확인해주세요.");
+    }
   }
 
   function changeTasteScore(delta: number) {
@@ -375,6 +470,11 @@ export default function CommunityScreen({ navigation }: AppScreenProps<"Communit
         <Text style={styles.sectionTitle}>{activeTab}</Text>
         <Text style={styles.sectionCount}>{visiblePosts.length}개</Text>
       </View>
+      {serverError ? (
+        <View style={styles.serverNotice}>
+          <Text style={styles.serverNoticeText}>{serverError}</Text>
+        </View>
+      ) : null}
     </>
   );
 
@@ -665,6 +765,20 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "#edf6fc",
     color: colors.primary,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  serverNotice: {
+    marginBottom: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 16,
+    backgroundColor: "#fff7ed",
+    borderWidth: 1,
+    borderColor: "#fed7aa",
+  },
+  serverNoticeText: {
+    color: "#b45309",
     fontSize: 12,
     fontWeight: "900",
   },

@@ -4,6 +4,7 @@ build/
 .expo/
 .expo-web.*.log
 .codex-expo-web.log
+.tunnel/
 release/*.apk
 release/*.zip
 .env

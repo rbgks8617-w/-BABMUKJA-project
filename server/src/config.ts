@@ -4,7 +4,12 @@ dotenv.config();
 
 function parseCorsOrigins(value: string | undefined) {
   if (!value) {
-    return ["http://127.0.0.1:19006", "http://localhost:19006"];
+    return [
+      "http://127.0.0.1:19006",
+      "http://localhost:19006",
+      "https://raw.githack.com",
+      "https://rawcdn.githack.com",
+    ];
   }
 
   return value
