@@ -9,7 +9,11 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:web": "expo export -p web --output-dir dist-web && node scripts/prepare-gh-pages.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "server:dev": "npm --prefix server run dev",
+    "server:build": "npm --prefix server run build",
+    "server:start": "npm --prefix server run start",
+    "server:typecheck": "npm --prefix server run typecheck"
   },
   "dependencies": {
     "@expo/metro-runtime": "~3.2.3",
