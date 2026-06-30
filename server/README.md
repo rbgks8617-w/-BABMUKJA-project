@@ -38,6 +38,14 @@ npm run build
 npm start
 ```
 
+## Prisma
+
+```bash
+npm run prisma:generate
+npm run prisma:migrate -- --name init
+npm run prisma:studio
+```
+
 ## Docker
 
 ```bash
