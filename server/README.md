@@ -11,6 +11,20 @@ npm install
 npm run dev
 ```
 
+## Local PostgreSQL with Docker
+
+```bash
+cd server
+docker compose up -d
+docker compose ps
+```
+
+Connection string:
+
+```txt
+postgresql://babmukja:babmukja_dev@localhost:5432/babmukja?schema=public
+```
+
 Health check:
 
 ```bash

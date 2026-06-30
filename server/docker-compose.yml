@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: babmukja-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: babmukja
+      POSTGRES_PASSWORD: babmukja_dev
+      POSTGRES_DB: babmukja
+      TZ: Asia/Seoul
+    ports:
+      - "5432:5432"
+    volumes:
+      - babmukja-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U babmukja -d babmukja"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  babmukja-postgres-data:
