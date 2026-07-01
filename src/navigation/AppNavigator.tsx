@@ -7,6 +7,7 @@ import type { ImageStyle } from "react-native";
 import AuthScreen from "../screens/AuthScreen";
 import CartScreen from "../screens/CartScreen";
 import CampusMapScreen from "../screens/CampusMapScreen";
+import CommunityPostDetailScreen from "../screens/CommunityPostDetailScreen";
 import CommunityScreen from "../screens/CommunityScreen";
 import MealMateChatScreen from "../screens/MealMateChatScreen";
 import MealMateScreen from "../screens/MealMateScreen";
@@ -153,6 +154,11 @@ export default function AppNavigator() {
         name="Community"
         component={CommunityScreen}
         options={({ navigation }) => pushOptions(navigation, "커뮤니티", "홈")}
+      />
+      <Stack.Screen
+        name="CommunityPostDetail"
+        component={CommunityPostDetailScreen}
+        options={({ navigation }) => pushOptions(navigation, "게시글", "커뮤니티", "Community")}
       />
       <Stack.Screen
         name="Recommendation"

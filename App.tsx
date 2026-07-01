@@ -20,6 +20,7 @@ const linking = {
     screens: {
       RestaurantList: "home",
       Community: "community",
+      CommunityPostDetail: "community/post/:postId",
       Recommendation: "recommendation",
       RestaurantDetail: "restaurant/:restaurantId",
       MenuDetail: "menu/:menuId",

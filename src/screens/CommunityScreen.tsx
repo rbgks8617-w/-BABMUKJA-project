@@ -2,10 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { FlatList, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import CachedRemoteImage from "../components/CachedRemoteImage";
 import {
-  createCommunityComment,
   createCommunityReview,
   deleteAllCommunityReviews,
-  deleteCommunityReview,
   fetchCommunityReviews,
   type CommunityReviewDto,
 } from "../services/communityApi";
@@ -43,7 +41,6 @@ const ratingStep = 0.5;
 const minRating = 0.5;
 const maxRating = 5;
 const maxLocalPosts = 80;
-const maxLocalComments = 60;
 const authoredReviewStorageKey = "babmukja-authored-review-ids";
 
 function formatRating(score: number) {
@@ -164,47 +161,16 @@ const initialPosts: CommunityPostItem[] = [
 
 const matePosts = initialPosts.filter((post) => post.topic === "나랑 밥먹자");
 
-function getCommentAuthorLabel(post: CommunityPostItem, comment: CommunityComment, commentIndex: number) {
-  if (comment.authorLabel) {
-    return comment.authorLabel;
-  }
-
-  if (comment.byAuthor) {
-    return "글쓴이";
-  }
-
-  const anonymousKeys = post.comments.slice(0, commentIndex + 1).reduce<string[]>((keys, item) => {
-    if (!item.byAuthor && !keys.includes(item.authorKey)) {
-      keys.push(item.authorKey);
-    }
-    return keys;
-  }, []);
-
-  return `익명${anonymousKeys.indexOf(comment.authorKey) + 1}`;
-}
-
 function PostCard({
   post,
-  commentDraft,
-  canManage,
-  isExpanded,
-  onChangeComment,
-  onDelete,
-  onSubmitComment,
-  onToggle,
+  onOpen,
 }: {
   post: CommunityPostItem;
-  commentDraft: string;
-  canManage: boolean;
-  isExpanded: boolean;
-  onChangeComment: (value: string) => void;
-  onDelete: () => void;
-  onSubmitComment: () => void;
-  onToggle: () => void;
+  onOpen: () => void;
 }) {
   return (
     <View style={styles.postCard}>
-      <Pressable style={styles.postSummary} onPress={onToggle}>
+      <Pressable style={styles.postSummary} onPress={onOpen}>
         <View style={styles.postSummaryCopy}>
           <View style={styles.postTopicPill}>
             <Text style={styles.postTopicText}>{post.topic}</Text>
@@ -215,53 +181,9 @@ function PostCard({
         <View style={styles.postSideMeta}>
           <Text style={styles.postTime}>{post.createdAt}</Text>
           {post.imageUrl ? <CachedRemoteImage uri={post.imageUrl} style={styles.postThumbnail} /> : null}
-          <Text style={styles.expandHint}>{isExpanded ? "닫기" : "보기"}</Text>
+          <Text style={styles.expandHint}>보기</Text>
         </View>
       </Pressable>
-
-      {isExpanded ? (
-        <View style={styles.postDetail}>
-          {canManage ? (
-            <Pressable style={styles.deleteButton} onPress={onDelete}>
-              <Text style={styles.deleteButtonText}>{post.isMine ? "게시글 삭제" : "관리자 삭제"}</Text>
-            </Pressable>
-          ) : null}
-          <Text style={styles.postBody}>{post.body}</Text>
-          {post.imageUrl ? <CachedRemoteImage uri={post.imageUrl} style={styles.postDetailImage} /> : null}
-
-          <View style={styles.commentBlock}>
-            <Text style={styles.commentTitle}>댓글</Text>
-            {post.comments.length > 0 ? (
-              post.comments.map((comment, index) => (
-                <View key={comment.id} style={styles.commentItem}>
-                  <View style={styles.commentHeader}>
-                    <Text style={[styles.commentAuthor, comment.byAuthor && styles.commentAuthorOwner]}>
-                      {getCommentAuthorLabel(post, comment, index)}
-                    </Text>
-                    <Text style={styles.commentTime}>{comment.createdAt}</Text>
-                  </View>
-                  <Text style={styles.commentBody}>{comment.body}</Text>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.commentEmpty}>아직 댓글이 없어요.</Text>
-            )}
-
-            <View style={styles.commentComposer}>
-              <TextInput
-                value={commentDraft}
-                onChangeText={onChangeComment}
-                placeholder="댓글 달기"
-                placeholderTextColor={colors.textSoft}
-                style={styles.commentInput}
-              />
-              <Pressable style={styles.commentButton} onPress={onSubmitComment}>
-                <Text style={styles.commentButtonText}>등록</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -275,14 +197,12 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
   const [activeTab, setActiveTab] = useState<CommunityTab>("음식 후기");
   const [posts, setPosts] = useState<CommunityPostItem[]>(initialPosts);
   const [serverError, setServerError] = useState("");
-  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [writerOpen, setWriterOpen] = useState(false);
   const [writeTitle, setWriteTitle] = useState("");
   const [writeBody, setWriteBody] = useState("");
   const [writeImageUrl, setWriteImageUrl] = useState("");
   const [writeTasteScore, setWriteTasteScore] = useState(4.5);
   const [writeValueScore, setWriteValueScore] = useState(4.5);
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [writerHeight, setWriterHeight] = useState(defaultWriterHeight);
   const dragStartHeight = useRef(defaultWriterHeight);
   const writerHeightRef = useRef(defaultWriterHeight);
@@ -353,9 +273,8 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
               title: "내 글에 댓글이 달렸어요",
               message: `${review.title} · ${comment.body}`,
               target: {
-                screen: "Community",
+                screen: "CommunityPostDetail",
                 params: {
-                  tab: "음식 후기",
                   postId: review.id,
                 },
               },
@@ -389,9 +308,11 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
     }
 
     if (route.params?.postId) {
-      setSelectedPostId(route.params.postId);
+      navigation.navigate("CommunityPostDetail", {
+        postId: route.params.postId,
+      });
     }
-  }, [route.params?.postId, route.params?.tab]);
+  }, [navigation, route.params?.postId, route.params?.tab]);
 
   function openWriter() {
     writerHeightRef.current = defaultWriterHeight;
@@ -431,7 +352,6 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
 
     setPosts((currentPosts) => [optimisticPost, ...currentPosts].slice(0, maxLocalPosts));
     setActiveTab("음식 후기");
-    setSelectedPostId(optimisticPost.id);
     closeWriter();
 
     try {
@@ -449,98 +369,24 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
       setPosts((currentPosts) =>
         [savedPost, ...currentPosts.filter((post) => post.id !== optimisticPost.id)].slice(0, maxLocalPosts),
       );
-      setSelectedPostId(savedPost.id);
+      navigation.navigate("CommunityPostDetail", {
+        postId: savedPost.id,
+      });
       setServerError("");
     } catch {
       setServerError("글 저장에 실패했어요. 서버를 확인해주세요.");
     }
   }
 
-  function updateCommentDraft(postId: string, value: string) {
-    setCommentDrafts((currentDrafts) => ({
-      ...currentDrafts,
-      [postId]: value,
-    }));
-  }
-
   function selectTab(tab: CommunityTab) {
     setActiveTab(tab);
-    setSelectedPostId(null);
     if (tab === "나랑 밥먹자") {
       setWriterOpen(false);
     }
   }
 
-  async function addComment(postId: string) {
-    const body = commentDrafts[postId]?.trim();
-
-    if (!body) {
-      return;
-    }
-
-    const optimisticComment: CommunityComment = {
-      id: `${postId}-comment-${Date.now()}`,
-      body,
-      byAuthor: false,
-      authorKey: participantKey,
-      authorLabel: "익명?",
-      createdAt: "방금",
-    };
-
-    setPosts((currentPosts) =>
-      currentPosts.map((post) => {
-        if (post.id !== postId) {
-          return post;
-        }
-
-        return {
-          ...post,
-          comments: [...post.comments, optimisticComment].slice(-maxLocalComments),
-        };
-      }),
-    );
-    updateCommentDraft(postId, "");
-
-    try {
-      const savedReview = await createCommunityComment(postId, {
-        body,
-        participantKey,
-      });
-      const savedPost = mapReviewToPost(savedReview, participantKey);
-      savedReview.comments.forEach((comment) => knownCommentIdsRef.current.add(comment.id));
-      setPosts((currentPosts) => currentPosts.map((post) => (post.id === postId ? savedPost : post)));
-      setServerError("");
-    } catch {
-      setServerError("댓글 저장에 실패했어요. 서버를 확인해주세요.");
-    }
-  }
-
   function changeTasteScore(delta: number) {
     setWriteTasteScore((currentScore) => clampRating(currentScore + delta));
-  }
-
-  async function deletePost(postId: string) {
-    const targetPost = posts.find((post) => post.id === postId);
-
-    if (!targetPost || (!targetPost.isMine && !isAdmin)) {
-      return;
-    }
-
-    setPosts((currentPosts) => currentPosts.filter((post) => post.id !== postId));
-    setSelectedPostId(null);
-    authoredReviewIdsRef.current.delete(postId);
-    writeAuthoredReviewIds(authoredReviewIdsRef.current);
-
-    try {
-      await deleteCommunityReview(postId, {
-        participantKey,
-        token: isAdmin ? token ?? undefined : undefined,
-      });
-      setServerError("");
-    } catch {
-      setServerError("게시글 삭제에 실패했어요. 서버를 확인해주세요.");
-      loadReviews();
-    }
   }
 
   async function deleteAllPosts() {
@@ -549,7 +395,6 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
     }
 
     setPosts((currentPosts) => currentPosts.filter((post) => post.topic !== "음식 후기"));
-    setSelectedPostId(null);
     authoredReviewIdsRef.current.clear();
     writeAuthoredReviewIds(authoredReviewIdsRef.current);
 
@@ -570,16 +415,14 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
     ({ item: post }: { item: CommunityPostItem }) => (
       <PostCard
         post={post}
-        commentDraft={commentDrafts[post.id] ?? ""}
-        canManage={post.isMine || isAdmin}
-        isExpanded={selectedPostId === post.id}
-        onChangeComment={(value) => updateCommentDraft(post.id, value)}
-        onDelete={() => deletePost(post.id)}
-        onSubmitComment={() => addComment(post.id)}
-        onToggle={() => setSelectedPostId((currentId) => (currentId === post.id ? null : post.id))}
+        onOpen={() =>
+          post.topic === "음식 후기"
+            ? navigation.navigate("CommunityPostDetail", { postId: post.id })
+            : navigation.navigate("MealMate")
+        }
       />
     ),
-    [commentDrafts, isAdmin, selectedPostId, token],
+    [navigation],
   );
 
   const listHeader = (
