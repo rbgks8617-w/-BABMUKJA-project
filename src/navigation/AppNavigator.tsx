@@ -119,9 +119,16 @@ function pushOptions(
 }
 
 export default function AppNavigator() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <View style={styles.loadingScreen} />;
+  }
+
   return (
     <Stack.Navigator
-      initialRouteName="RestaurantList"
+      key={user ? "signed-in" : "signed-out"}
+      initialRouteName={user ? "RestaurantList" : "Auth"}
       screenOptions={{
         animation: "slide_from_right",
         contentStyle: { backgroundColor: colors.background },
@@ -183,7 +190,9 @@ export default function AppNavigator() {
       <Stack.Screen
         name="Auth"
         component={AuthScreen}
-        options={({ navigation }) => pushOptions(navigation, "계정", "홈")}
+        options={{
+          headerShown: false,
+        }}
       />
       <Stack.Screen
         name="Notifications"
@@ -202,6 +211,10 @@ export default function AppNavigator() {
 }
 
 const styles = StyleSheet.create({
+  loadingScreen: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   homeLogo: {
     flexDirection: "row",
     alignItems: "center",

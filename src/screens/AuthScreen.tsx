@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { CommonActions } from "@react-navigation/native";
 import { useAuth } from "../store/AuthContext";
 import { colors } from "../theme/colors";
 import type { AppScreenProps } from "../types/app";
@@ -17,6 +18,14 @@ export default function AuthScreen({ navigation }: AppScreenProps<"Auth">) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isRegisterMode = mode === "register";
+  const goHome = useCallback(() => {
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: "RestaurantList" }],
+      }),
+    );
+  }, [navigation]);
 
   async function submit() {
     const normalizedEmail = email.trim();
@@ -46,7 +55,7 @@ export default function AuthScreen({ navigation }: AppScreenProps<"Auth">) {
         });
       }
 
-      navigation.goBack();
+      goHome();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "로그인 처리에 실패했어요.");
     } finally {
@@ -68,7 +77,7 @@ export default function AuthScreen({ navigation }: AppScreenProps<"Auth">) {
           <Text style={styles.title}>{user.nickname}</Text>
           <Text style={styles.description}>{user.email}</Text>
           {user.studentId ? <Text style={styles.studentId}>학번 {user.studentId}</Text> : null}
-          <Pressable style={styles.primaryButton} onPress={() => navigation.navigate("RestaurantList")}>
+          <Pressable style={styles.primaryButton} onPress={goHome}>
             <Text style={styles.primaryButtonText}>앱으로 돌아가기</Text>
           </Pressable>
           <Pressable style={styles.secondaryButton} onPress={logout} disabled={isSubmitting}>
