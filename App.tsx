@@ -5,6 +5,7 @@ import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
 import StartupSplash from "./src/components/StartupSplash";
 import AppNavigator from "./src/navigation/AppNavigator";
+import { AuthProvider } from "./src/store/AuthContext";
 import { CartProvider } from "./src/store/CartContext";
 import { FavoriteProvider } from "./src/store/FavoriteContext";
 import { NotificationProvider } from "./src/store/NotificationContext";
@@ -25,6 +26,7 @@ const linking = {
       CampusMap: "map",
       MealMate: "meal-mate",
       MealMateChat: "meal-mate/chat",
+      Auth: "auth",
       Notifications: "notifications",
       Cart: "cart",
       Payment: "payment",
@@ -94,13 +96,15 @@ export default function App() {
     <NotificationProvider>
       <FavoriteProvider>
         <CartProvider>
-          <View style={{ flex: 1 }}>
-            <NavigationContainer linking={navigationLinking}>
-              <StatusBar style="dark" />
-              <AppNavigator />
-            </NavigationContainer>
-            {showStartupSplash ? <StartupSplash onDone={hideStartupSplash} /> : null}
-          </View>
+          <AuthProvider>
+            <View style={{ flex: 1 }}>
+              <NavigationContainer linking={navigationLinking}>
+                <StatusBar style="dark" />
+                <AppNavigator />
+              </NavigationContainer>
+              {showStartupSplash ? <StartupSplash onDone={hideStartupSplash} /> : null}
+            </View>
+          </AuthProvider>
         </CartProvider>
       </FavoriteProvider>
     </NotificationProvider>

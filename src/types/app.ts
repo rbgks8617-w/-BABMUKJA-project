@@ -11,6 +11,7 @@ export type RootStackParamList = {
   MealMateChat: {
     room: MealMateChatRoom;
   };
+  Auth: undefined;
   Notifications: undefined;
   Cart: undefined;
   Payment: { orderItems?: OrderItem[] } | undefined;

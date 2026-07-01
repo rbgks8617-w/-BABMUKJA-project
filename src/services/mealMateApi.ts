@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://them-machines-threatening-collectibles.trycloudflare.com";
+const API_BASE_URL = "https://arcade-amendments-moore-quotations.trycloudflare.com";
 
 export type MealMateRoomDto = {
   id: string;

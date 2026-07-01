@@ -4,6 +4,7 @@ import { CommonActions } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import type { NativeStackNavigationOptions, NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { ImageStyle } from "react-native";
+import AuthScreen from "../screens/AuthScreen";
 import CartScreen from "../screens/CartScreen";
 import CampusMapScreen from "../screens/CampusMapScreen";
 import CommunityScreen from "../screens/CommunityScreen";
@@ -16,6 +17,7 @@ import PaymentScreen from "../screens/PaymentScreen";
 import RecommendationScreen from "../screens/RecommendationScreen";
 import RestaurantDetailScreen from "../screens/RestaurantDetailScreen";
 import RestaurantListScreen from "../screens/RestaurantListScreen";
+import { useAuth } from "../store/AuthContext";
 import { colors } from "../theme/colors";
 import { APP_FONT_FAMILY } from "../theme/typography";
 import type { RootStackParamList } from "../types/app";
@@ -83,6 +85,17 @@ function HomeHeaderTitle() {
   );
 }
 
+function AccountHeaderButton({ navigation }: { navigation: AppNavigation }) {
+  const { user, isLoading } = useAuth();
+  const label = isLoading ? "..." : user?.nickname ?? "로그인";
+
+  return (
+    <Pressable style={({ pressed }) => [styles.accountButton, pressed && styles.backButtonPressed]} onPress={() => navigation.navigate("Auth")}>
+      <Text style={styles.accountButtonText}>{label}</Text>
+    </Pressable>
+  );
+}
+
 function pushOptions(
   navigation: AppNavigation,
   title: string,
@@ -123,10 +136,11 @@ export default function AppNavigator() {
       <Stack.Screen
         name="RestaurantList"
         component={RestaurantListScreen}
-        options={{
+        options={({ navigation }) => ({
           headerTitle: () => <HomeHeaderTitle />,
           headerTitleAlign: "left",
-        }}
+          headerRight: () => <AccountHeaderButton navigation={navigation} />,
+        })}
       />
       <Stack.Screen
         name="Community"
@@ -165,6 +179,11 @@ export default function AppNavigator() {
         name="MealMateChat"
         component={MealMateChatScreen}
         options={({ navigation }) => pushOptions(navigation, "익명 채팅", "모임", "MealMate")}
+      />
+      <Stack.Screen
+        name="Auth"
+        component={AuthScreen}
+        options={({ navigation }) => pushOptions(navigation, "계정", "홈")}
       />
       <Stack.Screen
         name="Notifications"
@@ -263,5 +282,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "900",
     lineHeight: 18,
+  },
+  accountButton: {
+    minHeight: 34,
+    justifyContent: "center",
+    paddingHorizontal: 13,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+  },
+  accountButtonText: {
+    color: "#ffffff",
+    fontFamily: APP_FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: "900",
   },
 });

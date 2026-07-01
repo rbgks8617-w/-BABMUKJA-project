@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { authRouter } from "./auth.js";
 import { communityRouter } from "./community.js";
 import { healthRouter } from "./health.js";
 import { mealMatesRouter } from "./mealMates.js";
@@ -9,6 +10,7 @@ import { restaurantsRouter } from "./restaurants.js";
 export const apiRouter = Router();
 
 apiRouter.use("/health", healthRouter);
+apiRouter.use("/auth", authRouter);
 apiRouter.use("/restaurants", restaurantsRouter);
 apiRouter.use("/menus", menusRouter);
 apiRouter.use("/community", communityRouter);
