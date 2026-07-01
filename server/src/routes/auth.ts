@@ -25,12 +25,19 @@ const sessionTtlMs = 1000 * 60 * 60 * 24 * 30;
 
 export const authRouter = Router();
 
-function serializeUser(user: { id: string; email: string; nickname: string; studentId: string | null }) {
+function serializeUser(user: {
+  id: string;
+  email: string;
+  nickname: string;
+  studentId: string | null;
+  role: "USER" | "ADMIN";
+}) {
   return {
     id: user.id,
     email: user.email,
     nickname: user.nickname,
     studentId: user.studentId,
+    role: user.role,
   };
 }
 
@@ -76,6 +83,7 @@ authRouter.post("/register", async (request, response, next) => {
         email: true,
         nickname: true,
         studentId: true,
+        role: true,
       },
     });
     const session = await createUserSession(user.id);
@@ -101,6 +109,7 @@ authRouter.post("/login", async (request, response, next) => {
         email: true,
         nickname: true,
         studentId: true,
+        role: true,
         passwordHash: true,
       },
     });

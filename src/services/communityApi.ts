@@ -71,9 +71,24 @@ export async function createCommunityComment(reviewId: string, input: { body: st
   return response.data;
 }
 
-export async function deleteCommunityReview(reviewId: string, participantKey: string) {
+export async function deleteCommunityReview(reviewId: string, input: { participantKey?: string; token?: string }) {
   await requestJson<void>(`/api/community/reviews/${reviewId}`, {
     method: "DELETE",
-    body: JSON.stringify({ participantKey }),
+    headers: input.token
+      ? {
+          Authorization: `Bearer ${input.token}`,
+        }
+      : undefined,
+    body: JSON.stringify({ participantKey: input.participantKey }),
   });
+}
+
+export async function deleteAllCommunityReviews(token: string) {
+  const response = await requestJson<ApiResponse<{ deletedCount: number }>>("/api/community/reviews", {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return response.data;
 }

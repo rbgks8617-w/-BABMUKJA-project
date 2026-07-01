@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { HttpError } from "../middleware/errorHandler.js";
 import { prisma } from "../db/prisma.js";
+import { getAuthUserFromHeader } from "../middleware/auth.js";
 
 const createReviewSchema = z.object({
   title: z.string().trim().min(1).max(80),
@@ -18,7 +19,7 @@ const createCommentSchema = z.object({
 });
 
 const deleteReviewSchema = z.object({
-  participantKey: z.string().trim().min(1).max(80),
+  participantKey: z.string().trim().min(1).max(80).optional(),
 });
 
 export const communityRouter = Router();
@@ -178,6 +179,8 @@ communityRouter.post("/reviews/:reviewId/comments", async (request, response, ne
 communityRouter.delete("/reviews/:reviewId", async (request, response, next) => {
   try {
     const payload = deleteReviewSchema.parse(request.body);
+    const authUser = await getAuthUserFromHeader(request.header("authorization"));
+    const isAdmin = authUser?.role === "ADMIN";
     const review = await prisma.review.findUnique({
       where: { id: request.params.reviewId },
       select: { id: true, authorKey: true },
@@ -187,7 +190,7 @@ communityRouter.delete("/reviews/:reviewId", async (request, response, next) => 
       throw new HttpError(404, "후기 글을 찾을 수 없습니다.");
     }
 
-    if (review.authorKey && review.authorKey !== payload.participantKey) {
+    if (!isAdmin && (!payload.participantKey || (review.authorKey && review.authorKey !== payload.participantKey))) {
       throw new HttpError(403, "내가 쓴 글만 삭제할 수 있습니다.");
     }
 
@@ -196,6 +199,26 @@ communityRouter.delete("/reviews/:reviewId", async (request, response, next) => 
     });
 
     response.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
+communityRouter.delete("/reviews", async (request, response, next) => {
+  try {
+    const authUser = await getAuthUserFromHeader(request.header("authorization"));
+
+    if (authUser?.role !== "ADMIN") {
+      throw new HttpError(403, "관리자만 게시글을 일괄 삭제할 수 있습니다.");
+    }
+
+    const result = await prisma.review.deleteMany();
+
+    response.json({
+      data: {
+        deletedCount: result.count,
+      },
+    });
   } catch (error) {
     next(error);
   }

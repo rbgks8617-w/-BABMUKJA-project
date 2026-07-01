@@ -4,11 +4,13 @@ import CachedRemoteImage from "../components/CachedRemoteImage";
 import {
   createCommunityComment,
   createCommunityReview,
+  deleteAllCommunityReviews,
   deleteCommunityReview,
   fetchCommunityReviews,
   type CommunityReviewDto,
 } from "../services/communityApi";
 import { getParticipantKey } from "../services/clientIdentity";
+import { useAuth } from "../store/AuthContext";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
 import type { AppScreenProps } from "../types/app";
@@ -184,6 +186,7 @@ function getCommentAuthorLabel(post: CommunityPostItem, comment: CommunityCommen
 function PostCard({
   post,
   commentDraft,
+  canManage,
   isExpanded,
   onChangeComment,
   onDelete,
@@ -192,6 +195,7 @@ function PostCard({
 }: {
   post: CommunityPostItem;
   commentDraft: string;
+  canManage: boolean;
   isExpanded: boolean;
   onChangeComment: (value: string) => void;
   onDelete: () => void;
@@ -217,9 +221,9 @@ function PostCard({
 
       {isExpanded ? (
         <View style={styles.postDetail}>
-          {post.isMine ? (
+          {canManage ? (
             <Pressable style={styles.deleteButton} onPress={onDelete}>
-              <Text style={styles.deleteButtonText}>게시글 삭제</Text>
+              <Text style={styles.deleteButtonText}>{post.isMine ? "게시글 삭제" : "관리자 삭제"}</Text>
             </Pressable>
           ) : null}
           <Text style={styles.postBody}>{post.body}</Text>
@@ -283,7 +287,9 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
   const dragStartHeight = useRef(defaultWriterHeight);
   const writerHeightRef = useRef(defaultWriterHeight);
   const { addNotification } = useNotifications();
+  const { token, user } = useAuth();
   const participantKey = useMemo(() => getParticipantKey(), []);
+  const isAdmin = user?.role === "ADMIN";
   const authoredReviewIdsRef = useRef<Set<string>>(readAuthoredReviewIds());
   const knownCommentIdsRef = useRef<Set<string>>(new Set());
   const hasLoadedServerReviewsRef = useRef(false);
@@ -516,7 +522,7 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
   async function deletePost(postId: string) {
     const targetPost = posts.find((post) => post.id === postId);
 
-    if (!targetPost?.isMine) {
+    if (!targetPost || (!targetPost.isMine && !isAdmin)) {
       return;
     }
 
@@ -526,10 +532,32 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
     writeAuthoredReviewIds(authoredReviewIdsRef.current);
 
     try {
-      await deleteCommunityReview(postId, participantKey);
+      await deleteCommunityReview(postId, {
+        participantKey,
+        token: isAdmin ? token ?? undefined : undefined,
+      });
       setServerError("");
     } catch {
       setServerError("게시글 삭제에 실패했어요. 서버를 확인해주세요.");
+      loadReviews();
+    }
+  }
+
+  async function deleteAllPosts() {
+    if (!isAdmin || !token) {
+      return;
+    }
+
+    setPosts((currentPosts) => currentPosts.filter((post) => post.topic !== "음식 후기"));
+    setSelectedPostId(null);
+    authoredReviewIdsRef.current.clear();
+    writeAuthoredReviewIds(authoredReviewIdsRef.current);
+
+    try {
+      await deleteAllCommunityReviews(token);
+      setServerError("");
+    } catch {
+      setServerError("게시글 전체 삭제에 실패했어요. 서버를 확인해주세요.");
       loadReviews();
     }
   }
@@ -543,6 +571,7 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
       <PostCard
         post={post}
         commentDraft={commentDrafts[post.id] ?? ""}
+        canManage={post.isMine || isAdmin}
         isExpanded={selectedPostId === post.id}
         onChangeComment={(value) => updateCommentDraft(post.id, value)}
         onDelete={() => deletePost(post.id)}
@@ -550,7 +579,7 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
         onToggle={() => setSelectedPostId((currentId) => (currentId === post.id ? null : post.id))}
       />
     ),
-    [commentDrafts, selectedPostId],
+    [commentDrafts, isAdmin, selectedPostId, token],
   );
 
   const listHeader = (
@@ -591,7 +620,14 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
           <Text style={styles.sectionTitle}>{activeTab}</Text>
           {activeTab === "음식 후기" ? <Text style={styles.liveCaption}>실시간 댓글 갱신 중</Text> : null}
         </View>
-        <Text style={styles.sectionCount}>{visiblePosts.length}개</Text>
+        <View style={styles.sectionActions}>
+          {isAdmin && activeTab === "음식 후기" && visiblePosts.length > 0 ? (
+            <Pressable style={styles.adminDeleteAllButton} onPress={deleteAllPosts}>
+              <Text style={styles.adminDeleteAllText}>전체 삭제</Text>
+            </Pressable>
+          ) : null}
+          <Text style={styles.sectionCount}>{visiblePosts.length}개</Text>
+        </View>
       </View>
       {serverError ? (
         <View style={styles.serverNotice}>
@@ -884,6 +920,24 @@ const styles = StyleSheet.create({
   liveCaption: {
     marginTop: 3,
     color: colors.primary,
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  sectionActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  adminDeleteAllButton: {
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: "#fff1f2",
+    borderWidth: 1,
+    borderColor: "#fecdd3",
+  },
+  adminDeleteAllText: {
+    color: "#e11d48",
     fontSize: 11,
     fontWeight: "900",
   },

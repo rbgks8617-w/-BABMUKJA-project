@@ -5,6 +5,7 @@ export type AuthUser = {
   email: string;
   nickname: string;
   studentId?: string | null;
+  role: "USER" | "ADMIN";
 };
 
 export type AuthSession = {

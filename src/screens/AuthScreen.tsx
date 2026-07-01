@@ -76,6 +76,7 @@ export default function AuthScreen({ navigation }: AppScreenProps<"Auth">) {
           <Text style={styles.eyebrow}>내 계정</Text>
           <Text style={styles.title}>{user.nickname}</Text>
           <Text style={styles.description}>{user.email}</Text>
+          {user.role === "ADMIN" ? <Text style={styles.adminBadge}>관리자 계정</Text> : null}
           {user.studentId ? <Text style={styles.studentId}>학번 {user.studentId}</Text> : null}
           <Pressable style={styles.primaryButton} onPress={goHome}>
             <Text style={styles.primaryButtonText}>앱으로 돌아가기</Text>
@@ -210,6 +211,18 @@ const styles = StyleSheet.create({
     marginTop: 8,
     color: colors.primaryDark,
     fontSize: 13,
+    fontWeight: "900",
+  },
+  adminBadge: {
+    alignSelf: "flex-start",
+    overflow: "hidden",
+    marginTop: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "#fff1f2",
+    color: "#e11d48",
+    fontSize: 12,
     fontWeight: "900",
   },
   modeRow: {
