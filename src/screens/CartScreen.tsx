@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: "#222222",
     fontSize: 22,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   item: {
     position: "relative",
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#f0dfcc",
+    borderColor: "#E9ECF1",
   },
   deleteButton: {
     position: "absolute",
@@ -218,12 +218,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: "#fff0e8",
+    backgroundColor: "#EFF4FF",
   },
   deleteButtonText: {
-    color: "#d9532b",
+    color: "#2463EB",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   itemHeader: {
     flexDirection: "row",
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   itemName: {
     color: "#222222",
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   itemMeta: {
     marginTop: 8,
@@ -247,9 +247,9 @@ const styles = StyleSheet.create({
     marginTop: 14,
     padding: 12,
     borderRadius: 14,
-    backgroundColor: "#f7fbfe",
+    backgroundColor: "#F7F8FA",
     borderWidth: 1,
-    borderColor: "#d7e9f1",
+    borderColor: "#E9ECF1",
   },
   optionPanelHeader: {
     flexDirection: "row",
@@ -261,13 +261,13 @@ const styles = StyleSheet.create({
   optionPanelTitle: {
     color: "#222222",
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   optionPanelHint: {
     flexShrink: 1,
     color: "#66788a",
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "600",
     textAlign: "right",
   },
   optionChips: {
@@ -283,22 +283,22 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#cdeaf7",
+    borderColor: "#E9ECF1",
   },
   optionChipSelected: {
-    backgroundColor: "#1d63b7",
-    borderColor: "#1d63b7",
+    backgroundColor: "#2463EB",
+    borderColor: "#2463EB",
   },
   optionChipText: {
     color: "#222222",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   optionChipPrice: {
     marginTop: 1,
     color: "#66788a",
     fontSize: 10,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   optionChipTextSelected: {
     color: "#ffffff",
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     marginTop: 11,
     paddingVertical: 11,
     borderRadius: 12,
-    backgroundColor: "#1d63b7",
+    backgroundColor: "#2463EB",
   },
   optionApplyButtonDisabled: {
     backgroundColor: "#e8f1f7",
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   optionApplyText: {
     color: "#ffffff",
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   optionApplyTextDisabled: {
     color: "#7f95a8",
@@ -325,15 +325,15 @@ const styles = StyleSheet.create({
     marginTop: 14,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: "#fffaf2",
+    backgroundColor: "#F7F8FA",
     borderWidth: 1,
-    borderColor: "#f0dfcc",
+    borderColor: "#E9ECF1",
   },
   quantityLabel: {
     marginBottom: 10,
     color: "#222222",
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   primaryButton: {
     alignItems: "center",
@@ -342,13 +342,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingVertical: 15,
     borderRadius: 14,
-    backgroundColor: "#d9532b",
+    backgroundColor: "#2463EB",
   },
   primaryButtonText: {
     color: "#ffffff",
     fontFamily: APP_FONT_FAMILY,
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "700",
     lineHeight: 20,
   },
 });

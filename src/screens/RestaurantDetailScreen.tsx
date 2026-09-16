@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import CachedRemoteImage from "../components/CachedRemoteImage";
 import MenuCard from "../components/MenuCard";
+import { Icon } from "../components/AppUI";
 import { getMenusByRestaurantId, getRestaurantById } from "../services/restaurantService";
 import { useFavorites } from "../store/FavoriteContext";
 import { colors } from "../theme/colors";
@@ -105,9 +106,8 @@ export default function RestaurantDetailScreen({ route, navigation }: AppScreenP
             <Text style={styles.scorePill}>가성비 {restaurant.valueScore ?? "4.3"}</Text>
           </View>
           <View style={styles.infoBox}>
-            <Text style={styles.infoLine}>위치: {restaurant.location}</Text>
-            <Text style={styles.infoLine}>영업시간: {restaurant.openingHours ?? "운영시간 준비중"}</Text>
-            <Text style={styles.infoLine}>전화번호: {restaurant.phone ?? "등록 예정"}</Text>
+            <View style={styles.infoRow}><Icon name="location-outline" size={16} color={colors.textMuted} /><Text style={styles.infoLine}>{restaurant.location}</Text></View>
+            <View style={styles.infoRow}><Icon name="time-outline" size={16} color={colors.textMuted} /><Text style={styles.infoLine}>{restaurant.openingHours ?? "운영시간 준비중"}</Text></View>
           </View>
           <Text style={styles.description}>{restaurant.description}</Text>
           <Text style={styles.reviewSummary}>{restaurant.reviewSummary ?? "학생 리뷰가 곧 추가될 예정이에요."}</Text>
@@ -116,6 +116,8 @@ export default function RestaurantDetailScreen({ route, navigation }: AppScreenP
             {menuFilters.map((filter) => (
               <Pressable
                 key={filter}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: selectedFilter === filter }}
                 style={[styles.filterChip, selectedFilter === filter && styles.filterChipActive]}
                 onPress={() => setSelectedFilter(filter)}
               >
@@ -136,8 +138,8 @@ export default function RestaurantDetailScreen({ route, navigation }: AppScreenP
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
+    paddingHorizontal: 24,
+    paddingTop: 8,
     paddingBottom: 28,
   },
   empty: {
@@ -147,14 +149,14 @@ const styles = StyleSheet.create({
   },
   heroImage: {
     width: "100%",
-    height: 196,
-    borderRadius: 22,
-    marginBottom: 16,
+    height: 210,
+    borderRadius: 14,
+    marginBottom: 24,
   },
   name: {
     color: "#222222",
     fontSize: 26,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   scoreRow: {
     flexDirection: "row",
@@ -170,22 +172,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceWarm,
     color: colors.primaryDark,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   infoBox: {
-    gap: 6,
+    gap: 10,
     marginTop: 14,
-    padding: 14,
-    borderRadius: 18,
+    paddingVertical: 16,
     backgroundColor: colors.surface,
-    borderWidth: 1,
+    borderBottomWidth: 1,
     borderColor: colors.border,
   },
   infoLine: {
+    flex: 1,
+    fontSize: 12,
     color: colors.text,
-    fontWeight: "800",
+    fontWeight: "600",
     lineHeight: 19,
   },
+  infoRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   description: {
     marginTop: 14,
     color: "#666666",
@@ -194,7 +198,7 @@ const styles = StyleSheet.create({
   reviewSummary: {
     marginTop: 10,
     color: colors.textMuted,
-    fontWeight: "800",
+    fontWeight: "600",
     lineHeight: 20,
   },
   sectionTitle: {
@@ -202,7 +206,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: "#222222",
     fontSize: 22,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   filterRow: {
     gap: 8,
@@ -224,7 +228,7 @@ const styles = StyleSheet.create({
   filterText: {
     color: colors.text,
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   filterTextActive: {
     color: "#ffffff",
@@ -239,7 +243,7 @@ const styles = StyleSheet.create({
   filterSummaryTitle: {
     color: colors.text,
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   filterSummaryCount: {
     overflow: "hidden",
@@ -249,6 +253,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceWarm,
     color: colors.primary,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
 });

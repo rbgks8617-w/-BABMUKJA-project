@@ -37,6 +37,8 @@ export default function FavoriteHeartButton({ isFavorite, onPress, size = 27, st
   return (
     <Pressable
       accessibilityLabel={isFavorite ? "즐겨찾기 해제" : "즐겨찾기 추가"}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isFavorite }}
       hitSlop={10}
       style={[styles.button, style]}
       onPress={handlePress}
@@ -59,12 +61,12 @@ export default function FavoriteHeartButton({ isFavorite, onPress, size = 27, st
 
 const styles = StyleSheet.create({
   button: {
-    width: 34,
-    height: 34,
+    width: 38,
+    height: 38,
     alignItems: "center",
     justifyContent: "center",
     overflow: "visible",
-    borderRadius: 17,
+    borderRadius: 19,
     backgroundColor: "rgba(255, 255, 255, 0.94)",
     borderWidth: 1,
     borderColor: "#dcecf3",

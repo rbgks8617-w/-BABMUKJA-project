@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+import React from "react";
+import { Icon } from "../components/AppUI";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
@@ -6,11 +7,6 @@ import type { AppScreenProps, CampusNotification, RootStackParamList } from "../
 
 export default function NotificationsScreen({ navigation }: AppScreenProps<"Notifications">) {
   const { notifications, markAllRead, markRead, unreadCount } = useNotifications();
-
-  useEffect(() => {
-    const timerId = setTimeout(markAllRead, 900);
-    return () => clearTimeout(timerId);
-  }, [markAllRead]);
 
   function openNotification(notification: CampusNotification) {
     markRead(notification.id);
@@ -21,6 +17,13 @@ export default function NotificationsScreen({ navigation }: AppScreenProps<"Noti
 
     if (notification.target.screen === "Community") {
       navigation.navigate("Community", notification.target.params as RootStackParamList["Community"]);
+    }
+    if (notification.target.screen === "CommunityPostDetail" && notification.target.params) {
+      navigation.navigate("CommunityPostDetail", notification.target.params as RootStackParamList["CommunityPostDetail"]);
+    }
+    if (notification.target.screen === "MealMate") navigation.navigate("MealMate");
+    if (notification.target.screen === "MealMateChat" && notification.target.params) {
+      navigation.navigate("MealMateChat", notification.target.params as RootStackParamList["MealMateChat"]);
     }
   }
 
@@ -50,13 +53,13 @@ export default function NotificationsScreen({ navigation }: AppScreenProps<"Noti
       ListHeaderComponent={
         <View style={styles.hero}>
           <View style={styles.heroTop}>
-            <Text style={styles.eyebrow}>캠퍼스 알림</Text>
+            <Text style={styles.eyebrow}>새로운 소식 {unreadCount}</Text>
             <View style={styles.countBadge}>
               <Text style={styles.countBadgeText}>{unreadCount}</Text>
             </View>
           </View>
-          <Text style={styles.title}>놓치면 아쉬운 소식만 모았어요</Text>
-          <Text style={styles.description}>학식 준비, 모임 참여, 모집 마감 같은 중요한 알림을 여기에서 확인해요.</Text>
+          <Text style={styles.title}>내 캠퍼스의 새 소식</Text>
+          <Pressable accessibilityRole="button" onPress={markAllRead} style={{ flexDirection: "row", gap: 6, alignItems: "center", alignSelf: "flex-end", minHeight: 44 }}><Icon name="checkmark-done-outline" size={16} color={colors.primary} /><Text style={{ color: colors.primary, fontSize: 12 }}>모두 읽음</Text></Pressable>
         </View>
       }
       ListEmptyComponent={
@@ -76,17 +79,16 @@ export default function NotificationsScreen({ navigation }: AppScreenProps<"Noti
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     paddingTop: 14,
     paddingBottom: 36,
     backgroundColor: colors.background,
   },
   hero: {
     marginBottom: 14,
-    padding: 16,
-    borderRadius: 24,
-    backgroundColor: "#eaf7fc",
-    borderWidth: 1,
+    paddingVertical: 16,
+    backgroundColor: "#ffffff",
+    borderBottomWidth: 1,
     borderColor: "#ccebf7",
   },
   heroTop: {
@@ -129,16 +131,15 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   noticeCard: {
-    marginBottom: 12,
-    padding: 14,
-    borderRadius: 22,
+    paddingVertical: 20,
+    paddingHorizontal: 10,
     backgroundColor: "#ffffff",
-    borderWidth: 1,
+    borderBottomWidth: 1,
     borderColor: colors.border,
   },
   noticeCardUnread: {
     borderColor: "#9ed9f0",
-    backgroundColor: "#fbfeff",
+    backgroundColor: "#F2F6FF",
   },
   noticeCardPressed: {
     opacity: 0.78,

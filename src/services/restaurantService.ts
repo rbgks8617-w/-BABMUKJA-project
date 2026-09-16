@@ -145,8 +145,16 @@ export function getMenusByRestaurantId(restaurantId: string): Menu[] {
 }
 
 export function getMenusByCategory(category: string) {
-  return menus
-    .filter((menu) => matchesCategory(menu, category))
+  const candidates = category === "전체"
+    ? [...new Map([
+        ...getPopularMenus().map((item) => [item.menu.id, item.menu] as const),
+        ...restaurants.flatMap((restaurant) => {
+          const menu = menus.find((item) => item.restaurantId === restaurant.id);
+          return menu ? [[menu.id, menu] as const] : [];
+        }),
+      ]).values()]
+    : menus.filter((menu) => matchesCategory(menu, category));
+  return candidates
     .slice(0, 8)
     .map((menu) => ({
       ...menu,

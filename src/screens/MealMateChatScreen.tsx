@@ -163,27 +163,27 @@ const styles = StyleSheet.create({
     margin: 16,
     marginBottom: 8,
     padding: 16,
-    borderRadius: 24,
-    backgroundColor: "#eaf7fc",
+    borderRadius: 14,
+    backgroundColor: "#F2F6FF",
     borderWidth: 1,
-    borderColor: "#ccebf7",
+    borderColor: "#E9ECF1",
   },
   eyebrow: {
     color: colors.primary,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   title: {
     marginTop: 6,
     color: colors.ink,
     fontSize: 23,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   meta: {
     marginTop: 7,
     color: colors.textMuted,
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   serverNotice: {
     marginHorizontal: 16,
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
   serverNoticeText: {
     color: "#c2410c",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   messageList: {
     flexGrow: 1,
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   sender: {
     color: colors.primary,
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   senderMe: {
     color: "#d9f4ff",
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
     color: colors.text,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "600",
     lineHeight: 20,
   },
   messageTextMe: {
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     color: colors.text,
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   sendButton: {
     minHeight: 44,
@@ -276,6 +276,6 @@ const styles = StyleSheet.create({
   sendButtonText: {
     color: "#ffffff",
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
 });

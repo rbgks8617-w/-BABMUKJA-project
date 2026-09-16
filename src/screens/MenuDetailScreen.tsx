@@ -1,17 +1,33 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Animated,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CachedRemoteImage from "../components/CachedRemoteImage";
 import PriceSummary from "../components/PriceSummary";
 import QuantitySelector from "../components/QuantitySelector";
+import { Icon } from "../components/AppUI";
+import FavoriteHeartButton from "../components/FavoriteHeartButton";
+import { useFavorites } from "../store/FavoriteContext";
 import { getMenuById } from "../services/restaurantService";
 import { useCart } from "../store/CartContext";
 import type { AppScreenProps, MenuOption, OrderItem } from "../types/app";
 import { formatPrice } from "../utils/formatPrice";
 
-export default function MenuDetailScreen({ route, navigation }: AppScreenProps<"MenuDetail">) {
+export default function MenuDetailScreen({
+  route,
+  navigation,
+}: AppScreenProps<"MenuDetail">) {
+  const insets = useSafeAreaInsets();
   const { menuId } = route.params;
   const menu = getMenuById(menuId);
   const { addToCart } = useCart();
+  const { isFavoriteMenu, toggleFavoriteMenu } = useFavorites();
   const [quantity, setQuantity] = useState(1);
   const [selectedOptions, setSelectedOptions] = useState<MenuOption[]>([]);
   const [addedMessage, setAddedMessage] = useState("");
@@ -25,7 +41,8 @@ export default function MenuDetailScreen({ route, navigation }: AppScreenProps<"
   );
 
   const optionTotal = useMemo(
-    () => normalizedSelectedOptions.reduce((sum, option) => sum + option.price, 0),
+    () =>
+      normalizedSelectedOptions.reduce((sum, option) => sum + option.price, 0),
     [normalizedSelectedOptions],
   );
 
@@ -53,7 +70,9 @@ export default function MenuDetailScreen({ route, navigation }: AppScreenProps<"
     setAddedMessage("");
     setSelectedOptions((prevOptions) => {
       const exists = prevOptions.some((item) => item.id === option.id);
-      return exists ? prevOptions.filter((item) => item.id !== option.id) : [...prevOptions, option];
+      return exists
+        ? prevOptions.filter((item) => item.id !== option.id)
+        : [...prevOptions, option];
     });
   }
 
@@ -134,7 +153,14 @@ export default function MenuDetailScreen({ route, navigation }: AppScreenProps<"
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.container}>
-        <CachedRemoteImage uri={currentMenu.imageUrl} style={styles.image} />
+        <View>
+          <CachedRemoteImage uri={currentMenu.imageUrl} style={styles.image} />
+          <FavoriteHeartButton
+            isFavorite={isFavoriteMenu(menuId)}
+            onPress={() => toggleFavoriteMenu(menuId)}
+            style={{ position: "absolute", right: 14, top: 14 }}
+          />
+        </View>
         <Text style={styles.category}>{currentMenu.category}</Text>
         <Text style={styles.name}>{currentMenu.name}</Text>
         <Text style={styles.price}>{formatPrice(currentMenu.price)}</Text>
@@ -143,15 +169,28 @@ export default function MenuDetailScreen({ route, navigation }: AppScreenProps<"
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>옵션 선택</Text>
           {currentMenu.options.map((option) => {
-            const isSelected = selectedOptions.some((item) => item.id === option.id);
+            const isSelected = selectedOptions.some(
+              (item) => item.id === option.id,
+            );
             return (
               <Pressable
                 key={option.id}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: isSelected }}
                 style={[styles.option, isSelected && styles.optionSelected]}
                 onPress={() => toggleOption(option)}
               >
-                <Text style={styles.optionName}>{option.name}</Text>
-                <Text style={styles.optionPrice}>+ {formatPrice(option.price)}</Text>
+                <Icon
+                  name={isSelected ? "checkbox" : "square-outline"}
+                  size={22}
+                  color={isSelected ? "#2463EB" : "#85909E"}
+                />
+                <Text style={[styles.optionName, { flex: 1, marginLeft: 10 }]}>
+                  {option.name}
+                </Text>
+                <Text style={styles.optionPrice}>
+                  + {formatPrice(option.price)}
+                </Text>
               </Pressable>
             );
           })}
@@ -173,21 +212,31 @@ export default function MenuDetailScreen({ route, navigation }: AppScreenProps<"
         </View>
 
         <PriceSummary price={totalPrice} />
-
-        <View style={styles.actions}>
-          <Pressable style={[styles.actionButton, styles.secondary]} onPress={handleAddToCart}>
-            <Text style={styles.secondaryText}>장바구니 담기</Text>
-          </Pressable>
-          <Pressable style={[styles.actionButton, styles.primary]} onPress={handleDirectPayment}>
-            <Text style={styles.primaryText}>바로 결제</Text>
-          </Pressable>
-        </View>
       </ScrollView>
+      <View
+        style={[styles.actions, { paddingBottom: Math.max(18, insets.bottom) }]}
+      >
+        <Pressable
+          accessibilityRole="button"
+          style={[styles.actionButton, styles.secondary]}
+          onPress={handleAddToCart}
+        >
+          <Text style={styles.secondaryText}>장바구니 담기</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          style={[styles.actionButton, styles.primary]}
+          onPress={handleDirectPayment}
+        >
+          <Text style={styles.primaryText}>{formatPrice(totalPrice)} 결제</Text>
+        </Pressable>
+      </View>
 
       {addedMessage ? (
         <Animated.View
           style={[
             styles.toast,
+            { bottom: 90 + Math.max(18, insets.bottom) },
             {
               opacity: toastOpacity,
               transform: [{ translateY: toastTranslateY }],
@@ -195,7 +244,12 @@ export default function MenuDetailScreen({ route, navigation }: AppScreenProps<"
           ]}
         >
           <Text style={styles.toastText}>{addedMessage}</Text>
-          <Pressable hitSlop={8} style={styles.toastAction} onPress={handleGoToCart}>
+          <Pressable
+            accessibilityRole="button"
+            hitSlop={8}
+            style={styles.toastAction}
+            onPress={handleGoToCart}
+          >
             <Text style={styles.toastActionText}>장바구니로 가기</Text>
           </Pressable>
         </Animated.View>
@@ -207,11 +261,11 @@ export default function MenuDetailScreen({ route, navigation }: AppScreenProps<"
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#fffaf4",
+    backgroundColor: "#ffffff",
   },
   container: {
     padding: 20,
-    paddingBottom: 120,
+    paddingBottom: 28,
   },
   empty: {
     flex: 1,
@@ -230,22 +284,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: "#fff0e8",
-    color: "#d9532b",
+    backgroundColor: "#EFF4FF",
+    color: "#2463EB",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   name: {
     marginTop: 10,
     color: "#222222",
     fontSize: 28,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   price: {
     marginTop: 8,
-    color: "#d9532b",
+    color: "#2463EB",
     fontSize: 20,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   description: {
     marginTop: 10,
@@ -258,7 +312,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: "#222222",
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   option: {
     flexDirection: "row",
@@ -266,21 +320,21 @@ const styles = StyleSheet.create({
     marginTop: 10,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#f0dfcc",
+    borderColor: "#E9ECF1",
     borderRadius: 10,
     backgroundColor: "#ffffff",
   },
   optionSelected: {
-    borderColor: "#d9532b",
-    backgroundColor: "#fff0e8",
+    borderColor: "#2463EB",
+    backgroundColor: "#EFF4FF",
   },
   optionName: {
     color: "#222222",
-    fontWeight: "800",
+    fontWeight: "600",
   },
   optionPrice: {
-    color: "#d9532b",
-    fontWeight: "800",
+    color: "#2463EB",
+    fontWeight: "600",
   },
   quantityRow: {
     flexDirection: "row",
@@ -291,7 +345,11 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: "row",
     gap: 12,
-    marginTop: 18,
+    padding: 18,
+    paddingBottom: 26,
+    borderTopWidth: 1,
+    borderColor: "#E9ECF1",
+    backgroundColor: "white",
   },
   actionButton: {
     flex: 1,
@@ -300,26 +358,26 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   primary: {
-    backgroundColor: "#d9532b",
+    backgroundColor: "#2463EB",
   },
   secondary: {
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#d9532b",
+    borderColor: "#2463EB",
   },
   primaryText: {
     color: "#ffffff",
-    fontWeight: "900",
+    fontWeight: "700",
   },
   secondaryText: {
-    color: "#d9532b",
-    fontWeight: "900",
+    color: "#2463EB",
+    fontWeight: "700",
   },
   toast: {
     position: "absolute",
     left: 20,
     right: 20,
-    bottom: 28,
+    bottom: 108,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -330,7 +388,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(24, 24, 24, 0.94)",
     shadowColor: "#000000",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.22,
+    shadowOpacity: 0.04,
     shadowRadius: 18,
     elevation: 8,
   },
@@ -339,7 +397,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     color: "#ffffff",
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "600",
     lineHeight: 20,
   },
   toastAction: {
@@ -348,12 +406,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 12,
     borderRadius: 999,
-    backgroundColor: "#fff0e8",
+    backgroundColor: "#EFF4FF",
   },
   toastActionText: {
-    color: "#d9532b",
+    color: "#2463EB",
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
     lineHeight: 18,
   },
 });

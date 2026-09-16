@@ -10,3 +10,9 @@ release/*.zip
 .env
 .DS_Store
 Thumbs.db
+
+# Expo exports runtime fonts/images under this name; these are not dependencies.
+!dist-web/assets/node_modules/
+!dist-web/assets/node_modules/**/
+!dist-web/assets/node_modules/**/*.ttf
+!dist-web/assets/node_modules/**/*.png

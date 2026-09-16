@@ -10,11 +10,11 @@ type QuantitySelectorProps = {
 export default function QuantitySelector({ quantity, onDecrease, onIncrease }: QuantitySelectorProps) {
   return (
     <View style={styles.container}>
-      <Pressable style={styles.button} onPress={onDecrease}>
+      <Pressable accessibilityRole="button" accessibilityLabel="수량 줄이기" disabled={quantity <= 1} style={[styles.button, quantity <= 1 && { opacity: 0.35 }]} onPress={onDecrease}>
         <Text style={styles.buttonText}>-</Text>
       </Pressable>
       <Text style={styles.quantity}>{quantity}</Text>
-      <Pressable style={styles.button} onPress={onIncrease}>
+      <Pressable accessibilityRole="button" accessibilityLabel="수량 늘리기" style={styles.button} onPress={onIncrease}>
         <Text style={styles.buttonText}>+</Text>
       </Pressable>
     </View>
@@ -28,8 +28,8 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   button: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 8,
@@ -38,12 +38,12 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#ffffff",
     fontSize: 22,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   quantity: {
     minWidth: 30,
     textAlign: "center",
     fontSize: 20,
-    fontWeight: "800",
+    fontWeight: "600",
   },
 });

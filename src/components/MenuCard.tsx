@@ -13,48 +13,70 @@ type MenuCardProps = {
   onToggleFavorite?: () => void;
 };
 
-export default function MenuCard({ menu, onPress, isFavorite = false, onToggleFavorite }: MenuCardProps) {
+export default function MenuCard({
+  menu,
+  onPress,
+  isFavorite = false,
+  onToggleFavorite,
+}: MenuCardProps) {
   return (
-    <Pressable style={styles.card} onPress={onPress}>
-      <CachedRemoteImage uri={menu.imageUrl} style={styles.image} />
-      {onToggleFavorite ? (
-        <FavoriteHeartButton isFavorite={isFavorite} style={styles.favoriteButton} onPress={onToggleFavorite} />
-      ) : null}
-      <View style={styles.content}>
-        <Text numberOfLines={1} style={styles.name}>{menu.name}</Text>
-        <Text numberOfLines={2} style={styles.description}>{menu.description}</Text>
-        <View style={styles.scoreRow}>
-          <Text style={styles.scoreText}>맛 {menu.tasteScore ?? "4.3"}</Text>
-          <Text style={styles.scoreText}>양 {menu.portionScore ?? "4.4"}</Text>
-          <Text style={styles.scoreText}>가성비 {menu.valueScore ?? "4.5"}</Text>
+    <View style={styles.card}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${menu.name} ${formatPrice(menu.price)}`}
+        style={styles.menuLink}
+        onPress={onPress}
+      >
+        <CachedRemoteImage uri={menu.imageUrl} style={styles.image} />
+        <View style={styles.content}>
+          <Text numberOfLines={1} style={styles.name}>
+            {menu.name}
+          </Text>
+          <Text numberOfLines={2} style={styles.description}>
+            {menu.description}
+          </Text>
+          <View style={styles.scoreRow}>
+            <Text style={styles.scoreText}>맛 {menu.tasteScore ?? "4.3"}</Text>
+            <Text style={styles.scoreText}>
+              양 {menu.portionScore ?? "4.4"}
+            </Text>
+            <Text style={styles.scoreText}>
+              가성비 {menu.valueScore ?? "4.5"}
+            </Text>
+          </View>
+          <Text style={styles.price}>{formatPrice(menu.price)}</Text>
         </View>
-        <Text style={styles.price}>{formatPrice(menu.price)}</Text>
-      </View>
-    </Pressable>
+      </Pressable>
+      {onToggleFavorite ? (
+        <FavoriteHeartButton
+          isFavorite={isFavorite}
+          style={styles.favoriteButton}
+          onPress={onToggleFavorite}
+        />
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
     position: "relative",
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 12,
-    padding: 11,
-    borderRadius: 14,
+    marginBottom: 0,
+    paddingVertical: 20,
     backgroundColor: colors.surface,
-    borderWidth: 1,
+    borderBottomWidth: 1,
     borderColor: colors.border,
   },
+  menuLink: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
   image: {
-    width: 88,
-    height: 88,
+    width: 104,
+    height: 104,
     borderRadius: 10,
   },
   favoriteButton: {
     position: "absolute",
-    top: 10,
-    right: 10,
+    top: 25,
+    left: 61,
     zIndex: 3,
   },
   content: {
@@ -64,7 +86,7 @@ const styles = StyleSheet.create({
   name: {
     color: colors.text,
     fontSize: 17,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   description: {
     marginTop: 5,
@@ -76,7 +98,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     color: colors.primary,
     fontSize: 16,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   scoreRow: {
     flexDirection: "row",
@@ -92,6 +114,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceWarm,
     color: colors.primaryDark,
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
   },
 });

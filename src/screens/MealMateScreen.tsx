@@ -11,6 +11,7 @@ import {
 import { getRestaurants } from "../services/restaurantService";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
+import { Icon } from "../components/AppUI";
 import type { AppScreenProps, Restaurant } from "../types/app";
 
 const anonymousNames = ["익명 01", "익명 02", "익명 03", "익명 04", "익명 05"];
@@ -98,6 +99,7 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
   const participantKey = useMemo(() => getParticipantKey(), []);
   const [posts, setPosts] = useState(() => buildInitialPosts(restaurants));
   const [serverError, setServerError] = useState("");
+  const [composerOpen, setComposerOpen] = useState(false);
   const [topic, setTopic] = useState("");
   const [time, setTime] = useState("");
   const [note, setNote] = useState("");
@@ -115,7 +117,7 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
       setPosts(rooms.map((room) => mapRoomToPost(room, restaurants)));
       setServerError("");
     } catch {
-      setServerError("서버 연결을 확인하고 있어요");
+      setServerError("서버에 연결하지 못했어요. 마지막 목록 또는 예시 모임을 표시해요.");
     }
   }, [participantKey, restaurants]);
 
@@ -336,12 +338,13 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
   const listHeader = (
     <>
       <View style={styles.hero}>
-        <Text style={styles.eyebrow}>나랑 밥먹자</Text>
-        <Text style={styles.title}>익명으로 편하게 밥 약속 잡기</Text>
-        <Text style={styles.description}>실명 없이 대화 주제와 시간을 직접 적고, 모임이 생기면 채팅방에서 장소를 맞춰요.</Text>
+        <View style={{ marginBottom: 14 }}><Icon name="people-outline" size={34} color={colors.success} /></View>
+        <Text style={styles.eyebrow}>한 끼의 새로운 만남</Text>
+        <Text style={styles.title}>오늘은 같이 먹을까요?</Text>
+        <Text style={styles.description}>같은 캠퍼스, 새로운 밥친구.</Text>
       </View>
-
-      <View style={styles.formCard}>
+      <Pressable accessibilityRole="button" onPress={() => setComposerOpen(value => !value)} style={styles.newMeeting}><Icon name={composerOpen ? "close-outline" : "add-outline"} color="white" size={20} /><Text style={styles.createButtonText}>{composerOpen ? "모집글 닫기" : "새 밥약속 만들기"}</Text></Pressable>
+      {composerOpen && <View style={styles.formCard}>
         <Text style={styles.sectionTitle}>모집글 만들기</Text>
         <TextInput
           style={styles.input}
@@ -396,7 +399,7 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
         <Pressable style={styles.createButton} onPress={createPost}>
           <Text style={styles.createButtonText}>익명으로 모집 올리기</Text>
         </Pressable>
-      </View>
+      </View>}
 
       <View style={styles.boardHeader}>
         <Text style={styles.sectionTitle}>현재 모집 중</Text>
@@ -444,6 +447,7 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
 }
 
 const styles = StyleSheet.create({
+  newMeeting: { minHeight: 48, backgroundColor: colors.primary, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", borderRadius: 12, marginBottom: 24 },
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -456,48 +460,46 @@ const styles = StyleSheet.create({
   },
   hero: {
     marginBottom: 14,
-    padding: 16,
-    borderRadius: 24,
-    backgroundColor: "#eaf7fc",
-    borderWidth: 1,
-    borderColor: "#ccebf7",
+    paddingVertical: 16,
+    backgroundColor: "white",
+    borderWidth: 0,
+    borderColor: "#E9ECF1",
   },
   eyebrow: {
     color: colors.primary,
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   title: {
     marginTop: 8,
     color: colors.ink,
     fontSize: 25,
-    fontWeight: "900",
+    fontWeight: "700",
     lineHeight: 31,
   },
   description: {
     marginTop: 8,
     color: colors.textMuted,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "600",
     lineHeight: 21,
   },
   formCard: {
     marginBottom: 14,
-    padding: 15,
-    borderRadius: 24,
+    paddingVertical: 15,
     backgroundColor: "#ffffff",
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: colors.border,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0,
     shadowRadius: 18,
     elevation: 3,
   },
   sectionTitle: {
     color: colors.text,
     fontSize: 19,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   input: {
     marginTop: 10,
@@ -509,7 +511,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     color: colors.text,
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   noteInput: {
     minHeight: 80,
@@ -526,7 +528,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     color: colors.textSoft,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   stepper: {
     flexDirection: "row",
@@ -544,14 +546,14 @@ const styles = StyleSheet.create({
   stepText: {
     color: "#ffffff",
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
     lineHeight: 21,
   },
   countValue: {
     minWidth: 34,
     color: colors.text,
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "700",
     textAlign: "center",
   },
   restaurantChips: {
@@ -574,7 +576,7 @@ const styles = StyleSheet.create({
   restaurantChipText: {
     color: colors.text,
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   restaurantChipTextSelected: {
     color: "#ffffff",
@@ -589,7 +591,7 @@ const styles = StyleSheet.create({
   createButtonText: {
     color: "#ffffff",
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   boardHeader: {
     flexDirection: "row",
@@ -599,7 +601,7 @@ const styles = StyleSheet.create({
   },
   boardMeta: {
     color: colors.textSoft,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   serverNotice: {
     marginBottom: 10,
@@ -613,12 +615,12 @@ const styles = StyleSheet.create({
   serverNoticeText: {
     color: "#c2410c",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   postCard: {
     marginBottom: 12,
     padding: 14,
-    borderRadius: 22,
+    borderRadius: 14,
     backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: colors.border,
@@ -636,19 +638,19 @@ const styles = StyleSheet.create({
   postRestaurant: {
     color: colors.text,
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   postMeta: {
     marginTop: 4,
     color: colors.primary,
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   countPill: {
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 999,
-    backgroundColor: "#eaf7fc",
+    backgroundColor: "#F2F6FF",
   },
   countPillFull: {
     backgroundColor: "#fff1ed",
@@ -656,7 +658,7 @@ const styles = StyleSheet.create({
   countText: {
     color: colors.primaryDark,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   countTextFull: {
     color: "#e34224",
@@ -665,7 +667,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     color: colors.textMuted,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "600",
     lineHeight: 20,
   },
   postFooter: {
@@ -680,7 +682,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     color: colors.textSoft,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   joinButton: {
     minHeight: 42,
@@ -720,7 +722,7 @@ const styles = StyleSheet.create({
   joinButtonText: {
     color: "#ffffff",
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   joinButtonTextDisabled: {
     color: colors.textSoft,
@@ -728,7 +730,7 @@ const styles = StyleSheet.create({
   leaveButtonText: {
     color: "#e34b2f",
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   toast: {
     position: "absolute",
@@ -742,14 +744,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#202124",
     shadowColor: "#000000",
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.04,
     shadowRadius: 18,
     elevation: 8,
   },
   toastText: {
     color: "#ffffff",
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "700",
     textAlign: "center",
   },
 });

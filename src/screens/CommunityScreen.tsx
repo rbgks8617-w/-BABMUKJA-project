@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import CachedRemoteImage from "../components/CachedRemoteImage";
+import { BottomNav, Icon } from "../components/AppUI";
+import { useHeaderHeight } from "@react-navigation/elements";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   createCommunityReview,
   deleteAllCommunityReviews,
@@ -181,7 +184,6 @@ function PostCard({
         <View style={styles.postSideMeta}>
           <Text style={styles.postTime}>{post.createdAt}</Text>
           {post.imageUrl ? <CachedRemoteImage uri={post.imageUrl} style={styles.postThumbnail} /> : null}
-          <Text style={styles.expandHint}>보기</Text>
         </View>
       </Pressable>
     </View>
@@ -190,7 +192,9 @@ function PostCard({
 
 export default function CommunityScreen({ navigation, route }: AppScreenProps<"Community">) {
   const { height: viewportHeight } = useWindowDimensions();
-  const maxWriterHeight = Math.max(360, viewportHeight - 28);
+  const headerHeight = useHeaderHeight();
+  const insets = useSafeAreaInsets();
+  const maxWriterHeight = Math.max(180, viewportHeight - headerHeight - Math.max(insets.bottom, 12) - 12);
   const minWriterHeight = Math.min(maxWriterHeight, Math.max(320, viewportHeight * 0.52));
   const defaultWriterHeight = Math.min(maxWriterHeight, Math.max(minWriterHeight, viewportHeight * 0.7));
 
@@ -292,7 +296,7 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
       setPosts([...reviews.map((review) => mapReviewToPost(review, participantKey)), ...matePosts]);
       setServerError("");
     } catch {
-      setServerError("서버 연결을 확인하고 있어요");
+      setServerError("서버에 연결하지 못했어요. 마지막 목록 또는 예시 글을 표시해요.");
     }
   }, [addNotification, participantKey]);
 
@@ -375,6 +379,13 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
       setServerError("");
     } catch {
       setServerError("글 저장에 실패했어요. 서버를 확인해주세요.");
+      setPosts(current => current.filter(post => post.id !== optimisticPost.id));
+      setWriteTitle(title);
+      setWriteBody(body);
+      setWriteImageUrl(imageUrl);
+      setWriteTasteScore(writeTasteScore);
+      setWriteValueScore(writeValueScore);
+      setWriterOpen(true);
     }
   }
 
@@ -427,6 +438,7 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
 
   const listHeader = (
     <>
+      <View style={styles.communityIntro}><Text style={styles.communityEyebrow}>CAMPUS COMMUNITY</Text><Text style={styles.communityTitle}>한 끼로 가까워지는 우리</Text><Text style={styles.communitySubtitle}>솔직한 맛 이야기, 새로운 밥친구.</Text></View>
       <View style={styles.tabRow}>
         {tabs.map((tab) => (
           <Pressable key={tab} style={[styles.tab, activeTab === tab && styles.tabActive]} onPress={() => selectTab(tab)}>
@@ -461,7 +473,6 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
       <View style={styles.sectionHeader}>
         <View>
           <Text style={styles.sectionTitle}>{activeTab}</Text>
-          {activeTab === "음식 후기" ? <Text style={styles.liveCaption}>실시간 댓글 갱신 중</Text> : null}
         </View>
         <View style={styles.sectionActions}>
           {isAdmin && activeTab === "음식 후기" && visiblePosts.length > 0 ? (
@@ -495,18 +506,20 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
         removeClippedSubviews
       />
 
+      <BottomNav active="community" navigation={navigation} />
+      {writerOpen && <Pressable accessibilityLabel="글쓰기 닫기" onPress={closeWriter} style={styles.backdrop} />}
       {writerOpen ? (
-        <View style={[styles.writerSheet, { height: writerHeight }]}>
+        <View accessibilityViewIsModal style={[styles.writerSheet, { height: writerHeight, bottom: Math.max(insets.bottom, 12) }]}>
           <View style={styles.writerDragArea} {...writerPanResponder.panHandlers}>
             <View style={styles.writerHandle} />
           </View>
           <View style={styles.writerHeader}>
-            <View>
-              <Text style={styles.writerEyebrow}>커뮤니티 글쓰기</Text>
-              <Text style={styles.writerTitle}>주제, 제목, 내용을 적어주세요</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.writerEyebrow}>음식 후기</Text>
+              <Text style={styles.writerTitle}>오늘의 한 끼는 어땠나요?</Text>
             </View>
-            <Pressable hitSlop={8} onPress={closeWriter}>
-              <Text style={styles.writerClose}>×</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="후기 작성 닫기" style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }} onPress={closeWriter}>
+              <Icon name="close" size={22} color={colors.textMuted} />
             </Pressable>
           </View>
 
@@ -515,7 +528,9 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
             contentContainerStyle={styles.writerScrollContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
           >
+            {serverError ? <Text accessibilityRole="alert" style={styles.serverNoticeText}>{serverError}</Text> : null}
             <Text style={styles.inputLabel}>제목</Text>
             <TextInput
               value={writeTitle}
@@ -544,6 +559,9 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
                 <Text style={styles.ratingLabel}>맛</Text>
                 <View style={styles.ratingStepper}>
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="맛 평점 낮추기"
+                    disabled={writeTasteScore <= minRating}
                     style={[styles.ratingButton, writeTasteScore <= minRating && styles.ratingButtonDisabled]}
                     onPress={() => changeTasteScore(-ratingStep)}
                   >
@@ -551,6 +569,9 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
                   </Pressable>
                   <Text style={styles.ratingValue}>{formatRating(writeTasteScore)}</Text>
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="맛 평점 높이기"
+                    disabled={writeTasteScore >= maxRating}
                     style={[styles.ratingButton, writeTasteScore >= maxRating && styles.ratingButtonDisabled]}
                     onPress={() => changeTasteScore(ratingStep)}
                   >
@@ -562,6 +583,9 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
                 <Text style={styles.ratingLabel}>가성비</Text>
                 <View style={styles.ratingStepper}>
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="가성비 평점 낮추기"
+                    disabled={writeValueScore <= minRating}
                     style={[styles.ratingButton, writeValueScore <= minRating && styles.ratingButtonDisabled]}
                     onPress={() => changeValueScore(-ratingStep)}
                   >
@@ -569,6 +593,9 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
                   </Pressable>
                   <Text style={styles.ratingValue}>{formatRating(writeValueScore)}</Text>
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="가성비 평점 높이기"
+                    disabled={writeValueScore >= maxRating}
                     style={[styles.ratingButton, writeValueScore >= maxRating && styles.ratingButtonDisabled]}
                     onPress={() => changeValueScore(ratingStep)}
                   >
@@ -601,6 +628,8 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
             </View>
 
             <Pressable
+              accessibilityRole="button"
+              disabled={!writeTitle.trim() || !writeBody.trim()}
               style={[styles.submitButton, (!writeTitle.trim() || !writeBody.trim()) && styles.submitButtonDisabled]}
               onPress={createPost}
             >
@@ -609,12 +638,9 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
           </ScrollView>
         </View>
       ) : activeTab === "음식 후기" ? (
-        <Pressable style={styles.writeDock} onPress={openWriter}>
-          <View>
-            <Text style={styles.writeDockEyebrow}>커뮤니티 글쓰기</Text>
-            <Text style={styles.writeDockTitle}>새 글 올리기</Text>
-          </View>
-          <Text style={styles.writeDockAction}>글쓰기</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="후기 쓰기" style={styles.writeDock} onPress={openWriter}>
+          <Icon name="create-outline" size={18} color="white" />
+          <Text style={{ fontSize: 13, fontWeight: "700", color: "white" }}>후기 쓰기</Text>
         </Pressable>
       ) : null}
     </View>
@@ -622,12 +648,17 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
 }
 
 const styles = StyleSheet.create({
+  communityIntro: { paddingTop: 4, paddingBottom: 28 },
+  communityEyebrow: { fontSize: 10, color: colors.primary, fontWeight: "700" },
+  communityTitle: { fontSize: 24, color: colors.text, fontWeight: "700", marginTop: 10 },
+  communitySubtitle: { fontSize: 12, color: colors.textMuted, marginTop: 10 },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(25,30,40,0.32)", zIndex: 19 },
   screen: {
     flex: 1,
     backgroundColor: colors.background,
   },
   container: {
-    paddingHorizontal: 18,
+    paddingHorizontal: 24,
     paddingTop: 18,
     paddingBottom: 152,
     backgroundColor: colors.background,
@@ -643,33 +674,33 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minHeight: 42,
     paddingVertical: 10,
-    borderRadius: 999,
+    borderRadius: 0,
     backgroundColor: "#ffffff",
-    borderWidth: 1,
+    borderBottomWidth: 2,
     borderColor: colors.border,
   },
   tabActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: "white",
     borderColor: colors.primary,
   },
   tabText: {
     color: colors.text,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   tabTextActive: {
-    color: "#ffffff",
+    color: colors.primary,
   },
   matePanel: {
     marginBottom: 12,
     padding: 18,
-    borderRadius: 24,
+    borderRadius: 14,
     backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: colors.border,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.04,
     shadowRadius: 20,
     elevation: 3,
   },
@@ -685,14 +716,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     overflow: "hidden",
     borderRadius: 18,
-    backgroundColor: "#edf6fc",
+    backgroundColor: "#F2F6FF",
     borderWidth: 1,
     borderColor: "#d5edf8",
   },
   mateSymbolText: {
     color: colors.primary,
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   matePanelCopy: {
     flex: 1,
@@ -701,19 +732,19 @@ const styles = StyleSheet.create({
   mateEyebrow: {
     color: colors.primary,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   panelTitle: {
     color: colors.text,
     fontSize: 21,
-    fontWeight: "900",
+    fontWeight: "700",
     lineHeight: 27,
   },
   panelDescription: {
     marginTop: 6,
     color: colors.textMuted,
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "600",
     lineHeight: 20,
   },
   mateFeatureRow: {
@@ -730,7 +761,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f4fbfe",
     color: colors.primaryDark,
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   primaryButton: {
     alignItems: "center",
@@ -740,14 +771,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.04,
     shadowRadius: 14,
     elevation: 3,
   },
   primaryButtonText: {
     color: "#ffffff",
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   sectionHeader: {
     flexDirection: "row",
@@ -758,13 +789,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: colors.text,
     fontSize: 19,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   liveCaption: {
     marginTop: 3,
     color: colors.primary,
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   sectionActions: {
     flexDirection: "row",
@@ -782,17 +813,17 @@ const styles = StyleSheet.create({
   adminDeleteAllText: {
     color: "#e11d48",
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   sectionCount: {
     overflow: "hidden",
     paddingHorizontal: 9,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: "#edf6fc",
+    backgroundColor: "#F2F6FF",
     color: colors.primary,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   serverNotice: {
     marginBottom: 10,
@@ -806,14 +837,14 @@ const styles = StyleSheet.create({
   serverNoticeText: {
     color: "#b45309",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   postCard: {
-    marginBottom: 12,
-    padding: 13,
-    borderRadius: 22,
+    marginBottom: 0,
+    paddingVertical: 20,
+    borderRadius: 0,
     backgroundColor: "#ffffff",
-    borderWidth: 1,
+    borderBottomWidth: 1,
     borderColor: colors.border,
   },
   postSummary: {
@@ -837,24 +868,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: "#edf6fc",
+    backgroundColor: "#F2F6FF",
   },
   postTopicText: {
     color: colors.primary,
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   postTime: {
     color: colors.textSoft,
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   postThumbnail: {
-    width: 48,
-    height: 40,
+    width: 64,
+    height: 64,
     marginTop: 7,
     borderRadius: 12,
-    backgroundColor: "#edf6fc",
+    backgroundColor: "#F2F6FF",
   },
   expandHint: {
     overflow: "hidden",
@@ -862,34 +893,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: "#edf6fc",
+    backgroundColor: "#F2F6FF",
     color: colors.primary,
     fontSize: 10,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   postTitle: {
     marginTop: 10,
     color: colors.text,
     fontSize: 17,
-    fontWeight: "900",
+    fontWeight: "700",
     lineHeight: 23,
   },
   postMeta: {
     marginTop: 6,
     color: colors.primary,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   postDetail: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "#e2f0f7",
+    borderTopColor: "#E9ECF1",
   },
   postBody: {
     color: colors.textMuted,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "600",
     lineHeight: 20,
   },
   deleteButton: {
@@ -905,32 +936,32 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     color: "#e11d48",
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   postDetailImage: {
     width: "100%",
     height: 150,
     marginTop: 12,
     borderRadius: 18,
-    backgroundColor: "#edf6fc",
+    backgroundColor: "#F2F6FF",
   },
   commentBlock: {
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "#e2f0f7",
+    borderTopColor: "#E9ECF1",
   },
   commentTitle: {
     marginBottom: 8,
     color: colors.ink,
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   commentItem: {
     marginBottom: 8,
     padding: 10,
     borderRadius: 16,
-    backgroundColor: "#f7fbfe",
+    backgroundColor: "#F7F8FA",
   },
   commentHeader: {
     flexDirection: "row",
@@ -941,7 +972,7 @@ const styles = StyleSheet.create({
   commentAuthor: {
     color: colors.primaryDark,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   commentAuthorOwner: {
     color: colors.orange,
@@ -949,20 +980,20 @@ const styles = StyleSheet.create({
   commentTime: {
     color: colors.textSoft,
     fontSize: 10,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   commentBody: {
     marginTop: 5,
     color: colors.text,
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "600",
     lineHeight: 19,
   },
   commentEmpty: {
     marginBottom: 8,
     color: colors.textSoft,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   commentComposer: {
     flexDirection: "row",
@@ -977,10 +1008,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#d7edf7",
+    borderColor: "#E9ECF1",
     color: colors.text,
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   commentButton: {
     alignItems: "center",
@@ -993,39 +1024,38 @@ const styles = StyleSheet.create({
   commentButtonText: {
     color: "#ffffff",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   writeDock: {
     position: "absolute",
-    left: 14,
-    right: 14,
-    bottom: 14,
+    right: 24,
+    bottom: 88,
     zIndex: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
     padding: 13,
-    borderRadius: 28,
-    backgroundColor: "rgba(255, 255, 255, 0.96)",
+    borderRadius: 14,
+    backgroundColor: colors.primary,
     borderWidth: 1,
-    borderColor: "#cdeaf7",
+    borderColor: "#E9ECF1",
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.04,
     shadowRadius: 24,
     elevation: 8,
   },
   writeDockEyebrow: {
     color: colors.primary,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   writeDockTitle: {
     marginTop: 3,
     color: colors.text,
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   writeDockAction: {
     overflow: "hidden",
@@ -1035,7 +1065,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     color: "#ffffff",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   writerSheet: {
     position: "absolute",
@@ -1045,13 +1075,13 @@ const styles = StyleSheet.create({
     zIndex: 20,
     paddingHorizontal: 16,
     paddingBottom: 16,
-    borderRadius: 28,
+    borderRadius: 14,
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#cdeaf7",
+    borderColor: "#E9ECF1",
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.24,
+    shadowOpacity: 0.04,
     shadowRadius: 28,
     elevation: 10,
   },
@@ -1084,23 +1114,23 @@ const styles = StyleSheet.create({
   writerEyebrow: {
     color: colors.primary,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   writerTitle: {
     marginTop: 4,
     color: colors.text,
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   writerClose: {
     width: 30,
     height: 30,
     overflow: "hidden",
     borderRadius: 15,
-    backgroundColor: "#edf6fc",
+    backgroundColor: "#F2F6FF",
     color: colors.textMuted,
     fontSize: 22,
-    fontWeight: "900",
+    fontWeight: "700",
     lineHeight: 29,
     textAlign: "center",
   },
@@ -1109,19 +1139,19 @@ const styles = StyleSheet.create({
     marginBottom: 7,
     color: colors.text,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   writerInput: {
     minHeight: 45,
     paddingHorizontal: 13,
     paddingVertical: 10,
     borderRadius: 16,
-    backgroundColor: "#f7fbfe",
+    backgroundColor: "#F7F8FA",
     borderWidth: 1,
-    borderColor: "#d7edf7",
+    borderColor: "#E9ECF1",
     color: colors.text,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   writerTextArea: {
     minHeight: 92,
@@ -1131,9 +1161,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
     padding: 12,
     borderRadius: 18,
-    backgroundColor: "#f7fbfe",
+    backgroundColor: "#F7F8FA",
     borderWidth: 1,
-    borderColor: "#d7edf7",
+    borderColor: "#E9ECF1",
   },
   ratingHeader: {
     flexDirection: "row",
@@ -1145,12 +1175,12 @@ const styles = StyleSheet.create({
   ratingTitle: {
     color: colors.text,
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   ratingGuide: {
     color: colors.textSoft,
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   ratingRow: {
     flexDirection: "row",
@@ -1161,7 +1191,7 @@ const styles = StyleSheet.create({
   ratingLabel: {
     color: colors.text,
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   ratingStepper: {
     flexDirection: "row",
@@ -1182,7 +1212,7 @@ const styles = StyleSheet.create({
   ratingButtonText: {
     color: "#ffffff",
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
     lineHeight: 20,
   },
   ratingValue: {
@@ -1190,7 +1220,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: colors.ink,
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   imageAttachRow: {
     flexDirection: "row",
@@ -1204,20 +1234,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minHeight: 42,
     borderRadius: 16,
-    backgroundColor: "#edf6fc",
+    backgroundColor: "#F2F6FF",
     borderWidth: 1,
-    borderColor: "#d7edf7",
+    borderColor: "#E9ECF1",
   },
   sampleImageButtonText: {
     color: colors.primary,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   writerThumbnail: {
     width: 52,
     height: 42,
     borderRadius: 13,
-    backgroundColor: "#edf6fc",
+    backgroundColor: "#F2F6FF",
   },
   submitButton: {
     alignItems: "center",
@@ -1232,6 +1262,6 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: "#ffffff",
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "700",
   },
 });

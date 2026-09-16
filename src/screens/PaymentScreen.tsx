@@ -65,13 +65,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     color: colors.text,
     fontSize: 26,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   sectionTitle: {
     marginTop: 14,
     color: colors.text,
     fontSize: 18,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   item: {
     padding: 16,
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
   itemName: {
     color: colors.text,
     fontSize: 17,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   itemMeta: {
     marginTop: 6,
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
   itemPrice: {
     marginTop: 8,
     color: colors.primary,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   method: {
     padding: 15,
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   },
   methodText: {
     color: colors.text,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   payButton: {
     alignItems: "center",
@@ -117,6 +117,6 @@ const styles = StyleSheet.create({
   },
   payButtonText: {
     color: "#ffffff",
-    fontWeight: "900",
+    fontWeight: "700",
   },
 });

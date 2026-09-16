@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#cdeaf7",
+    borderColor: "#E9ECF1",
   },
   heroTop: {
     flexDirection: "row",
@@ -198,20 +198,20 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: colors.primary,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   title: {
     marginTop: 8,
     color: colors.text,
     fontSize: 24,
-    fontWeight: "900",
+    fontWeight: "700",
     lineHeight: 30,
   },
   description: {
     marginTop: 6,
     color: colors.textMuted,
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "600",
     lineHeight: 19,
   },
   progressPill: {
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   progressText: {
     color: colors.primaryDark,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   pathBox: {
     marginBottom: 14,
@@ -236,12 +236,12 @@ const styles = StyleSheet.create({
   pathLabel: {
     color: colors.primaryDark,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   pathText: {
     marginTop: 5,
     color: colors.text,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   treeWrap: {
     gap: 12,
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   },
   stepNumberText: {
     color: "#ffffff",
-    fontWeight: "900",
+    fontWeight: "700",
   },
   stepCopy: {
     flex: 1,
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   stepTitle: {
     color: colors.text,
     fontSize: 18,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   stepSubtitle: {
     marginTop: 3,
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
   },
   optionText: {
     color: colors.text,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   optionTextActive: {
     color: "#ffffff",
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
   },
   lightButtonText: {
     color: colors.primary,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   resultCard: {
     overflow: "hidden",
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: colors.text,
     fontSize: 18,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   resultImage: {
     width: "100%",
@@ -356,18 +356,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceWarm,
     color: colors.primary,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   resultName: {
     marginTop: 12,
     color: colors.text,
     fontSize: 25,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   restaurant: {
     marginTop: 6,
     color: colors.primary,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   resultDescription: {
     marginTop: 10,
@@ -388,18 +388,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8efe6",
     color: "#7c4b3b",
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   price: {
     marginTop: 12,
     color: colors.text,
     fontSize: 20,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   cta: {
     marginTop: 12,
     color: colors.primary,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   alternativeWrap: {
     marginTop: 14,
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: colors.text,
     fontSize: 16,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   alternativeItem: {
     flexDirection: "row",
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
   },
   alternativeName: {
     color: colors.text,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   alternativeMeta: {
     marginTop: 3,
@@ -444,6 +444,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceWarm,
     color: colors.primary,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "600",
   },
 });

@@ -1,9 +1,12 @@
 import React from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Icon } from "../components/AppUI";
+import { Pressable, StyleSheet, View } from "react-native";
 import { CommonActions } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import type { NativeStackNavigationOptions, NativeStackNavigationProp } from "@react-navigation/native-stack";
-import type { ImageStyle } from "react-native";
+import type {
+  NativeStackNavigationOptions,
+  NativeStackNavigationProp,
+} from "@react-navigation/native-stack";
 import AuthScreen from "../screens/AuthScreen";
 import CartScreen from "../screens/CartScreen";
 import CampusMapScreen from "../screens/CampusMapScreen";
@@ -22,7 +25,6 @@ import { useAuth } from "../store/AuthContext";
 import { colors } from "../theme/colors";
 import { APP_FONT_FAMILY } from "../theme/typography";
 import type { RootStackParamList } from "../types/app";
-import { tukSymbolSource } from "../utils/staticAssets";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 type AppNavigation = NativeStackNavigationProp<RootStackParamList>;
@@ -35,7 +37,10 @@ const headerTitleStyle: NativeStackNavigationOptions["headerTitleStyle"] = {
   fontWeight: "700",
 };
 
-function goBackOrFallback(navigation: AppNavigation, fallbackRoute: RouteName = "RestaurantList") {
+function goBackOrFallback(
+  navigation: AppNavigation,
+  fallbackRoute: RouteName = "RestaurantList",
+) {
   if (navigation.canGoBack()) {
     navigation.goBack();
     return;
@@ -61,38 +66,15 @@ function BackHeaderButton({
   return (
     <Pressable
       hitSlop={8}
-      style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [
+        styles.backButton,
+        pressed && styles.backButtonPressed,
+      ]}
       onPress={() => goBackOrFallback(navigation, fallbackRoute)}
     >
-      <View style={styles.backIconCircle}>
-        <View style={styles.backChevron} />
-      </View>
-      <Text style={styles.backButtonText}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function HomeHeaderTitle() {
-  return (
-    <View style={styles.homeLogo}>
-      <View style={styles.homeLogoMark}>
-        <Image source={tukSymbolSource} style={styles.homeLogoImage as ImageStyle} />
-      </View>
-      <View>
-        <Text style={styles.homeLogoName}>대학교 밥먹자</Text>
-        <Text style={styles.homeLogoSub}>campus meal order</Text>
-      </View>
-    </View>
-  );
-}
-
-function AccountHeaderButton({ navigation }: { navigation: AppNavigation }) {
-  const { user, isLoading } = useAuth();
-  const label = isLoading ? "..." : user?.nickname ?? "로그인";
-
-  return (
-    <Pressable style={({ pressed }) => [styles.accountButton, pressed && styles.backButtonPressed]} onPress={() => navigation.navigate("Auth")}>
-      <Text style={styles.accountButtonText}>{label}</Text>
+      <Icon name="chevron-back" size={23} />
     </Pressable>
   );
 }
@@ -110,7 +92,13 @@ function pushOptions(
     customAnimationOnGesture: true,
     fullScreenGestureEnabled: true,
     gestureEnabled: true,
-    headerLeft: () => <BackHeaderButton navigation={navigation} label={label} fallbackRoute={fallbackRoute} />,
+    headerLeft: () => (
+      <BackHeaderButton
+        navigation={navigation}
+        label={label}
+        fallbackRoute={fallbackRoute}
+      />
+    ),
     headerShadowVisible: false,
     headerStyle: { backgroundColor: colors.background },
     headerTitleStyle,
@@ -144,11 +132,7 @@ export default function AppNavigator() {
       <Stack.Screen
         name="RestaurantList"
         component={RestaurantListScreen}
-        options={({ navigation }) => ({
-          headerTitle: () => <HomeHeaderTitle />,
-          headerTitleAlign: "left",
-          headerRight: () => <AccountHeaderButton navigation={navigation} />,
-        })}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="Community"
@@ -158,7 +142,9 @@ export default function AppNavigator() {
       <Stack.Screen
         name="CommunityPostDetail"
         component={CommunityPostDetailScreen}
-        options={({ navigation }) => pushOptions(navigation, "게시글", "커뮤니티", "Community")}
+        options={({ navigation }) =>
+          pushOptions(navigation, "게시글", "커뮤니티", "Community")
+        }
       />
       <Stack.Screen
         name="Recommendation"
@@ -168,12 +154,16 @@ export default function AppNavigator() {
       <Stack.Screen
         name="RestaurantDetail"
         component={RestaurantDetailScreen}
-        options={({ navigation }) => pushOptions(navigation, "식당 상세", "식당")}
+        options={({ navigation }) =>
+          pushOptions(navigation, "식당 상세", "식당")
+        }
       />
       <Stack.Screen
         name="MenuDetail"
         component={MenuDetailScreen}
-        options={({ navigation }) => pushOptions(navigation, "메뉴 상세", "메뉴")}
+        options={({ navigation }) =>
+          pushOptions(navigation, "메뉴 상세", "메뉴")
+        }
       />
       <Stack.Screen
         name="CampusMap"
@@ -186,12 +176,16 @@ export default function AppNavigator() {
       <Stack.Screen
         name="MealMate"
         component={MealMateScreen}
-        options={({ navigation }) => pushOptions(navigation, "나랑 밥먹자", "커뮤니티", "Community")}
+        options={({ navigation }) =>
+          pushOptions(navigation, "나랑 밥먹자", "커뮤니티", "Community")
+        }
       />
       <Stack.Screen
         name="MealMateChat"
         component={MealMateChatScreen}
-        options={({ navigation }) => pushOptions(navigation, "익명 채팅", "모임", "MealMate")}
+        options={({ navigation }) =>
+          pushOptions(navigation, "익명 채팅", "모임", "MealMate")
+        }
       />
       <Stack.Screen
         name="Auth"
@@ -205,8 +199,18 @@ export default function AppNavigator() {
         component={NotificationsScreen}
         options={({ navigation }) => pushOptions(navigation, "알림", "홈")}
       />
-      <Stack.Screen name="Cart" component={CartScreen} options={({ navigation }) => pushOptions(navigation, "장바구니")} />
-      <Stack.Screen name="Payment" component={PaymentScreen} options={({ navigation }) => pushOptions(navigation, "결제", "장바구니", "Cart")} />
+      <Stack.Screen
+        name="Cart"
+        component={CartScreen}
+        options={({ navigation }) => pushOptions(navigation, "장바구니")}
+      />
+      <Stack.Screen
+        name="Payment"
+        component={PaymentScreen}
+        options={({ navigation }) =>
+          pushOptions(navigation, "결제", "장바구니", "Cart")
+        }
+      />
       <Stack.Screen
         name="OrderComplete"
         component={OrderCompleteScreen}
@@ -221,98 +225,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  homeLogo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  homeLogoMark: {
-    width: 30,
-    height: 30,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 15,
-    backgroundColor: "transparent",
-  },
-  homeLogoImage: {
-    width: 29,
-    height: 29,
-    resizeMode: "contain",
-  },
-  homeLogoName: {
-    color: colors.ink,
-    fontFamily: APP_FONT_FAMILY,
-    fontSize: 15,
-    fontWeight: "900",
-    lineHeight: 18,
-  },
-  homeLogoSub: {
-    marginTop: 1,
-    color: colors.textSoft,
-    fontFamily: APP_FONT_FAMILY,
-    fontSize: 8,
-    fontWeight: "800",
-    lineHeight: 10,
-    textTransform: "uppercase",
-  },
   backButton: {
     flexDirection: "row",
     alignItems: "center",
-    minHeight: 38,
+    minHeight: 44,
     paddingLeft: 6,
     paddingRight: 14,
     borderRadius: 999,
     backgroundColor: "rgba(255, 255, 255, 0.94)",
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: "#b3dff2",
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 7 },
-    shadowOpacity: 0.16,
+    shadowOpacity: 0,
     shadowRadius: 14,
-    elevation: 3,
+    elevation: 0,
   },
   backButtonPressed: {
     opacity: 0.72,
     transform: [{ scale: 0.98 }],
-  },
-  backIconCircle: {
-    width: 28,
-    height: 28,
-    marginRight: 6,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 14,
-    backgroundColor: "#f0fbff",
-    borderWidth: 1,
-    borderColor: "#caedf8",
-  },
-  backChevron: {
-    width: 9,
-    height: 9,
-    borderLeftWidth: 3,
-    borderBottomWidth: 3,
-    borderColor: colors.primary,
-    borderRadius: 1.5,
-    transform: [{ rotate: "45deg" }, { translateX: 1 }],
-  },
-  backButtonText: {
-    color: colors.primaryDark,
-    fontFamily: APP_FONT_FAMILY,
-    fontSize: 14,
-    fontWeight: "900",
-    lineHeight: 18,
-  },
-  accountButton: {
-    minHeight: 34,
-    justifyContent: "center",
-    paddingHorizontal: 13,
-    borderRadius: 999,
-    backgroundColor: colors.primary,
-  },
-  accountButtonText: {
-    color: "#ffffff",
-    fontFamily: APP_FONT_FAMILY,
-    fontSize: 12,
-    fontWeight: "900",
   },
 });

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Platform, Text, TextInput, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { useFonts } from "expo-font";
+import { Asset } from "expo-asset";
 import { StatusBar } from "expo-status-bar";
 import StartupSplash from "./src/components/StartupSplash";
 import AppNavigator from "./src/navigation/AppNavigator";
@@ -10,9 +11,24 @@ import { CartProvider } from "./src/store/CartContext";
 import { FavoriteProvider } from "./src/store/FavoriteContext";
 import { NotificationProvider } from "./src/store/NotificationContext";
 import { colors } from "./src/theme/colors";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { roundedTextStyle } from "./src/theme/typography";
 
-const webBaseUrl = typeof window === "undefined" ? "" : new URL("./", window.location.href).href;
+const webBaseUrl =
+  typeof window === "undefined" ? "" : new URL("./", window.location.href).href;
+
+function hostedFont(source: number) {
+  if (Platform.OS !== "web" || __DEV__ || !webBaseUrl) return source;
+  // Expo SDK 51 resolves fonts from the origin; static hosts use a nested path.
+  const { uri } = Asset.fromModule(source);
+  return new URL(uri.replace(/^\/assets\//, "assets/"), webBaseUrl).href;
+}
+
+const appFonts = {
+  GabiaSolmee: hostedFont(require("./assets/fonts/gabia_solmee.ttf")),
+  ionicons: hostedFont(Ionicons.font.ionicons),
+};
 
 const linking = {
   prefixes: ["babmukja://", webBaseUrl].filter(Boolean),
@@ -40,7 +56,10 @@ const navigationLinking = Platform.OS === "web" ? undefined : linking;
 
 function applyDefaultFont(Component: any) {
   Component.defaultProps = Component.defaultProps || {};
-  Component.defaultProps.style = [Component.defaultProps.style, roundedTextStyle];
+  Component.defaultProps.style = [
+    Component.defaultProps.style,
+    roundedTextStyle,
+  ];
 }
 
 applyDefaultFont(Text);
@@ -48,9 +67,7 @@ applyDefaultFont(TextInput);
 
 export default function App() {
   const [showStartupSplash, setShowStartupSplash] = useState(true);
-  const [fontsLoaded] = useFonts({
-    GabiaSolmee: require("./assets/fonts/gabia_solmee.ttf"),
-  });
+  const [fontsLoaded, fontError] = useFonts(appFonts);
 
   const hideStartupSplash = useCallback(() => {
     setShowStartupSplash(false);
@@ -72,9 +89,9 @@ export default function App() {
       body,
       input,
       textarea,
-      button,
-      [class*="css-text"] {
-        font-family: "GabiaSolmee", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif !important;
+      button {
+        font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+        -webkit-font-smoothing: antialiased;
       }
       input,
       textarea {
@@ -85,29 +102,50 @@ export default function App() {
       #root {
         overscroll-behavior-x: contain;
       }
+      * { box-sizing: border-box; }
+      :focus-visible { outline: 2px solid #2463EB; outline-offset: 3px; }
     `;
     document.head.appendChild(style);
   }, []);
 
-  if (!fontsLoaded && Platform.OS !== "web") {
+  if (!fontsLoaded && !fontError) {
     return <View style={{ flex: 1, backgroundColor: colors.background }} />;
   }
 
   return (
-    <NotificationProvider>
-      <FavoriteProvider>
-        <CartProvider>
-          <AuthProvider>
-            <View style={{ flex: 1 }}>
-              <NavigationContainer linking={navigationLinking}>
-                <StatusBar style="dark" />
-                <AppNavigator />
-              </NavigationContainer>
-              {showStartupSplash ? <StartupSplash onDone={hideStartupSplash} /> : null}
-            </View>
-          </AuthProvider>
-        </CartProvider>
-      </FavoriteProvider>
-    </NotificationProvider>
+    <SafeAreaProvider>
+      <NotificationProvider>
+        <FavoriteProvider>
+          <CartProvider>
+            <AuthProvider>
+              <View
+                style={{
+                  flex: 1,
+                  backgroundColor: "#EDF0F4",
+                  alignItems: "center",
+                }}
+              >
+                <View
+                  style={{
+                    flex: 1,
+                    width: "100%",
+                    maxWidth: 560,
+                    backgroundColor: colors.background,
+                  }}
+                >
+                  <NavigationContainer linking={navigationLinking}>
+                    <StatusBar style="dark" />
+                    <AppNavigator />
+                  </NavigationContainer>
+                  {showStartupSplash ? (
+                    <StartupSplash onDone={hideStartupSplash} />
+                  ) : null}
+                </View>
+              </View>
+            </AuthProvider>
+          </CartProvider>
+        </FavoriteProvider>
+      </NotificationProvider>
+    </SafeAreaProvider>
   );
 }

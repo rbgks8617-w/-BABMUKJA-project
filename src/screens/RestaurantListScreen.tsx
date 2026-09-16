@@ -1,12 +1,36 @@
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  FlatList,
+  Image,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  BottomNav,
+  Icon,
+  IconButton,
+  SectionHeading,
+  type IconName,
+} from "../components/AppUI";
 import CachedRemoteImage from "../components/CachedRemoteImage";
 import FavoriteHeartButton from "../components/FavoriteHeartButton";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import {
   getBuildingCards,
   getCrowdPicks,
-  getCrowdStatus,
   getMenuById,
   getMenusByCategory,
   getPopularMenus,
@@ -19,1342 +43,877 @@ import { useCart } from "../store/CartContext";
 import { useFavorites } from "../store/FavoriteContext";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
-import type { AppScreenProps, CongestionLevel, SearchResult } from "../types/app";
+import { BRAND_FONT_FAMILY } from "../theme/typography";
+import type { AppScreenProps } from "../types/app";
 import { formatPrice } from "../utils/formatPrice";
-import { lunchboxRecommendationSource } from "../utils/staticAssets";
+import {
+  lunchboxRecommendationSource,
+  tukSymbolSource,
+} from "../utils/staticAssets";
 
-const categoryTabs = ["즐겨찾기", "전체", "한식", "중식", "분식", "양식", "카페", "가성비", "혼밥"];
+const categories = [
+  "전체",
+  "한식",
+  "중식",
+  "분식",
+  "양식",
+  "카페",
+  "가성비",
+  "혼밥",
+];
+const shortcuts: {
+  title: string;
+  icon: IconName;
+  color: string;
+  background: string;
+  target: "CampusMap" | "Recommendation" | "MealMate" | "Community";
+}[] = [
+  {
+    title: "학교 식당",
+    icon: "restaurant-outline",
+    color: "#2864D9",
+    background: "#EDF3FF",
+    target: "CampusMap",
+  },
+  {
+    title: "메뉴 추천",
+    icon: "sparkles-outline",
+    color: "#BD7911",
+    background: "#FFF6D9",
+    target: "Recommendation",
+  },
+  {
+    title: "나랑 밥먹자",
+    icon: "people-outline",
+    color: "#229379",
+    background: "#EAF7F0",
+    target: "MealMate",
+  },
+  {
+    title: "음식 후기",
+    icon: "chatbubble-ellipses-outline",
+    color: "#D26A68",
+    background: "#FFF0EC",
+    target: "Community",
+  },
+];
 
-const congestionTone: Record<CongestionLevel, { level: number; color: string }> = {
-  원활: { level: 1, color: "#16a872" },
-  보통: { level: 2, color: "#f4a21a" },
-  혼잡: { level: 3, color: "#eb4b26" },
-  "매우 혼잡": { level: 4, color: "#d9261c" },
-};
-
-function getCrowdPillStyle(status: CongestionLevel) {
-  if (status === "매우 혼잡") {
-    return styles.crowdPillVeryBusy;
-  }
-
-  if (status === "혼잡") {
-    return styles.crowdPillBusy;
-  }
-
-  if (status === "보통") {
-    return styles.crowdPillNormal;
-  }
-
-  return styles.crowdPillSmooth;
-}
-
+// Sample values until the campus provides a live crowd data source.
 const CrowdPanel = memo(function CrowdPanel({
-  crowdPicks,
-  onOpenRestaurant,
+  onOpen,
 }: {
-  crowdPicks: ReturnType<typeof getCrowdPicks>;
-  onOpenRestaurant: (restaurantId: string) => void;
+  onOpen: (id: string) => void;
 }) {
-  const [liveTick, setLiveTick] = useState(0);
-  const liveMotion = useRef(new Animated.Value(1)).current;
-  const liveTranslateY = liveMotion.interpolate({
-    inputRange: [0, 1],
-    outputRange: [12, 0],
-  });
-
-  useEffect(() => {
-    const refreshLiveData = () => {
-      Animated.timing(liveMotion, {
-        toValue: 0,
-        duration: 420,
-        useNativeDriver: true,
-      }).start(() => {
-        setLiveTick((currentTick) => currentTick + 1);
-        Animated.timing(liveMotion, {
-          toValue: 1,
-          duration: 660,
-          useNativeDriver: true,
-        }).start();
-      });
-    };
-
-    const timerId = setInterval(refreshLiveData, 10000);
-    return () => clearInterval(timerId);
-  }, [liveMotion]);
-
-  const liveCrowdPicks = useMemo(
-    () =>
-      crowdPicks.map((item, index) => {
-        const recentUsers = Math.max(1, item.recentUsers + ((liveTick + index * 4) % 7) - 2);
-        return {
-          ...item,
-          recentUsers,
-          status: getCrowdStatus(recentUsers),
-        };
-      }),
-    [crowdPicks, liveTick],
-  );
-
+  const picks = useMemo(getCrowdPicks, []);
   return (
-    <Animated.View style={[styles.topCrowdCard, { opacity: liveMotion, transform: [{ translateY: liveTranslateY }] }]}>
-      <Text style={styles.topCrowdTitle}>최근 10분 혼잡도</Text>
-      <View style={styles.compactCrowdList}>
-        {liveCrowdPicks.map((item) => {
-          const tone = congestionTone[item.status];
-
+    <View style={s.crowd}>
+      <View style={s.crowdHeading}>
+        <View style={s.row}>
+          <Icon name="pulse" size={16} color={colors.success} />
+          <Text style={s.smallHeading}>지금 식당은</Text>
+        </View>
+        <Text style={s.sample}>혼잡도 예시</Text>
+      </View>
+      <View style={s.row}>
+        {picks.map((pick, index) => {
+          const color =
+            pick.status === "원활"
+              ? "#229379"
+              : pick.status === "보통"
+                ? "#B78226"
+                : "#DB625C";
           return (
             <Pressable
-              key={item.restaurant.id}
-              style={styles.compactCrowdItem}
-              onPress={() => onOpenRestaurant(item.restaurant.id)}
+              key={pick.restaurantId}
+              accessibilityRole="button"
+              onPress={() => onOpen(pick.restaurantId)}
+              style={[s.crowdItem, index > 0 && s.crowdDivider]}
             >
-              <View style={styles.compactCrowdTop}>
-                <Text style={styles.compactCrowdName} numberOfLines={1}>{item.restaurant.name}</Text>
-                <Text style={[styles.compactCrowdPill, getCrowdPillStyle(item.status)]}>{item.status}</Text>
-              </View>
-              <View style={styles.compactCrowdMeter} accessibilityLabel={`${item.status} 혼잡도`}>
-                {[1, 2, 3, 4].map((step) => (
-                  <View
-                    key={`${item.restaurant.id}-${step}`}
-                    style={[
-                      styles.compactCrowdSegment,
-                      step <= tone.level && {
-                        backgroundColor: tone.color,
-                        opacity: step === tone.level ? 1 : 0.9,
-                      },
-                    ]}
-                  />
-                ))}
+              <Text numberOfLines={1} style={s.crowdName}>
+                {pick.restaurant.name}
+              </Text>
+              <View style={s.crowdStatus}>
+                <View style={[s.dot, { backgroundColor: color }]} />
+                <Text style={[s.crowdText, { color }]}>{pick.status}</Text>
               </View>
             </Pressable>
           );
         })}
       </View>
-    </Animated.View>
+    </View>
   );
 });
-export default function RestaurantListScreen({ navigation }: AppScreenProps<"RestaurantList">) {
-  const { width } = useWindowDimensions();
-  const todayCafeteria = getTodayCafeteria();
-  const popularMenus = getPopularMenus();
-  const restaurantCount = getRestaurantCount();
-  const crowdPicks = useMemo(() => getCrowdPicks(), []);
-  const buildingCards = useMemo(() => getBuildingCards(), []);
-  const { totalQuantity } = useCart();
-  const { favoriteMenuIds, isFavoriteMenu, toggleFavoriteMenu } = useFavorites();
-  const { unreadCount } = useNotifications();
-  const isWideLayout = width >= 980;
-  const carouselCardWidth = Math.min(width - 48, 300);
-  const [activeCategory, setActiveCategory] = useState("전체");
-  const [searchQuery, setSearchQuery] = useState("");
-  const debouncedSearchQuery = useDebouncedValue(searchQuery, 250);
 
-  const todayImage = getRestaurantById(todayCafeteria.restaurantId)?.imageUrl ?? buildingCards[0]?.imageUrl;
+export default function RestaurantListScreen({
+  navigation,
+  route,
+}: AppScreenProps<"RestaurantList">) {
+  const insets = useSafeAreaInsets();
+  const scroll = useRef<ScrollView>(null);
+  const [activeCategory, setActiveCategory] = useState(
+    route.params?.category ?? "전체",
+  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedQuery = useDebouncedValue(searchQuery, 250);
+  const { totalQuantity } = useCart();
+  const { favoriteMenuIds, isFavoriteMenu, toggleFavoriteMenu } =
+    useFavorites();
+  const { unreadCount } = useNotifications();
+  const today = getTodayCafeteria();
+  const buildings = useMemo(getBuildingCards, []);
+  const popular = useMemo(getPopularMenus, []);
+  const favorites = activeCategory === "즐겨찾기";
+  const searching = searchQuery.trim().length > 0;
   const favoriteMenus = useMemo(
     () =>
       favoriteMenuIds
-        .map((menuId) => getMenuById(menuId))
-        .filter((menu): menu is NonNullable<ReturnType<typeof getMenuById>> => Boolean(menu))
+        .map(getMenuById)
+        .filter((item): item is NonNullable<typeof item> => Boolean(item))
         .map((menu) => ({
           ...menu,
           restaurant: getRestaurantById(menu.restaurantId),
         })),
     [favoriteMenuIds],
   );
-  const categoryMenus = useMemo(
-    () => (activeCategory === "즐겨찾기" ? favoriteMenus : getMenusByCategory(activeCategory)),
-    [activeCategory, favoriteMenus],
+  const menuItems = useMemo(
+    () => (favorites ? favoriteMenus : getMenusByCategory(activeCategory)),
+    [activeCategory, favorites, favoriteMenus],
   );
-  const searchResults = useMemo(() => searchCampusFood(debouncedSearchQuery), [debouncedSearchQuery]);
-  const trimmedSearchQuery = searchQuery.trim();
-  const isFavoriteCategory = activeCategory === "즐겨찾기";
-
-  const openRestaurantDetail = useCallback(
-    (restaurantId: string) => navigation.navigate("RestaurantDetail", { restaurantId }),
+  const results = useMemo(
+    () => searchCampusFood(debouncedQuery),
+    [debouncedQuery],
+  );
+  const openRestaurant = useCallback(
+    (restaurantId: string) =>
+      navigation.navigate("RestaurantDetail", { restaurantId }),
     [navigation],
   );
 
-  function openSearchResult(result: SearchResult) {
-    if (result.type === "menu") {
-      navigation.navigate("MenuDetail", { menuId: result.targetId });
-      return;
+  useEffect(() => {
+    if (route.params?.category) {
+      setActiveCategory(route.params.category);
+      setSearchQuery("");
+      scroll.current?.scrollTo({ y: 0, animated: true });
     }
+  }, [route.params]);
 
-    openRestaurantDetail(result.targetId);
+  function showFavorites() {
+    setActiveCategory("즐겨찾기");
+    setSearchQuery("");
+    scroll.current?.scrollTo({ y: 0, animated: true });
   }
-
-  function toggleMenuFavorite(menuId: string) {
-    toggleFavoriteMenu(menuId);
-  }
-
-  const crowdPanel = <CrowdPanel crowdPicks={crowdPicks} onOpenRestaurant={openRestaurantDetail} />;
-
-  const infoRail = (
-    <View style={[styles.infoRail, isWideLayout && styles.infoRailDesktop]}>
-      <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>인기 메뉴</Text>
-        {popularMenus.map((item) => (
-          <Pressable
-            key={item.menu.id}
-            style={styles.menuRankRow}
-            onPress={() => navigation.navigate("MenuDetail", { menuId: item.menu.id })}
-          >
-            <Text style={styles.rankNumber}>{item.rank}</Text>
-            <View style={styles.menuRankCopy}>
-              <Text style={styles.menuRankName} numberOfLines={1}>{item.menu.name}</Text>
-              <Text style={styles.menuRankMeta} numberOfLines={1}>{item.restaurant.name}</Text>
-            </View>
-          </Pressable>
-        ))}
-      </View>
-    </View>
-  );
-
-  const restaurantSection = (
-    <View style={styles.mainColumn}>
-      <View style={styles.sectionHeader}>
-        <View>
-          <Text style={styles.sectionTitle}>학교 식당</Text>
-          <Text style={styles.sectionDescription}>건물 3곳 · 식당 {restaurantCount}곳</Text>
-        </View>
-      </View>
-
-      <FlatList
-        horizontal
-        data={buildingCards}
-        keyExtractor={(building) => building.id}
-        showsHorizontalScrollIndicator={false}
-        snapToInterval={carouselCardWidth + 14}
-        decelerationRate="fast"
-        contentContainerStyle={styles.restaurantCarousel}
-        initialNumToRender={3}
-        maxToRenderPerBatch={3}
-        windowSize={3}
-        removeClippedSubviews
-        renderItem={({ item: building }) => (
-          <Pressable
-            style={({ pressed }) => [
-              styles.restaurantSlide,
-              pressed && styles.restaurantSlidePressed,
-              { width: carouselCardWidth },
-            ]}
-            onPress={() => navigation.navigate("CampusMap", { buildingId: building.id })}
-          >
-            <View style={styles.slideImage}>
-              {building.imageUrl ? <CachedRemoteImage uri={building.imageUrl} style={styles.slideImageFill} /> : null}
-              <View style={styles.slideOverlay} />
-              <View style={styles.slideTop}>
-                <Text style={styles.slideRank}>{building.index}</Text>
-              </View>
-            </View>
-            <View style={styles.slideBody}>
-              <Text numberOfLines={1} style={styles.slideTitle}>{building.displayName} 식당</Text>
-              <Text style={styles.slideMenu} numberOfLines={1}>
-                {building.menuPreview}
-              </Text>
-              <View style={styles.slideMetaRow}>
-                <Text style={styles.slideMeta}>{building.walkText}</Text>
-                <Text style={styles.slideCrowd}>{building.crowdText}</Text>
-              </View>
-            </View>
-          </Pressable>
-        )}
-      />
-    </View>
-  );
 
   return (
-    <View style={styles.screen}>
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={[styles.container, isWideLayout && styles.containerWide]}
-      >
-        {crowdPanel}
-
-        <View style={styles.header}>
-          <View style={styles.heroRow}>
-            <View style={styles.headerCopy}>
-              <Text style={styles.eyebrow}>한국공학대학교</Text>
-              <Text style={styles.title}>오늘 뭐 먹지?</Text>
-            </View>
-            <View style={styles.headerActions}>
-              <Pressable style={styles.alertButton} onPress={() => navigation.navigate("Notifications")}>
-                <Text style={styles.alertIcon}>알림</Text>
-                {unreadCount > 0 ? (
-                  <View style={styles.alertBadge}>
-                    <Text style={styles.alertBadgeText}>{unreadCount}</Text>
-                  </View>
-                ) : null}
-              </Pressable>
-              <Pressable style={styles.cartButton} onPress={() => navigation.navigate("Cart")}>
-                <Text style={styles.cartText}>장바구니 {totalQuantity}</Text>
-              </Pressable>
-            </View>
+    <View style={[s.screen, { paddingTop: insets.top }]}>
+      <View style={s.topbar}>
+        <View style={s.brand}>
+          <Image source={tukSymbolSource} style={s.symbol} />
+          <View>
+            <Text style={s.brandName}>대학교 밥먹자</Text>
+            <Text style={s.school}>한국공학대학교</Text>
           </View>
         </View>
-
-        <View style={styles.searchBar}>
+        <View style={s.row}>
+          <IconButton
+            name="notifications-outline"
+            label="알림"
+            badge={unreadCount}
+            onPress={() => navigation.navigate("Notifications")}
+          />
+          <IconButton
+            name="bag-handle-outline"
+            label="장바구니"
+            badge={totalQuantity}
+            onPress={() => navigation.navigate("Cart")}
+          />
+        </View>
+      </View>
+      <ScrollView
+        ref={scroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={s.content}
+      >
+        <View style={s.intro}>
+          {!favorites && (
+            <Text style={s.greeting}>공강 사이, 든든한 한 끼</Text>
+          )}
+          <Text style={s.title}>
+            {favorites ? (
+              "즐겨찾기"
+            ) : (
+              <>
+                오늘, 뭐 먹을까?<Text style={s.titleDot}>.</Text>
+              </>
+            )}
+          </Text>
+        </View>
+        <View style={s.search}>
+          <Icon name="search-outline" size={20} color={colors.textSoft} />
           <TextInput
+            accessibilityLabel="메뉴 또는 식당 검색"
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="메뉴, 식당, 음식 이름으로 검색해보세요"
+            placeholder="먹고 싶은 메뉴, 찾고 싶은 식당"
             placeholderTextColor={colors.textSoft}
             returnKeyType="search"
-            style={styles.searchInput}
+            style={s.searchInput}
           />
-          {trimmedSearchQuery ? (
-            <Pressable hitSlop={8} onPress={() => setSearchQuery("")}>
-              <Text style={styles.searchClear}>×</Text>
-            </Pressable>
-          ) : (
-            <Text style={styles.searchIcon}>⌕</Text>
+          {searching && (
+            <IconButton
+              name="close"
+              label="검색 지우기"
+              onPress={() => setSearchQuery("")}
+            />
           )}
         </View>
 
-        {trimmedSearchQuery ? (
-          <View style={styles.searchPanel}>
-            <View style={styles.searchPanelHeader}>
-              <Text style={styles.searchPanelTitle}>검색 결과</Text>
-              <Text style={styles.searchPanelCount}>{searchResults.length}개</Text>
-            </View>
-            {searchResults.length > 0 ? (
-              searchResults.map((result) => (
-                <Pressable key={result.id} style={styles.searchResultRow} onPress={() => openSearchResult(result)}>
-                  <CachedRemoteImage uri={result.imageUrl} style={styles.searchResultImage} />
-                  <View style={styles.searchResultCopy}>
-                    <Text numberOfLines={1} style={styles.searchResultTitle}>{result.title}</Text>
-                    <Text numberOfLines={1} style={styles.searchResultSubtitle}>{result.subtitle}</Text>
-                  </View>
-                  <Text style={styles.searchResultType}>{result.type === "menu" ? "메뉴" : "식당"}</Text>
-                </Pressable>
-              ))
-            ) : (
-              <View style={styles.searchEmpty}>
-                <Text style={styles.searchEmptyText}>검색 결과가 없어요</Text>
+        {searching ? (
+          <View style={s.section}>
+            <SectionHeading title={"검색 결과 " + results.length} />
+            {results.map((result) => (
+              <Pressable
+                key={result.id}
+                accessibilityRole="button"
+                style={s.searchResult}
+                onPress={() =>
+                  result.type === "menu"
+                    ? navigation.navigate("MenuDetail", {
+                        menuId: result.targetId,
+                      })
+                    : openRestaurant(result.targetId)
+                }
+              >
+                <CachedRemoteImage
+                  uri={result.imageUrl}
+                  style={s.resultImage}
+                />
+                <View style={s.flex}>
+                  <Text style={s.menuName}>{result.title}</Text>
+                  <Text style={s.meta}>{result.subtitle}</Text>
+                  {result.price !== undefined && (
+                    <Text style={s.price}>{formatPrice(result.price)}</Text>
+                  )}
+                </View>
+                <Icon
+                  name="chevron-forward"
+                  size={18}
+                  color={colors.textSoft}
+                />
+              </Pressable>
+            ))}
+            {results.length === 0 && (
+              <View style={s.empty}>
+                <Icon name="search-outline" size={30} color={colors.textSoft} />
+                <Text style={s.meta}>
+                  {searchQuery !== debouncedQuery
+                    ? "검색 중이에요"
+                    : "검색 결과가 없어요"}
+                </Text>
               </View>
             )}
           </View>
-        ) : null}
-
-        <FlatList
-          horizontal
-          data={categoryTabs}
-          keyExtractor={(tab) => tab}
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoryScroller}
-          contentContainerStyle={styles.categoryRow}
-          initialNumToRender={7}
-          maxToRenderPerBatch={7}
-          windowSize={3}
-          removeClippedSubviews
-          renderItem={({ item: tab }) => (
-            <Pressable
-              style={[styles.categoryChip, activeCategory === tab && styles.categoryChipActive]}
-              onPress={() => setActiveCategory(tab)}
-            >
-              <Text numberOfLines={1} style={[styles.categoryText, activeCategory === tab && styles.categoryTextActive]}>
-                {tab}
-              </Text>
-            </Pressable>
-          )}
-        />
-
-        <View style={styles.categoryMenuPanel}>
-          <View style={styles.categoryMenuHeader}>
-            <View>
-              {isFavoriteCategory ? (
-                <Text style={styles.categoryMenuTitle}>즐겨찾기</Text>
-              ) : (
-                <>
-                  <Text style={styles.categoryMenuEyebrow}>
-                    {activeCategory === "전체" ? "바로 고르기" : `${activeCategory} 메뉴`}
-                  </Text>
-                  <Text style={styles.categoryMenuTitle}>
-                    {activeCategory === "전체" ? "지금 먹기 좋은 메뉴" : `${activeCategory} 추천`}
-                  </Text>
-                </>
-              )}
-            </View>
-            <Text style={styles.categoryMenuCount}>{categoryMenus.length}개</Text>
-          </View>
-
-          {categoryMenus.length > 0 ? (
-            <FlatList
-              horizontal
-              data={categoryMenus}
-              keyExtractor={(menu) => menu.id}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryMenuList}
-              initialNumToRender={4}
-              maxToRenderPerBatch={4}
-              windowSize={5}
-              removeClippedSubviews
-              renderItem={({ item: menu }) => (
-                <Pressable
-                  style={({ pressed }) => [styles.categoryMenuCard, pressed && styles.categoryMenuCardPressed]}
-                  onPress={() => navigation.navigate("MenuDetail", { menuId: menu.id })}
-                >
-                  <View style={styles.categoryMenuImage}>
-                    <CachedRemoteImage uri={menu.imageUrl} style={styles.categoryMenuImageFill} />
-                    <View style={styles.categoryMenuImageDim} />
-                    <Text style={styles.categoryMenuBadge}>{menu.category}</Text>
-                    <FavoriteHeartButton
-                      isFavorite={isFavoriteMenu(menu.id)}
-                      size={24}
-                      style={styles.categoryHeartButton}
-                      onPress={() => toggleMenuFavorite(menu.id)}
-                    />
-                  </View>
-                  <Text numberOfLines={1} style={styles.categoryMenuName}>{menu.name}</Text>
-                  <Text numberOfLines={1} style={styles.categoryMenuRestaurant}>
-                    {menu.restaurant?.name ?? "학교 식당"}
-                  </Text>
-                  <Text style={styles.categoryMenuPrice}>{formatPrice(menu.price)}</Text>
-                </Pressable>
-              )}
-            />
-          ) : (
-            <View style={styles.categoryEmpty}>
-              <Text style={styles.categoryEmptyText}>
-                {isFavoriteCategory ? "비었어요" : "이 카테고리 메뉴를 곧 채울게요."}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.todayCard}>
-          <View style={styles.todayCopy}>
-            <View style={styles.todayTopRow}>
-              <Text style={styles.cardEyebrow}>오늘 학식</Text>
-              <Text style={styles.statusPill}>{todayCafeteria.statusText}</Text>
-            </View>
-            <Text style={styles.todayTitle}>{todayCafeteria.menuItems[0]}</Text>
-            <Text style={styles.todayMenu}>{todayCafeteria.menuItems.slice(1).join(" · ")}</Text>
-            <View style={styles.todayFooter}>
-              <Text style={styles.todayPrice}>{formatPrice(todayCafeteria.price)}</Text>
-              <Text style={styles.todayTime}>{todayCafeteria.servingTime}</Text>
-            </View>
-          </View>
-          {todayImage ? (
-            <View style={styles.todayImage}>
-              <CachedRemoteImage uri={todayImage} style={styles.todayImageFill} />
-              <View style={styles.todayImageGloss} />
-            </View>
-          ) : null}
-        </View>
-
-        {isWideLayout ? (
-          <View style={styles.contentLayout}>
-            {restaurantSection}
-            {infoRail}
-          </View>
         ) : (
           <>
-            {restaurantSection}
-            {infoRail}
+            {!favorites && (
+              <>
+                <View style={s.shortcuts}>
+                  {shortcuts.map((item) => (
+                    <Pressable
+                      key={item.title}
+                      accessibilityRole="button"
+                      onPress={() => navigation.navigate(item.target)}
+                      style={s.shortcut}
+                    >
+                      <View
+                        style={[
+                          s.shortcutIcon,
+                          { backgroundColor: item.background },
+                        ]}
+                      >
+                        <Icon name={item.icon} color={item.color} size={27} />
+                      </View>
+                      <Text style={s.shortcutText}>{item.title}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <View style={s.featureSection}>
+                  <View style={s.featureHeading}>
+                    <View style={s.row}>
+                      <Text style={s.featureLabel}>TODAY'S TABLE</Text>
+                      <View style={s.blueDot} />
+                    </View>
+                    <Text style={s.featureDate}>오늘의 학식</Text>
+                  </View>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="오늘 학식 라온식당 보기"
+                    onPress={() => openRestaurant(today.restaurantId)}
+                    style={({ pressed }) => [
+                      s.today,
+                      pressed && { opacity: 0.86 },
+                    ]}
+                  >
+                    <View style={s.todayCopy}>
+                      <Text style={s.todayLocation}>
+                        종합교육관 · {today.restaurantName}
+                      </Text>
+                      <Text style={s.todayTitle}>{today.menuItems[0]}</Text>
+                      <Text style={s.todaySides}>
+                        {today.menuItems.slice(1).join(" · ")}
+                      </Text>
+                      <Text style={s.todayPrice}>
+                        {formatPrice(today.price)}
+                      </Text>
+                      <View style={s.row}>
+                        <Icon
+                          name="time-outline"
+                          size={12}
+                          color={colors.textMuted}
+                        />
+                        <Text style={s.todayTime}>{today.servingTime}</Text>
+                      </View>
+                    </View>
+                    <View style={s.todayPhoto}>
+                      <CachedRemoteImage
+                        uri={
+                          getRestaurantById(today.restaurantId)?.imageUrl ?? ""
+                        }
+                        style={s.todayImage}
+                      />
+                      <Text style={s.photoCaption}>메뉴 이미지 예시</Text>
+                      <View style={s.photoArrow}>
+                        <Icon name="arrow-forward" size={18} color="white" />
+                      </View>
+                    </View>
+                  </Pressable>
+                </View>
+              </>
+            )}
+
+            <View style={s.menuSection}>
+              {!favorites && <SectionHeading title="취향대로 골라봐요" />}
+              {!favorites && (
+                <FlatList
+                  horizontal
+                  data={categories}
+                  keyExtractor={(item) => item}
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={s.filters}
+                  initialNumToRender={8}
+                  renderItem={({ item }) => (
+                    <Pressable
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: activeCategory === item }}
+                      onPress={() => setActiveCategory(item)}
+                      style={[
+                        s.filter,
+                        activeCategory === item && s.filterActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          s.filterText,
+                          activeCategory === item && s.filterTextActive,
+                        ]}
+                      >
+                        {item}
+                      </Text>
+                    </Pressable>
+                  )}
+                />
+              )}
+              {menuItems.length ? (
+                <FlatList
+                  horizontal
+                  data={menuItems}
+                  keyExtractor={(menu) => menu.id}
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={s.menuList}
+                  initialNumToRender={3}
+                  maxToRenderPerBatch={4}
+                  windowSize={5}
+                  removeClippedSubviews={Platform.OS === "android"}
+                  renderItem={({ item: menu }) => (
+                    <View style={s.menuCard}>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          menu.name + " " + formatPrice(menu.price)
+                        }
+                        onPress={() =>
+                          navigation.navigate("MenuDetail", { menuId: menu.id })
+                        }
+                      >
+                        <CachedRemoteImage
+                          uri={menu.imageUrl}
+                          style={s.menuImage}
+                        />
+                        <Text style={s.menuRestaurant} numberOfLines={1}>
+                          {menu.restaurant?.name}
+                        </Text>
+                        <Text style={s.menuName} numberOfLines={1}>
+                          {menu.name}
+                        </Text>
+                        <View style={s.priceRow}>
+                          <Text style={s.price}>{formatPrice(menu.price)}</Text>
+                          <View style={s.rating}>
+                            <Icon name="star" size={11} color="#E1A234" />
+                            <Text style={s.ratingText}>
+                              {menu.tasteScore.toFixed(1)}
+                            </Text>
+                          </View>
+                        </View>
+                      </Pressable>
+                      <FavoriteHeartButton
+                        isFavorite={isFavoriteMenu(menu.id)}
+                        onPress={() => toggleFavoriteMenu(menu.id)}
+                        style={s.heart}
+                        size={24}
+                      />
+                    </View>
+                  )}
+                />
+              ) : (
+                <View style={s.empty}>
+                  <Icon
+                    name="heart-outline"
+                    size={36}
+                    color={colors.borderStrong}
+                  />
+                  <Text style={s.emptyText}>
+                    {favorites ? "비었어요" : "등록된 메뉴가 없어요"}
+                  </Text>
+                </View>
+              )}
+            </View>
+            {!favorites && (
+              <>
+                <View style={s.section}>
+                  <CrowdPanel onOpen={openRestaurant} />
+                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => navigation.navigate("Recommendation")}
+                  style={s.recommendation}
+                >
+                  <View style={s.recommendationCopy}>
+                    <Text style={s.recommendationTag}>오늘의 메뉴 찾기</Text>
+                    <Text style={s.recommendationTitle}>
+                      고민은 짧게, 한 끼는 맛있게
+                    </Text>
+                    <View style={s.row}>
+                      <Text style={s.recommendationLink}>
+                        나에게 맞는 메뉴 추천
+                      </Text>
+                      <Icon
+                        name="arrow-forward"
+                        size={14}
+                        color={colors.primary}
+                      />
+                    </View>
+                  </View>
+                  <Image
+                    source={lunchboxRecommendationSource}
+                    resizeMode="contain"
+                    style={s.lunchbox}
+                  />
+                </Pressable>
+                <View style={s.section}>
+                  <SectionHeading
+                    title="우리 학교 맛집"
+                    action="지도 보기"
+                    onPress={() => navigation.navigate("CampusMap")}
+                  />
+                  <Text style={s.sectionSubtitle}>
+                    건물 3곳, 식당 {getRestaurantCount()}곳을 한눈에
+                  </Text>
+                  <FlatList
+                    horizontal
+                    data={buildings}
+                    keyExtractor={(item) => item.id}
+                    initialNumToRender={3}
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={s.buildings}
+                    renderItem={({ item, index }) => (
+                      <Pressable
+                        accessibilityRole="button"
+                        style={s.building}
+                        onPress={() =>
+                          navigation.navigate("CampusMap", {
+                            buildingId: item.id,
+                          })
+                        }
+                      >
+                        <CachedRemoteImage
+                          uri={item.imageUrl ?? ""}
+                          style={s.buildingImage}
+                        />
+                        <View style={s.buildingNumber}>
+                          <Text style={s.buildingNumberText}>0{index + 1}</Text>
+                        </View>
+                        <Text style={s.buildingName}>{item.name}</Text>
+                        <Text style={s.meta}>
+                          {item.restaurants.length}개 식당 · {item.walkText}
+                        </Text>
+                        <Text numberOfLines={1} style={s.buildingRestaurants}>
+                          {item.menuPreview}
+                        </Text>
+                      </Pressable>
+                    )}
+                  />
+                </View>
+                <View style={s.divider} />
+                <View style={s.section}>
+                  <SectionHeading title="실패 없는 인기 메뉴" />
+                  {popular.map((item) => (
+                    <Pressable
+                      accessibilityRole="button"
+                      key={item.menu.id}
+                      style={s.rankRow}
+                      onPress={() =>
+                        navigation.navigate("MenuDetail", {
+                          menuId: item.menu.id,
+                        })
+                      }
+                    >
+                      <Text style={s.rank}>
+                        {item.rank.toString().padStart(2, "0")}
+                      </Text>
+                      <CachedRemoteImage
+                        uri={item.menu.imageUrl}
+                        style={s.rankImage}
+                      />
+                      <View style={s.flex}>
+                        <Text style={s.menuName}>{item.menu.name}</Text>
+                        <Text style={s.meta}>{item.restaurant.name}</Text>
+                      </View>
+                      <Text style={s.rankPrice}>
+                        {formatPrice(item.menu.price)}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  style={s.mateBanner}
+                  onPress={() => navigation.navigate("MealMate")}
+                >
+                  <View style={s.mateIcon}>
+                    <Icon name="people-outline" color="#229379" size={26} />
+                  </View>
+                  <View style={s.flex}>
+                    <Text style={s.menuName}>같이 먹으면 더 맛있으니까</Text>
+                    <Text style={s.meta}>오늘의 밥친구 만나기</Text>
+                  </View>
+                  <Icon name="arrow-forward" color="#229379" />
+                </Pressable>
+                <Text style={s.footer}>
+                  우리의 맛있는 캠퍼스 생활, 대학교 밥먹자
+                </Text>
+              </>
+            )}
           </>
         )}
       </ScrollView>
-
-      <View
-        style={[styles.bottomDock, isWideLayout && { left: (width - 520) / 2, right: undefined, width: 520 }]}
-      >
-        <Pressable style={styles.dockMainAction} onPress={() => navigation.navigate("Recommendation")}>
-          <View style={styles.dockIcon}>
-            <Image source={lunchboxRecommendationSource} style={styles.dockImage} />
-          </View>
-          <View style={styles.dockCopy}>
-            <Text style={styles.dockTitle}>뭐 먹을지 고민될 땐?</Text>
-            <Text style={styles.dockDescription}>취향 기반 메뉴 추천</Text>
-          </View>
-          <Text style={styles.dockAction}>추천</Text>
-        </Pressable>
-        <Pressable style={styles.dockCommunityAction} onPress={() => navigation.navigate("Community")}>
-          <Text style={styles.dockCommunityEyebrow}>게시판</Text>
-          <Text style={styles.dockCommunityTitle}>후기 · 밥친구</Text>
-        </Pressable>
-      </View>
+      <BottomNav
+        active={favorites ? "favorites" : "home"}
+        navigation={navigation}
+        onFavorites={showFavorites}
+      />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 146,
-    backgroundColor: colors.background,
-  },
-  containerWide: {
-    maxWidth: 1220,
-    alignSelf: "center",
-    width: "100%",
-  },
-  header: {
-    marginBottom: 12,
-  },
-  heroRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    gap: 14,
-  },
-  headerCopy: {
-    flex: 1,
-  },
-  headerActions: {
+const s = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.background },
+  row: { flexDirection: "row", alignItems: "center", gap: 6 },
+  flex: { flex: 1, minWidth: 0 },
+  topbar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
+    justifyContent: "space-between",
+    paddingHorizontal: 18,
+    height: 76,
   },
-  eyebrow: {
-    color: colors.sky,
-    fontWeight: "900",
-  },
-  title: {
-    maxWidth: 250,
-    marginTop: 7,
+  brand: { flexDirection: "row", alignItems: "center", gap: 8 },
+  symbol: { width: 35, height: 39, resizeMode: "contain" },
+  brandName: {
+    fontSize: 20,
+    fontFamily: BRAND_FONT_FAMILY,
     color: colors.text,
-    fontSize: 27,
-    fontWeight: "900",
-    lineHeight: 34,
+    lineHeight: 25,
   },
-  cartButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 3,
+  school: { fontSize: 10, color: colors.textMuted, marginTop: 2 },
+  content: { paddingBottom: 12 },
+  intro: { paddingHorizontal: 24, paddingTop: 14, paddingBottom: 19 },
+  greeting: { fontSize: 13, color: colors.textMuted, marginBottom: 7 },
+  title: {
+    fontSize: 29,
+    fontWeight: "700",
+    lineHeight: 38,
+    color: colors.text,
   },
-  cartText: {
-    color: "#ffffff",
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  alertButton: {
-    position: "relative",
-    minWidth: 48,
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#ccebf7",
-  },
-  alertIcon: {
-    color: colors.primaryDark,
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  alertBadge: {
-    position: "absolute",
-    top: -6,
-    right: -5,
-    minWidth: 19,
-    height: 19,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 5,
-    borderRadius: 10,
-    backgroundColor: "#ff3b30",
-  },
-  alertBadgeText: {
-    color: "#ffffff",
-    fontSize: 10,
-    fontWeight: "900",
-    lineHeight: 13,
-  },
-  searchBar: {
+  titleDot: { color: colors.primary },
+  search: {
+    marginHorizontal: 24,
+    paddingLeft: 16,
+    paddingRight: 6,
+    height: 52,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 999,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#cdeaf7",
+    gap: 9,
+    backgroundColor: "#F5F6F8",
+    borderRadius: 12,
   },
   searchInput: {
     flex: 1,
     minWidth: 0,
+    height: "100%",
     color: colors.text,
     fontSize: 13,
-    fontWeight: "800",
-    padding: 0,
   },
-  searchIcon: {
-    color: colors.primaryDark,
-    fontSize: 20,
-    fontWeight: "900",
-  },
-  searchClear: {
-    width: 24,
-    height: 24,
-    overflow: "hidden",
-    borderRadius: 12,
-    backgroundColor: "#eef8fc",
-    color: colors.primaryDark,
-    fontSize: 20,
-    fontWeight: "900",
-    lineHeight: 22,
-    textAlign: "center",
-  },
-  searchPanel: {
-    marginTop: -4,
-    marginBottom: 12,
-    padding: 12,
-    borderRadius: 22,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#cdeaf7",
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    elevation: 3,
-  },
-  searchPanelHeader: {
+  shortcuts: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 25,
   },
-  searchPanelTitle: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: "900",
-  },
-  searchPanelCount: {
-    overflow: "hidden",
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: "#eef8fc",
-    color: colors.primaryDark,
-    fontSize: 11,
-    fontWeight: "900",
-  },
-  searchResultRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#edf3f7",
-  },
-  searchResultImage: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    backgroundColor: "#e7eef4",
-  },
-  searchResultCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  searchResultTitle: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  searchResultSubtitle: {
-    marginTop: 3,
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  searchResultType: {
-    overflow: "hidden",
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: colors.primary,
-    color: "#ffffff",
-    fontSize: 11,
-    fontWeight: "900",
-  },
-  searchEmpty: {
-    alignItems: "center",
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#edf3f7",
-  },
-  searchEmptyText: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  categoryRow: {
-    alignItems: "center",
-    gap: 8,
-    paddingBottom: 2,
-  },
-  categoryScroller: {
-    flexGrow: 0,
-    height: 42,
-    marginBottom: 8,
-  },
-  categoryChip: {
-    height: 38,
-    minWidth: 62,
+  shortcut: { flex: 1, alignItems: "center", gap: 9 },
+  shortcutIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 0,
-    borderRadius: 999,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: colors.border,
   },
-  categoryChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  categoryText: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: "900",
-    lineHeight: 15,
-  },
-  categoryTextActive: {
-    color: "#ffffff",
-  },
-  categoryMenuPanel: {
-    marginBottom: 12,
-    paddingVertical: 12,
-    borderRadius: 22,
-    backgroundColor: "rgba(255, 255, 255, 0.72)",
-    borderWidth: 1,
-    borderColor: "#cdeaf7",
-  },
-  categoryMenuHeader: {
+  shortcutText: { fontSize: 12, fontWeight: "600", color: colors.text },
+  featureSection: { marginHorizontal: 24, marginTop: 2 },
+  featureHeading: {
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
-    paddingHorizontal: 14,
-    marginBottom: 10,
-  },
-  categoryMenuEyebrow: {
-    color: colors.primary,
-    fontSize: 11,
-    fontWeight: "900",
-  },
-  categoryMenuTitle: {
-    marginTop: 3,
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: "900",
-  },
-  categoryMenuCount: {
-    overflow: "hidden",
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: "#eef8fc",
-    color: colors.primaryDark,
-    fontSize: 11,
-    fontWeight: "900",
-  },
-  categoryMenuList: {
-    gap: 10,
-    paddingHorizontal: 14,
-  },
-  categoryMenuCard: {
-    width: 138,
-    padding: 8,
-    borderRadius: 18,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  categoryMenuCardPressed: {
-    transform: [{ scale: 0.98 }],
-    opacity: 0.88,
-  },
-  categoryMenuImage: {
-    height: 92,
-    justifyContent: "flex-start",
-    alignItems: "flex-start",
-    overflow: "hidden",
-    borderRadius: 14,
-  },
-  categoryMenuImageRadius: {
-    borderRadius: 14,
-  },
-  categoryMenuImageFill: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 14,
-  },
-  categoryMenuImageDim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(7, 26, 43, 0.12)",
-  },
-  categoryMenuBadge: {
-    overflow: "hidden",
-    margin: 7,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: "rgba(255, 255, 255, 0.88)",
-    color: colors.primaryDark,
-    fontSize: 10,
-    fontWeight: "900",
-  },
-  categoryHeartButton: {
-    position: "absolute",
-    top: 7,
-    right: 7,
-    zIndex: 4,
-  },
-  categoryMenuName: {
-    marginTop: 8,
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  categoryMenuRestaurant: {
-    marginTop: 3,
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  categoryMenuPrice: {
-    marginTop: 5,
-    color: colors.primary,
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  categoryEmpty: {
-    marginHorizontal: 14,
-    paddingVertical: 18,
-    alignItems: "center",
-    borderRadius: 18,
-    backgroundColor: "#f5fbfe",
-  },
-  categoryEmptyText: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  todayCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
     marginBottom: 12,
-    padding: 14,
-    borderRadius: 24,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 3,
   },
-  todayCopy: {
-    flex: 1,
-    minWidth: 0,
+  featureLabel: { fontSize: 10, fontWeight: "800", color: colors.primary },
+  blueDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
   },
-  todayTopRow: {
+  featureDate: { color: colors.textMuted, fontSize: 11 },
+  today: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  cardEyebrow: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: "900",
-  },
-  statusPill: {
+    backgroundColor: "#F2F6FF",
+    borderRadius: 16,
     overflow: "hidden",
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: colors.surfaceWarm,
-    color: colors.primaryDark,
-    fontSize: 11,
-    fontWeight: "900",
+    minHeight: 184,
   },
+  todayCopy: { flex: 1, minWidth: 0, padding: 18, paddingRight: 8 },
+  todayLocation: { color: colors.primary, fontSize: 10, fontWeight: "600" },
   todayTitle: {
-    marginTop: 10,
-    color: colors.text,
     fontSize: 24,
-    fontWeight: "900",
+    fontWeight: "700",
+    color: colors.text,
+    marginTop: 12,
   },
-  todayMenu: {
-    marginTop: 7,
+  todaySides: {
+    fontSize: 10,
     color: colors.textMuted,
-    fontSize: 14,
-    fontWeight: "800",
-    lineHeight: 20,
-  },
-  todayFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 14,
+    marginTop: 7,
+    lineHeight: 17,
   },
   todayPrice: {
     color: colors.primary,
-    fontSize: 20,
-    fontWeight: "900",
+    fontSize: 21,
+    fontWeight: "800",
+    marginTop: 15,
+    marginBottom: 8,
   },
-  todayTime: {
-    overflow: "hidden",
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 999,
-    backgroundColor: "#eef7fb",
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "900",
+  todayTime: { fontSize: 10, color: colors.textMuted },
+  todayPhoto: { width: "42%", overflow: "hidden" },
+  todayImage: { width: "100%", height: "100%" },
+  photoCaption: {
+    position: "absolute",
+    top: 9,
+    right: 7,
+    fontSize: 8,
+    color: "white",
+    backgroundColor: "rgba(0,0,0,0.35)",
+    padding: 4,
+    borderRadius: 4,
   },
-  todayImage: {
-    width: 112,
-    height: 98,
-    overflow: "hidden",
-    borderRadius: 24,
+  photoArrow: {
+    position: "absolute",
+    right: 12,
+    bottom: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  todayImageRadius: {
-    borderRadius: 24,
+  section: { paddingHorizontal: 24, paddingTop: 24 },
+  crowd: {
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+    paddingBottom: 24,
   },
-  todayImageFill: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 24,
-  },
-  todayImageGloss: {
-    flex: 1,
-    backgroundColor: "rgba(255,255,255,0.08)",
-  },
-  mateBanner: {
+  crowdHeading: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    justifyContent: "space-between",
     marginBottom: 16,
-    padding: 14,
-    borderRadius: 24,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#ccebf7",
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 18,
-    elevation: 3,
   },
-  mateIcon: {
-    width: 46,
-    height: 46,
+  smallHeading: { color: colors.text, fontSize: 13, fontWeight: "700" },
+  sample: { fontSize: 10, color: colors.textSoft },
+  crowdItem: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: "center",
+    gap: 8,
+    minHeight: 45,
+  },
+  crowdDivider: { borderLeftWidth: 1, borderColor: colors.border },
+  crowdName: { fontSize: 10, color: colors.textMuted },
+  crowdStatus: { flexDirection: "row", gap: 5, alignItems: "center" },
+  dot: { width: 5, height: 5, borderRadius: 3 },
+  crowdText: { fontSize: 12, fontWeight: "700" },
+  menuSection: { paddingTop: 24, paddingLeft: 24 },
+  filters: { gap: 8, paddingBottom: 18, paddingRight: 24 },
+  filter: {
+    paddingHorizontal: 17,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#F5F6F8",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 23,
-    backgroundColor: "#eaf7fc",
   },
-  mateIconText: {
-    color: colors.primaryDark,
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  mateCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  mateEyebrow: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  mateTitle: {
-    marginTop: 3,
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: "900",
-  },
-  mateDescription: {
-    marginTop: 3,
+  filterActive: { backgroundColor: colors.primary },
+  filterText: { color: colors.textMuted, fontSize: 12, fontWeight: "600" },
+  filterTextActive: { color: "white" },
+  menuList: { gap: 14, paddingRight: 24, paddingBottom: 6 },
+  menuCard: { width: 156 },
+  menuImage: { width: "100%", height: 136, borderRadius: 12 },
+  heart: { position: "absolute", top: 8, right: 8 },
+  menuRestaurant: {
+    marginTop: 12,
+    fontSize: 10,
     color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "800",
+    marginBottom: 5,
   },
-  mateAction: {
-    overflow: "hidden",
-    paddingHorizontal: 13,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: colors.ink,
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  contentLayout: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 16,
-  },
-  mainColumn: {
-    flex: 1,
-    minWidth: 0,
-  },
-  infoRail: {
-    gap: 12,
-    marginBottom: 16,
-  },
-  infoRailDesktop: {
-    width: 286,
-    marginBottom: 0,
-  },
-  topCrowdCard: {
-    alignSelf: "flex-start",
-    width: "100%",
-    maxWidth: 520,
-    marginBottom: 10,
-    paddingHorizontal: 11,
-    paddingVertical: 9,
-    borderRadius: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  topCrowdTitle: {
-    marginBottom: 7,
+  menuName: {
+    fontSize: 15,
+    fontWeight: "700",
     color: colors.text,
-    fontSize: 12,
-    fontWeight: "900",
+    lineHeight: 22,
   },
-  compactCrowdList: {
-    flexDirection: "row",
-    gap: 7,
-  },
-  compactCrowdItem: {
-    flex: 1,
-    minWidth: 0,
-    gap: 5,
-  },
-  compactCrowdTop: {
+  priceRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    justifyContent: "space-between",
+    marginTop: 5,
   },
-  compactCrowdName: {
+  price: { fontSize: 16, fontWeight: "800", color: colors.text },
+  rating: { flexDirection: "row", alignItems: "center", gap: 3 },
+  ratingText: { fontSize: 10, color: colors.textMuted },
+  empty: { alignItems: "center", gap: 14, paddingVertical: 70 },
+  emptyText: { fontSize: 15, color: colors.textMuted },
+  recommendation: {
+    marginTop: 28,
+    marginHorizontal: 24,
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 118,
+    backgroundColor: "#EFF4FF",
+    borderRadius: 14,
+    overflow: "hidden",
+  },
+  recommendationCopy: {
     flex: 1,
     minWidth: 0,
+    paddingLeft: 18,
+    paddingVertical: 18,
+    zIndex: 1,
+  },
+  recommendationTag: { fontSize: 10, color: colors.primary, fontWeight: "600" },
+  recommendationTitle: {
+    fontSize: 14,
+    fontWeight: "700",
     color: colors.text,
-    fontSize: 10,
-    fontWeight: "900",
-  },
-  compactCrowdPill: {
-    overflow: "hidden",
-    minWidth: 44,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 999,
-    fontSize: 9,
-    fontWeight: "900",
-    textAlign: "center",
-  },
-  compactCrowdMeter: {
-    flexDirection: "row",
-    gap: 3,
-  },
-  compactCrowdSegment: {
-    flex: 1,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: "#dfe4e8",
-  },
-  infoCard: {
-    padding: 14,
-    borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.92)",
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 3,
-  },
-  infoTitle: {
+    marginTop: 8,
     marginBottom: 10,
+  },
+  recommendationLink: { fontSize: 10, color: colors.primary },
+  lunchbox: { width: 108, height: 118, transform: [{ scale: 1.5 }] },
+  sectionSubtitle: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: -12,
+    marginBottom: 18,
+  },
+  buildings: { gap: 14, paddingBottom: 5 },
+  building: { width: 216 },
+  buildingImage: { width: "100%", height: 120, borderRadius: 12 },
+  buildingNumber: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: "white",
+    borderRadius: 5,
+  },
+  buildingNumberText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: colors.primary,
+  },
+  buildingName: {
     color: colors.text,
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "700",
+    marginTop: 13,
   },
-  rankNumber: {
-    width: 24,
-    height: 24,
-    overflow: "hidden",
-    borderRadius: 12,
-    backgroundColor: colors.primary,
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "900",
-    lineHeight: 24,
-    textAlign: "center",
-  },
-  crowdPillSmooth: {
-    backgroundColor: "#e9f8ee",
-    color: colors.success,
-  },
-  crowdPillNormal: {
-    backgroundColor: "#fff6dc",
-    color: "#b7791f",
-  },
-  crowdPillBusy: {
-    backgroundColor: "#ffede5",
-    color: colors.orange,
-  },
-  crowdPillVeryBusy: {
-    backgroundColor: "#ffe8e7",
-    color: "#d9261c",
-  },
-  menuRankRow: {
+  meta: { fontSize: 11, color: colors.textMuted, lineHeight: 18, marginTop: 4 },
+  buildingRestaurants: { fontSize: 10, color: colors.textSoft, marginTop: 6 },
+  divider: { height: 7, backgroundColor: "#F5F6F8", marginTop: 26 },
+  rankRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 5,
+    gap: 12,
+    paddingVertical: 13,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
   },
-  menuRankCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  menuRankName: {
-    color: colors.text,
-    fontWeight: "900",
-  },
-  menuRankMeta: {
-    marginTop: 2,
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    color: colors.text,
-    fontSize: 22,
-    fontWeight: "900",
-  },
-  sectionDescription: {
-    marginTop: 4,
-    color: colors.textSoft,
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  restaurantCarousel: {
-    gap: 14,
-    paddingRight: 16,
-    paddingBottom: 8,
-  },
-  restaurantSlide: {
-    overflow: "hidden",
-    borderRadius: 24,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#ccebf7",
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 18,
-    elevation: 3,
-  },
-  restaurantSlidePressed: {
-    opacity: 0.82,
-    transform: [{ scale: 0.98 }],
-  },
-  slideImage: {
-    height: 118,
-    justifyContent: "space-between",
-    overflow: "hidden",
-  },
-  slideImageRadius: {
-    borderTopLeftRadius: 23,
-    borderTopRightRadius: 23,
-  },
-  slideImageFill: {
-    ...StyleSheet.absoluteFillObject,
-    borderTopLeftRadius: 23,
-    borderTopRightRadius: 23,
-  },
-  slideOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(8, 32, 65, 0.18)",
-  },
-  slideTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    padding: 10,
-  },
-  slideRank: {
-    width: 30,
-    height: 30,
-    overflow: "hidden",
-    borderRadius: 15,
-    backgroundColor: colors.primary,
-    color: "#ffffff",
-    fontSize: 15,
-    fontWeight: "900",
-    lineHeight: 30,
-    textAlign: "center",
-  },
-  slideBody: {
-    padding: 14,
-  },
-  slideTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: "900",
-    lineHeight: 23,
-  },
-  slideMenu: {
-    marginTop: 6,
-    color: colors.textMuted,
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  slideMetaRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 11,
-  },
-  slideMeta: {
-    overflow: "hidden",
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: "#eef7fb",
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "900",
-  },
-  slideCrowd: {
-    overflow: "hidden",
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: "#e9f8ee",
-    color: colors.success,
-    fontSize: 11,
-    fontWeight: "900",
-  },
-  bottomDock: {
-    position: "absolute",
-    left: 14,
-    right: 14,
-    bottom: 14,
-    zIndex: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    maxWidth: 520,
-    alignSelf: "center",
-    padding: 8,
-    borderRadius: 28,
-    backgroundColor: "rgba(255, 255, 255, 0.94)",
-    borderWidth: 1,
-    borderColor: "#cdeaf7",
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.22,
-    shadowRadius: 24,
-    elevation: 8,
-  },
-  dockMainAction: {
-    flex: 1,
-    minWidth: 0,
+  rank: { fontSize: 15, color: colors.primary, fontWeight: "800" },
+  rankImage: { width: 55, height: 55, borderRadius: 10 },
+  rankPrice: { fontSize: 13, fontWeight: "700", color: colors.text },
+  mateBanner: {
+    margin: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    paddingVertical: 4,
-    minHeight: 58,
+    backgroundColor: "#EFF8F3",
+    borderRadius: 12,
   },
-  dockIcon: {
-    width: 50,
-    height: 50,
+  mateIcon: { width: 40, alignItems: "center" },
+  footer: {
+    textAlign: "center",
+    color: colors.textSoft,
+    fontSize: 10,
+    marginBottom: 15,
+  },
+  searchResult: {
+    flexDirection: "row",
+    gap: 14,
     alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    borderRadius: 25,
-    backgroundColor: "#ffffff",
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
   },
-  dockImage: {
-    width: 54,
-    height: 42,
-    resizeMode: "contain",
-  },
-  dockCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  dockTitle: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: "900",
-  },
-  dockDescription: {
-    marginTop: 2,
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  dockAction: {
-    overflow: "hidden",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: colors.primary,
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  dockCommunityAction: {
-    alignSelf: "stretch",
-    justifyContent: "center",
-    minWidth: 88,
-    maxWidth: 116,
-    paddingHorizontal: 10,
-    borderRadius: 22,
-    backgroundColor: "#edf6fc",
-    borderWidth: 1,
-    borderColor: "#d5edf8",
-  },
-  dockCommunityEyebrow: {
-    color: colors.primary,
-    fontSize: 11,
-    fontWeight: "900",
-    lineHeight: 14,
-  },
-  dockCommunityTitle: {
-    marginTop: 2,
-    color: colors.ink,
-    fontSize: 11,
-    fontWeight: "900",
-    lineHeight: 14,
-  },
+  resultImage: { width: 68, height: 68, borderRadius: 10 },
 });

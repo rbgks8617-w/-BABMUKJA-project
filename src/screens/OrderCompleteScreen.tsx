@@ -73,14 +73,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.success,
     color: "#ffffff",
     fontSize: 38,
-    fontWeight: "900",
+    fontWeight: "700",
     textAlign: "center",
     lineHeight: 58,
   },
   title: {
     color: colors.text,
     fontSize: 25,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   orderNumber: {
     marginTop: 8,
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     color: colors.text,
     fontSize: 18,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   row: {
     flexDirection: "row",
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   },
   itemPrice: {
     color: colors.primary,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   divider: {
     height: 1,
@@ -123,12 +123,12 @@ const styles = StyleSheet.create({
   totalLabel: {
     color: colors.text,
     fontSize: 16,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   totalPrice: {
     color: colors.primary,
     fontSize: 18,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   readyBox: {
     padding: 18,
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     color: "#ffffff",
     fontSize: 24,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   homeButton: {
     alignItems: "center",
@@ -153,6 +153,6 @@ const styles = StyleSheet.create({
   },
   homeButtonText: {
     color: "#ffffff",
-    fontWeight: "900",
+    fontWeight: "700",
   },
 });

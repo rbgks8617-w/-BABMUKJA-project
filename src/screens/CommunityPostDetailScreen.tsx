@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
   emptyText: {
     color: colors.textMuted,
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   container: {
     padding: 18,
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
   },
   postCard: {
     padding: 15,
-    borderRadius: 22,
+    borderRadius: 14,
     backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: colors.border,
@@ -297,36 +297,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: "#edf6fc",
+    backgroundColor: "#F2F6FF",
   },
   topicText: {
     color: colors.primary,
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   timeText: {
     color: colors.textSoft,
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   title: {
     marginTop: 13,
     color: colors.text,
     fontSize: 21,
-    fontWeight: "900",
+    fontWeight: "700",
     lineHeight: 28,
   },
   meta: {
     marginTop: 8,
     color: colors.primary,
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   body: {
     marginTop: 14,
     color: colors.textMuted,
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "600",
     lineHeight: 23,
   },
   imageFrame: {
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#f1f7fb",
     borderWidth: 1,
-    borderColor: "#e2f0f7",
+    borderColor: "#E9ECF1",
   },
   detailImage: {
     width: "100%",
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     color: "#e11d48",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   buttonDisabled: {
     opacity: 0.55,
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
   commentCard: {
     marginTop: 12,
     padding: 14,
-    borderRadius: 22,
+    borderRadius: 14,
     backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: colors.border,
@@ -373,13 +373,13 @@ const styles = StyleSheet.create({
     marginBottom: 9,
     color: colors.ink,
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   commentItem: {
     marginBottom: 9,
     padding: 11,
     borderRadius: 16,
-    backgroundColor: "#f7fbfe",
+    backgroundColor: "#F7F8FA",
   },
   commentHeader: {
     flexDirection: "row",
@@ -390,24 +390,24 @@ const styles = StyleSheet.create({
   commentAuthor: {
     color: colors.primaryDark,
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   commentTime: {
     color: colors.textSoft,
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "600",
   },
   commentBody: {
     marginTop: 6,
     color: colors.text,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "600",
     lineHeight: 20,
   },
   commentEmpty: {
     color: colors.textSoft,
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   commentComposer: {
     flexDirection: "row",
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     color: colors.text,
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   commentButton: {
     justifyContent: "center",
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
   commentButtonText: {
     color: "#ffffff",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   serverNotice: {
     marginTop: 12,
@@ -452,6 +452,6 @@ const styles = StyleSheet.create({
   serverNoticeText: {
     color: "#b45309",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
   },
 });
