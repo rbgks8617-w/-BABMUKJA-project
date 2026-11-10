@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "#F2F6FF",
     borderWidth: 1,
-    borderColor: "#E9ECF1",
+    borderColor: colors.border,
   },
   eyebrow: {
     color: colors.primary,

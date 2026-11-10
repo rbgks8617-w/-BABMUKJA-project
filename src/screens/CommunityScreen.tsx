@@ -441,7 +441,13 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
       <View style={styles.communityIntro}><Text style={styles.communityEyebrow}>CAMPUS COMMUNITY</Text><Text style={styles.communityTitle}>한 끼로 가까워지는 우리</Text><Text style={styles.communitySubtitle}>솔직한 맛 이야기, 새로운 밥친구.</Text></View>
       <View style={styles.tabRow}>
         {tabs.map((tab) => (
-          <Pressable key={tab} style={[styles.tab, activeTab === tab && styles.tabActive]} onPress={() => selectTab(tab)}>
+          <Pressable
+            key={tab}
+            accessibilityRole="tab"
+            aria-selected={activeTab === tab}
+            style={[styles.tab, activeTab === tab && styles.tabActive]}
+            onPress={() => selectTab(tab)}
+          >
             <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
           </Pressable>
         ))}
@@ -472,7 +478,7 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
 
       <View style={styles.sectionHeader}>
         <View>
-          <Text style={styles.sectionTitle}>{activeTab}</Text>
+          <Text accessibilityRole="header" style={styles.sectionTitle}>{activeTab}</Text>
         </View>
         <View style={styles.sectionActions}>
           {isAdmin && activeTab === "음식 후기" && visiblePosts.length > 0 ? (
@@ -915,7 +921,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "#E9ECF1",
+    borderTopColor: colors.border,
   },
   postBody: {
     color: colors.textMuted,
@@ -949,7 +955,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "#E9ECF1",
+    borderTopColor: colors.border,
   },
   commentTitle: {
     marginBottom: 8,
@@ -961,7 +967,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     padding: 10,
     borderRadius: 16,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: colors.surfaceMuted,
   },
   commentHeader: {
     flexDirection: "row",
@@ -1008,7 +1014,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#E9ECF1",
+    borderColor: colors.border,
     color: colors.text,
     fontSize: 13,
     fontWeight: "600",
@@ -1039,7 +1045,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: colors.primary,
     borderWidth: 1,
-    borderColor: "#E9ECF1",
+    borderColor: colors.border,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 14 },
     shadowOpacity: 0.04,
@@ -1078,7 +1084,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#E9ECF1",
+    borderColor: colors.border,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.04,
@@ -1146,9 +1152,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     paddingVertical: 10,
     borderRadius: 16,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
-    borderColor: "#E9ECF1",
+    borderColor: colors.border,
     color: colors.text,
     fontSize: 14,
     fontWeight: "600",
@@ -1161,9 +1167,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
     padding: 12,
     borderRadius: 18,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
-    borderColor: "#E9ECF1",
+    borderColor: colors.border,
   },
   ratingHeader: {
     flexDirection: "row",
@@ -1236,7 +1242,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: "#F2F6FF",
     borderWidth: 1,
-    borderColor: "#E9ECF1",
+    borderColor: colors.border,
   },
   sampleImageButtonText: {
     color: colors.primary,

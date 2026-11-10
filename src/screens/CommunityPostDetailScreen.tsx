@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#f1f7fb",
     borderWidth: 1,
-    borderColor: "#E9ECF1",
+    borderColor: colors.border,
   },
   detailImage: {
     width: "100%",
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     marginBottom: 9,
     padding: 11,
     borderRadius: 16,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: colors.surfaceMuted,
   },
   commentHeader: {
     flexDirection: "row",

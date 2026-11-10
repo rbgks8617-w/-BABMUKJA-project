@@ -1,15 +1,13 @@
 import React, { useEffect, useState } from "react";
 import {
   FlatList,
-  Image,
   Pressable,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
 } from "react-native";
-import type { ViewStyle } from "react-native";
-import { BottomNav, Icon } from "../components/AppUI";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BottomNav, Icon, ui } from "../components/AppUI";
 import CachedRemoteImage from "../components/CachedRemoteImage";
 import {
   campusMapBuildings,
@@ -17,22 +15,11 @@ import {
 } from "../services/restaurantService";
 import { colors } from "../theme/colors";
 import type { AppScreenProps } from "../types/app";
-import { campusMapSource } from "../utils/staticAssets";
-
-// Keep the original map. Compress this large PNG or convert to WebP before native release.
-const aspectRatio = 1608 / 978;
-const buildingAreas: Record<string, ViewStyle> = {
-  tip: { left: "6%", top: "27%", width: "29%", height: "35%" },
-  education: { left: "38%", top: "20%", width: "25%", height: "30%" },
-  industry: { right: "8%", top: "31%", width: "25%", height: "28%" },
-};
 export default function CampusMapScreen({
   route,
   navigation,
 }: AppScreenProps<"CampusMap">) {
-  const { height } = useWindowDimensions();
-  const [mapWidth, setMapWidth] = useState(0);
-  const mapHeight = Math.min(mapWidth / aspectRatio, height * 0.3);
+  const { top } = useSafeAreaInsets();
   const [selectedId, setSelectedId] = useState(
     route.params?.buildingId ?? "tip",
   );
@@ -43,54 +30,16 @@ export default function CampusMapScreen({
     campusMapBuildings.find((item) => item.id === selectedId) ??
     campusMapBuildings[0];
   return (
-    <View style={s.screen}>
-      <View style={s.heading}>
-        <Text style={s.eyebrow}>TUK CAMPUS MAP</Text>
-        <Text style={s.title}>맛있는 곳은, 가까이에</Text>
-      </View>
-      <View
-        onLayout={(event) => setMapWidth(event.nativeEvent.layout.width)}
-        style={s.mapArea}
-      >
-        <View
-          style={{
-            width: mapHeight * aspectRatio,
-            height: mapHeight,
-            alignSelf: "center",
-          }}
-        >
-          <Image
-            source={campusMapSource}
-            resizeMode="contain"
-            accessibilityLabel="한국공학대학교 캠퍼스 지도"
-            style={StyleSheet.absoluteFillObject}
-          />
-          {campusMapBuildings.map((item) => (
-            <Pressable
-              key={item.id}
-              accessibilityRole="button"
-              accessibilityLabel={item.name + " 지도에서 선택"}
-              accessibilityState={{ selected: item.id === building.id }}
-              onPress={() => setSelectedId(item.id)}
-              style={[{ position: "absolute" }, buildingAreas[item.id]]}
-            />
-          ))}
-        </View>
-      </View>
-      <View style={s.tabs}>
+    <View style={[s.screen, { paddingTop: top }]}>
+      <View accessibilityRole="tablist" accessibilityLabel="건물 선택" style={s.tabs}>
         {campusMapBuildings.map((item) => (
           <Pressable
             key={item.id}
             accessibilityRole="tab"
-            accessibilityState={{ selected: item.id === building.id }}
+            aria-selected={item.id === building.id}
             onPress={() => setSelectedId(item.id)}
-            style={[s.tab, item.id === building.id && s.tabSelected]}
+            style={({ pressed }) => [s.tab, item.id === building.id && s.tabSelected, pressed && ui.pressed]}
           >
-            <Icon
-              name="location-outline"
-              size={15}
-              color={item.id === building.id ? "white" : colors.textMuted}
-            />
             <Text
               style={[s.tabText, item.id === building.id && { color: "white" }]}
             >
@@ -100,7 +49,7 @@ export default function CampusMapScreen({
         ))}
       </View>
       <View style={s.listHeading}>
-        <Text style={s.listTitle}>{building.name}</Text>
+        <Text accessibilityRole="header" style={s.listTitle}>{building.name}</Text>
         <Text style={s.count}>{building.restaurants.length}개 식당</Text>
       </View>
       <FlatList
@@ -147,44 +96,34 @@ export default function CampusMapScreen({
 }
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  heading: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 20 },
-  eyebrow: { color: colors.primary, fontSize: 10, fontWeight: "700" },
-  title: { color: colors.text, fontSize: 24, fontWeight: "700", marginTop: 8 },
-  mapArea: {
-    marginHorizontal: 16,
-    backgroundColor: "#F7F9FC",
-    overflow: "hidden",
-    borderRadius: 12,
-  },
   tabs: {
     flexDirection: "row",
     paddingHorizontal: 20,
-    gap: 7,
-    paddingVertical: 18,
+    gap: 8,
+    paddingVertical: 12,
   },
   tab: {
     flex: 1,
-    minHeight: 42,
-    flexDirection: "row",
+    minHeight: 48,
+    paddingHorizontal: 4,
     alignItems: "center",
     justifyContent: "center",
-    gap: 3,
-    backgroundColor: "#F5F6F8",
-    borderRadius: 8,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: 10,
   },
   tabSelected: { backgroundColor: colors.primary },
-  tabText: { color: colors.textMuted, fontSize: 11, fontWeight: "600" },
+  tabText: { color: colors.textMuted, fontSize: 12, fontWeight: "600", textAlign: "center", flexShrink: 1 },
   listHeading: {
     paddingHorizontal: 24,
     flexDirection: "row",
     alignItems: "center",
-    gap: 9,
-    paddingVertical: 14,
-    borderTopWidth: 6,
-    borderColor: "#F5F6F8",
+    gap: 8,
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   listTitle: { fontSize: 18, fontWeight: "700", color: colors.text },
-  count: { fontSize: 11, color: colors.textMuted },
+  count: { fontSize: 12, color: colors.textMuted },
   list: { paddingHorizontal: 24, paddingBottom: 16 },
   restaurant: {
     flexDirection: "row",

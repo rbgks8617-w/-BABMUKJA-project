@@ -339,9 +339,9 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
     <>
       <View style={styles.hero}>
         <View style={{ marginBottom: 14 }}><Icon name="people-outline" size={34} color={colors.success} /></View>
-        <Text style={styles.eyebrow}>한 끼의 새로운 만남</Text>
-        <Text style={styles.title}>오늘은 같이 먹을까요?</Text>
-        <Text style={styles.description}>같은 캠퍼스, 새로운 밥친구.</Text>
+        <Text style={styles.eyebrow}>한국공학대학교</Text>
+        <Text accessibilityRole="header" style={styles.title}>밥친구 찾기</Text>
+        <Text style={styles.description}>식당과 시간이 맞는 모임에 참여해 보세요</Text>
       </View>
       <Pressable accessibilityRole="button" onPress={() => setComposerOpen(value => !value)} style={styles.newMeeting}><Icon name={composerOpen ? "close-outline" : "add-outline"} color="white" size={20} /><Text style={styles.createButtonText}>{composerOpen ? "모집글 닫기" : "새 밥약속 만들기"}</Text></Pressable>
       {composerOpen && <View style={styles.formCard}>
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     backgroundColor: "white",
     borderWidth: 0,
-    borderColor: "#E9ECF1",
+    borderColor: colors.border,
   },
   eyebrow: {
     color: colors.primary,

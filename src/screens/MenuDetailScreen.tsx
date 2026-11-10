@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
-  Animated,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,13 +8,13 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CachedRemoteImage from "../components/CachedRemoteImage";
-import PriceSummary from "../components/PriceSummary";
 import QuantitySelector from "../components/QuantitySelector";
-import { Icon } from "../components/AppUI";
+import { Icon, ui } from "../components/AppUI";
 import FavoriteHeartButton from "../components/FavoriteHeartButton";
 import { useFavorites } from "../store/FavoriteContext";
 import { getMenuById } from "../services/restaurantService";
 import { useCart } from "../store/CartContext";
+import { colors } from "../theme/colors";
 import type { AppScreenProps, MenuOption, OrderItem } from "../types/app";
 import { formatPrice } from "../utils/formatPrice";
 
@@ -31,9 +30,6 @@ export default function MenuDetailScreen({
   const [quantity, setQuantity] = useState(1);
   const [selectedOptions, setSelectedOptions] = useState<MenuOption[]>([]);
   const [addedMessage, setAddedMessage] = useState("");
-  const toastOpacity = useRef(new Animated.Value(0)).current;
-  const toastTranslateY = useRef(new Animated.Value(28)).current;
-  const toastAnimation = useRef<Animated.CompositeAnimation | null>(null);
 
   const normalizedSelectedOptions = useMemo(
     () => [...selectedOptions].sort((a, b) => a.id.localeCompare(b.id)),
@@ -45,14 +41,6 @@ export default function MenuDetailScreen({
       normalizedSelectedOptions.reduce((sum, option) => sum + option.price, 0),
     [normalizedSelectedOptions],
   );
-
-  useEffect(() => {
-    return () => {
-      if (toastAnimation.current) {
-        toastAnimation.current.stop();
-      }
-    };
-  }, []);
 
   if (!menu) {
     return (
@@ -88,66 +76,18 @@ export default function MenuDetailScreen({
     };
   }
 
-  function showAddedToast(message: string) {
-    if (toastAnimation.current) {
-      toastAnimation.current.stop();
-    }
-
-    setAddedMessage(message);
-    toastOpacity.setValue(0);
-    toastTranslateY.setValue(28);
-
-    toastAnimation.current = Animated.sequence([
-      Animated.parallel([
-        Animated.timing(toastOpacity, {
-          toValue: 1,
-          duration: 220,
-          useNativeDriver: false,
-        }),
-        Animated.timing(toastTranslateY, {
-          toValue: 0,
-          duration: 220,
-          useNativeDriver: false,
-        }),
-      ]),
-      Animated.delay(2300),
-      Animated.parallel([
-        Animated.timing(toastOpacity, {
-          toValue: 0,
-          duration: 420,
-          useNativeDriver: false,
-        }),
-        Animated.timing(toastTranslateY, {
-          toValue: 18,
-          duration: 420,
-          useNativeDriver: false,
-        }),
-      ]),
-    ]);
-
-    toastAnimation.current.start(({ finished }: { finished: boolean }) => {
-      if (finished) {
-        setAddedMessage("");
-      }
-    });
-  }
-
   function handleAddToCart() {
     addToCart(makeOrderItem());
-    showAddedToast(`${currentMenu.name} ${quantity}개가 추가되었습니다.`);
+    setAddedMessage(`${currentMenu.name} ${quantity}개를 담았어요`);
   }
 
   function handleGoToCart() {
-    if (toastAnimation.current) {
-      toastAnimation.current.stop();
-    }
-
     setAddedMessage("");
     navigation.navigate("Cart");
   }
 
   function handleDirectPayment() {
-    navigation.navigate("Payment", { orderItems: [makeOrderItem()] });
+    navigation.navigate("Payment", { orderItems: [makeOrderItem()], fromCart: false });
   }
 
   return (
@@ -162,11 +102,11 @@ export default function MenuDetailScreen({
           />
         </View>
         <Text style={styles.category}>{currentMenu.category}</Text>
-        <Text style={styles.name}>{currentMenu.name}</Text>
+        <Text accessibilityRole="header" style={styles.name}>{currentMenu.name}</Text>
         <Text style={styles.price}>{formatPrice(currentMenu.price)}</Text>
         <Text style={styles.description}>{currentMenu.description}</Text>
 
-        <View style={styles.section}>
+        {currentMenu.options.length > 0 && <View style={styles.section}>
           <Text style={styles.sectionTitle}>옵션 선택</Text>
           {currentMenu.options.map((option) => {
             const isSelected = selectedOptions.some(
@@ -176,14 +116,14 @@ export default function MenuDetailScreen({
               <Pressable
                 key={option.id}
                 accessibilityRole="checkbox"
-                accessibilityState={{ checked: isSelected }}
-                style={[styles.option, isSelected && styles.optionSelected]}
+                aria-checked={isSelected}
+                style={({ pressed }) => [styles.option, isSelected && styles.optionSelected, pressed && ui.pressed]}
                 onPress={() => toggleOption(option)}
               >
                 <Icon
                   name={isSelected ? "checkbox" : "square-outline"}
                   size={22}
-                  color={isSelected ? "#2463EB" : "#85909E"}
+                  color={isSelected ? colors.primary : colors.textSoft}
                 />
                 <Text style={[styles.optionName, { flex: 1, marginLeft: 10 }]}>
                   {option.name}
@@ -194,7 +134,7 @@ export default function MenuDetailScreen({
               </Pressable>
             );
           })}
-        </View>
+        </View>}
 
         <View style={styles.quantityRow}>
           <Text style={styles.sectionTitle}>수량</Text>
@@ -211,49 +151,39 @@ export default function MenuDetailScreen({
           />
         </View>
 
-        <PriceSummary price={totalPrice} />
       </ScrollView>
       <View
-        style={[styles.actions, { paddingBottom: Math.max(18, insets.bottom) }]}
+        style={[ui.actionBar, { paddingBottom: Math.max(16, insets.bottom) }]}
       >
-        <Pressable
-          accessibilityRole="button"
-          style={[styles.actionButton, styles.secondary]}
-          onPress={handleAddToCart}
-        >
-          <Text style={styles.secondaryText}>장바구니 담기</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          style={[styles.actionButton, styles.primary]}
-          onPress={handleDirectPayment}
-        >
-          <Text style={styles.primaryText}>{formatPrice(totalPrice)} 결제</Text>
-        </Pressable>
-      </View>
-
-      {addedMessage ? (
-        <Animated.View
-          style={[
-            styles.toast,
-            { bottom: 90 + Math.max(18, insets.bottom) },
-            {
-              opacity: toastOpacity,
-              transform: [{ translateY: toastTranslateY }],
-            },
-          ]}
-        >
-          <Text style={styles.toastText}>{addedMessage}</Text>
+        {addedMessage ? (
+          <View style={styles.confirmation}>
+            <Text accessibilityLiveRegion="polite" style={styles.confirmationText}>{addedMessage}</Text>
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.cartLink, pressed && ui.pressed]}
+              onPress={handleGoToCart}
+            >
+              <Text style={styles.secondaryText}>장바구니 보기</Text>
+            </Pressable>
+          </View>
+        ) : null}
+        <View style={styles.actions}>
           <Pressable
             accessibilityRole="button"
-            hitSlop={8}
-            style={styles.toastAction}
-            onPress={handleGoToCart}
+            style={({ pressed }) => [ui.primaryButton, styles.actionButton, styles.secondary, pressed && ui.pressed]}
+            onPress={handleAddToCart}
           >
-            <Text style={styles.toastActionText}>장바구니로 가기</Text>
+            <Text style={styles.secondaryText}>장바구니 담기</Text>
           </Pressable>
-        </Animated.View>
-      ) : null}
+          <Pressable
+            accessibilityRole="button"
+            style={({ pressed }) => [ui.primaryButton, styles.actionButton, pressed && ui.pressed]}
+            onPress={handleDirectPayment}
+          >
+            <Text style={ui.primaryButtonText}>{formatPrice(totalPrice)} 결제</Text>
+          </Pressable>
+        </View>
+      </View>
     </View>
   );
 }
@@ -265,7 +195,7 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: 20,
-    paddingBottom: 28,
+    paddingBottom: 20,
   },
   empty: {
     flex: 1,
@@ -274,144 +204,113 @@ const styles = StyleSheet.create({
   },
   image: {
     width: "100%",
-    height: 240,
-    borderRadius: 14,
-    marginBottom: 18,
+    height: 216,
+    borderRadius: 16,
+    marginBottom: 16,
   },
   category: {
     alignSelf: "flex-start",
     overflow: "hidden",
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: "#EFF4FF",
-    color: "#2463EB",
+    borderRadius: 8,
+    backgroundColor: colors.surfaceWarm,
+    color: colors.primary,
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   name: {
     marginTop: 10,
-    color: "#222222",
+    color: colors.text,
     fontSize: 28,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   price: {
     marginTop: 8,
-    color: "#2463EB",
+    color: colors.primary,
     fontSize: 20,
-    fontWeight: "700",
+    fontWeight: "600",
+    fontVariant: ["tabular-nums"],
   },
   description: {
     marginTop: 10,
-    color: "#666666",
+    color: colors.textMuted,
     lineHeight: 21,
   },
   section: {
     marginTop: 24,
   },
   sectionTitle: {
-    color: "#222222",
+    color: colors.text,
     fontSize: 18,
     fontWeight: "700",
   },
   option: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
     marginTop: 10,
-    padding: 14,
+    padding: 12,
     borderWidth: 1,
-    borderColor: "#E9ECF1",
+    borderColor: colors.border,
     borderRadius: 10,
     backgroundColor: "#ffffff",
   },
   optionSelected: {
-    borderColor: "#2463EB",
-    backgroundColor: "#EFF4FF",
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceWarm,
   },
   optionName: {
-    color: "#222222",
+    color: colors.text,
     fontWeight: "600",
   },
   optionPrice: {
-    color: "#2463EB",
+    color: colors.primary,
     fontWeight: "600",
   },
   quantityRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginVertical: 24,
+    marginTop: 24,
   },
   actions: {
     flexDirection: "row",
-    gap: 12,
-    padding: 18,
-    paddingBottom: 26,
-    borderTopWidth: 1,
-    borderColor: "#E9ECF1",
-    backgroundColor: "white",
+    gap: 8,
   },
   actionButton: {
     flex: 1,
-    alignItems: "center",
-    paddingVertical: 15,
-    borderRadius: 10,
-  },
-  primary: {
-    backgroundColor: "#2463EB",
+    paddingHorizontal: 8,
   },
   secondary: {
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#2463EB",
-  },
-  primaryText: {
-    color: "#ffffff",
-    fontWeight: "700",
+    borderColor: colors.primary,
   },
   secondaryText: {
-    color: "#2463EB",
-    fontWeight: "700",
-  },
-  toast: {
-    position: "absolute",
-    left: 20,
-    right: 20,
-    bottom: 108,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 16,
-    backgroundColor: "rgba(24, 24, 24, 0.94)",
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
-    shadowRadius: 18,
-    elevation: 8,
-  },
-  toastText: {
-    flex: 1,
-    flexShrink: 1,
-    color: "#ffffff",
+    color: colors.primary,
     fontSize: 14,
     fontWeight: "600",
+    textAlign: "center",
+  },
+  confirmation: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingLeft: 12,
+    marginBottom: 8,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceWarm,
+  },
+  confirmationText: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 13,
     lineHeight: 20,
   },
-  toastAction: {
-    flexShrink: 0,
-    minHeight: 34,
+  cartLink: {
+    minHeight: 48,
     justifyContent: "center",
     paddingHorizontal: 12,
-    borderRadius: 999,
-    backgroundColor: "#EFF4FF",
-  },
-  toastActionText: {
-    color: "#2463EB",
-    fontSize: 13,
-    fontWeight: "700",
-    lineHeight: 18,
   },
 });

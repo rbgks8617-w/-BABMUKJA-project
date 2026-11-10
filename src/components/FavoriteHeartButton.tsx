@@ -1,7 +1,8 @@
-import React, { useRef } from "react";
-import { Animated, Pressable, StyleSheet } from "react-native";
+import React from "react";
+import { Image, Pressable, StyleSheet } from "react-native";
 import type { GestureResponderEvent, StyleProp, ViewStyle } from "react-native";
 import { heartEmptySource, heartFilledSource } from "../utils/staticAssets";
+import { colors } from "../theme/colors";
 
 type FavoriteHeartButtonProps = {
   isFavorite: boolean;
@@ -11,26 +12,8 @@ type FavoriteHeartButtonProps = {
 };
 
 export default function FavoriteHeartButton({ isFavorite, onPress, size = 27, style }: FavoriteHeartButtonProps) {
-  const scale = useRef(new Animated.Value(1)).current;
-
   function handlePress(event: GestureResponderEvent) {
     event.stopPropagation();
-    scale.stopAnimation();
-    scale.setValue(0.84);
-    Animated.sequence([
-      Animated.spring(scale, {
-        toValue: 1.28,
-        friction: 3,
-        tension: 190,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scale, {
-        toValue: 1,
-        friction: 4,
-        tension: 150,
-        useNativeDriver: true,
-      }),
-    ]).start();
     onPress();
   }
 
@@ -40,20 +23,13 @@ export default function FavoriteHeartButton({ isFavorite, onPress, size = 27, st
       accessibilityRole="button"
       accessibilityState={{ selected: isFavorite }}
       hitSlop={10}
-      style={[styles.button, style]}
+      style={({ pressed }) => [styles.button, style, pressed && styles.pressed]}
       onPress={handlePress}
     >
-      <Animated.Image
+      <Image
         source={isFavorite ? heartFilledSource : heartEmptySource}
         resizeMode="contain"
-        style={[
-          styles.image,
-          {
-            width: size,
-            height: size,
-            transform: [{ scale }],
-          },
-        ]}
+        style={{ width: size, height: size }}
       />
     </Pressable>
   );
@@ -69,9 +45,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     backgroundColor: "rgba(255, 255, 255, 0.94)",
     borderWidth: 1,
-    borderColor: "#dcecf3",
+    borderColor: colors.border,
   },
-  image: {
-    transformOrigin: "center",
-  },
+  pressed: { opacity: 0.7 },
 });

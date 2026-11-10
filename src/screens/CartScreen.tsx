@@ -1,10 +1,11 @@
 import React, { useCallback, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import PriceSummary from "../components/PriceSummary";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Icon, ui } from "../components/AppUI";
 import QuantitySelector from "../components/QuantitySelector";
 import { getMenuById } from "../services/restaurantService";
 import { useCart } from "../store/CartContext";
-import { APP_FONT_FAMILY } from "../theme/typography";
+import { colors } from "../theme/colors";
 import type { AppScreenProps, CartItem, MenuOption } from "../types/app";
 import { formatPrice } from "../utils/formatPrice";
 
@@ -17,6 +18,7 @@ function optionKey(options: MenuOption[] = []) {
 }
 
 export default function CartScreen({ navigation }: AppScreenProps<"Cart">) {
+  const insets = useSafeAreaInsets();
   const { cartItems, changeCartItemQuantity, removeFromCart, splitCartItemWithOptions, totalPrice } = useCart();
   const [optionDrafts, setOptionDrafts] = useState<Record<string, MenuOption[]>>({});
 
@@ -63,8 +65,9 @@ export default function CartScreen({ navigation }: AppScreenProps<"Cart">) {
       return (
         <View style={styles.item}>
           <Pressable
+            accessibilityRole="button"
             accessibilityLabel={`${item.name} 삭제`}
-            style={styles.deleteButton}
+            style={({ pressed }) => [styles.deleteButton, pressed && ui.pressed]}
             onPress={() => removeFromCart(item.cartId)}
           >
             <Text style={styles.deleteButtonText}>삭제</Text>
@@ -89,7 +92,7 @@ export default function CartScreen({ navigation }: AppScreenProps<"Cart">) {
             <View style={styles.optionPanel}>
               <View style={styles.optionPanelHeader}>
                 <Text style={styles.optionPanelTitle}>옵션 변경</Text>
-                <Text style={styles.optionPanelHint}>선택한 옵션은 1개만 분리돼요</Text>
+                {item.quantity > 1 && <Text style={styles.optionPanelHint}>1개에만 적용돼요</Text>}
               </View>
               <View style={styles.optionChips}>
                 {availableOptions.map((option) => {
@@ -97,7 +100,9 @@ export default function CartScreen({ navigation }: AppScreenProps<"Cart">) {
                   return (
                     <Pressable
                       key={option.id}
-                      style={[styles.optionChip, isSelected && styles.optionChipSelected]}
+                      accessibilityRole="checkbox"
+                      aria-checked={isSelected}
+                      style={({ pressed }) => [styles.optionChip, isSelected && styles.optionChipSelected, pressed && ui.pressed]}
                       onPress={() => toggleOption(item, option)}
                     >
                       <Text style={[styles.optionChipText, isSelected && styles.optionChipTextSelected]}>
@@ -111,6 +116,8 @@ export default function CartScreen({ navigation }: AppScreenProps<"Cart">) {
                 })}
               </View>
               <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !hasOptionChange }}
                 disabled={!hasOptionChange}
                 style={[styles.optionApplyButton, !hasOptionChange && styles.optionApplyButtonDisabled]}
                 onPress={() => applyOptionChange(item)}
@@ -145,83 +152,84 @@ export default function CartScreen({ navigation }: AppScreenProps<"Cart">) {
   if (cartItems.length === 0) {
     return (
       <View style={styles.empty}>
+        <Icon name="bag-handle-outline" size={32} color={colors.textMuted} />
         <Text style={styles.emptyTitle}>장바구니가 비어 있어요</Text>
-        <Pressable style={styles.primaryButton} onPress={() => navigation.navigate("RestaurantList")}>
-          <Text style={styles.primaryButtonText}>식당 보러가기</Text>
+        <Pressable
+          accessibilityRole="button"
+          style={({ pressed }) => [ui.primaryButton, pressed && ui.pressed]}
+          onPress={() => navigation.navigate("RestaurantList", { category: "전체" })}
+        >
+          <Text style={ui.primaryButtonText}>메뉴 둘러보기</Text>
         </Pressable>
       </View>
     );
   }
 
   return (
-    <FlatList
-      data={cartItems}
-      keyExtractor={(item) => item.cartId}
-      renderItem={renderCartItem}
-      contentContainerStyle={styles.container}
-      ItemSeparatorComponent={() => <View style={styles.listGap} />}
-      initialNumToRender={6}
-      maxToRenderPerBatch={6}
-      windowSize={7}
-      removeClippedSubviews
-      ListFooterComponent={
-        <View style={styles.footer}>
-          <PriceSummary price={totalPrice} />
-          <Pressable
-            style={styles.primaryButton}
-            onPress={() => navigation.navigate("Payment", { orderItems: cartItems })}
-          >
-            <Text style={styles.primaryButtonText}>결제하기</Text>
-          </Pressable>
-        </View>
-      }
-    />
+    <View style={styles.screen}>
+      <FlatList
+        data={cartItems}
+        keyExtractor={(item) => item.cartId}
+        renderItem={renderCartItem}
+        contentContainerStyle={styles.container}
+        ItemSeparatorComponent={() => <View style={styles.listGap} />}
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={7}
+      />
+      <View style={[ui.actionBar, { paddingBottom: Math.max(16, insets.bottom) }]}>
+        <Pressable
+          accessibilityRole="button"
+          style={({ pressed }) => [ui.primaryButton, pressed && ui.pressed]}
+          onPress={() => navigation.navigate("Payment", { orderItems: cartItems, fromCart: true })}
+        >
+          <Text style={ui.primaryButtonText}>{formatPrice(totalPrice)} 결제하기</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.surfaceMuted },
   container: {
     padding: 20,
   },
   listGap: {
-    height: 14,
-  },
-  footer: {
-    paddingTop: 14,
+    height: 12,
   },
   empty: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
+    gap: 12,
   },
   emptyTitle: {
-    marginBottom: 16,
-    color: "#222222",
+    color: colors.text,
     fontSize: 22,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   item: {
     position: "relative",
     padding: 16,
-    paddingTop: 18,
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#E9ECF1",
+    borderColor: colors.border,
   },
   deleteButton: {
     position: "absolute",
-    top: 12,
-    right: 12,
+    top: 8,
+    right: 8,
     zIndex: 2,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: "#EFF4FF",
+    minWidth: 48,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
   },
   deleteButtonText: {
-    color: "#2463EB",
+    color: colors.danger,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -234,22 +242,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemName: {
-    color: "#222222",
+    color: colors.text,
     fontSize: 18,
     fontWeight: "700",
   },
   itemMeta: {
     marginTop: 8,
-    color: "#666666",
+    color: colors.textMuted,
     lineHeight: 19,
   },
   optionPanel: {
     marginTop: 14,
     padding: 12,
     borderRadius: 14,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
-    borderColor: "#E9ECF1",
+    borderColor: colors.border,
   },
   optionPanelHeader: {
     flexDirection: "row",
@@ -259,13 +267,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   optionPanelTitle: {
-    color: "#222222",
+    color: colors.text,
     fontSize: 14,
     fontWeight: "700",
   },
   optionPanelHint: {
     flexShrink: 1,
-    color: "#66788a",
+    color: colors.textMuted,
     fontSize: 11,
     fontWeight: "600",
     textAlign: "right",
@@ -276,27 +284,27 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   optionChip: {
-    minHeight: 38,
+    minHeight: 48,
     justifyContent: "center",
     paddingHorizontal: 11,
     paddingVertical: 7,
-    borderRadius: 999,
+    borderRadius: 10,
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#E9ECF1",
+    borderColor: colors.border,
   },
   optionChipSelected: {
-    backgroundColor: "#2463EB",
-    borderColor: "#2463EB",
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   optionChipText: {
-    color: "#222222",
+    color: colors.text,
     fontSize: 12,
     fontWeight: "700",
   },
   optionChipPrice: {
     marginTop: 1,
-    color: "#66788a",
+    color: colors.textMuted,
     fontSize: 10,
     fontWeight: "600",
   },
@@ -305,10 +313,12 @@ const styles = StyleSheet.create({
   },
   optionApplyButton: {
     alignItems: "center",
+    justifyContent: "center",
+    minHeight: 48,
     marginTop: 11,
     paddingVertical: 11,
     borderRadius: 12,
-    backgroundColor: "#2463EB",
+    backgroundColor: colors.primary,
   },
   optionApplyButtonDisabled: {
     backgroundColor: "#e8f1f7",
@@ -325,30 +335,14 @@ const styles = StyleSheet.create({
     marginTop: 14,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
-    borderColor: "#E9ECF1",
+    borderColor: colors.border,
   },
   quantityLabel: {
     marginBottom: 10,
-    color: "#222222",
+    color: colors.text,
     fontSize: 14,
     fontWeight: "700",
-  },
-  primaryButton: {
-    alignItems: "center",
-    marginTop: 6,
-    minWidth: 132,
-    paddingHorizontal: 28,
-    paddingVertical: 15,
-    borderRadius: 14,
-    backgroundColor: "#2463EB",
-  },
-  primaryButtonText: {
-    color: "#ffffff",
-    fontFamily: APP_FONT_FAMILY,
-    fontSize: 15,
-    fontWeight: "700",
-    lineHeight: 20,
   },
 });

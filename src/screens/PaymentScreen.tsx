@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import PriceSummary from "../components/PriceSummary";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Icon, ui } from "../components/AppUI";
 import { createDummyPayment } from "../services/paymentService";
 import { useCart } from "../store/CartContext";
 import { colors } from "../theme/colors";
@@ -10,6 +11,7 @@ import { formatPrice } from "../utils/formatPrice";
 const paymentMethods = ["학교 포인트", "체크카드", "간편결제"];
 
 export default function PaymentScreen({ route, navigation }: AppScreenProps<"Payment">) {
+  const insets = useSafeAreaInsets();
   const orderItems = route.params?.orderItems ?? [];
   const { clearCart } = useCart();
   const [paymentMethod, setPaymentMethod] = useState(paymentMethods[0]);
@@ -21,51 +23,96 @@ export default function PaymentScreen({ route, navigation }: AppScreenProps<"Pay
 
   function handlePayment() {
     const order = createDummyPayment(orderItems, paymentMethod);
-    clearCart();
+    if (route.params?.fromCart) clearCart();
     navigation.replace("OrderComplete", { order });
   }
 
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>주문 확인</Text>
-
-      {orderItems.map((item) => (
-        <View key={item.cartId ?? item.menuId} style={styles.item}>
-          <Text style={styles.itemName}>{item.name}</Text>
-          <Text style={styles.itemMeta}>수량 {item.quantity}개</Text>
-          <Text style={styles.itemPrice}>{formatPrice(item.totalPrice)}</Text>
-        </View>
-      ))}
-
-      <Text style={styles.sectionTitle}>결제 수단</Text>
-      {paymentMethods.map((method) => (
+  if (orderItems.length === 0) {
+    return (
+      <View style={styles.empty}>
+        <Text style={styles.title}>주문할 메뉴가 없어요</Text>
         <Pressable
-          key={method}
-          style={[styles.method, paymentMethod === method && styles.methodSelected]}
-          onPress={() => setPaymentMethod(method)}
+          accessibilityRole="button"
+          style={({ pressed }) => [ui.primaryButton, pressed && ui.pressed]}
+          onPress={() => navigation.navigate("RestaurantList", { category: "전체" })}
         >
-          <Text style={styles.methodText}>{method}</Text>
+          <Text style={ui.primaryButtonText}>메뉴 둘러보기</Text>
         </Pressable>
-      ))}
+      </View>
+    );
+  }
 
-      <PriceSummary price={totalPrice} />
-      <Pressable style={styles.payButton} onPress={handlePayment}>
-        <Text style={styles.payButtonText}>더미 결제 완료</Text>
-      </Pressable>
-    </ScrollView>
+  return (
+    <View style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title} accessibilityRole="header">주문 확인</Text>
+        <Text style={styles.notice}>테스트 주문이에요. 실제로 결제되지 않아요.</Text>
+        {orderItems.map((item) => (
+          <View key={item.cartId ?? item.menuId} style={styles.item}>
+            <View style={styles.itemDetails}>
+              <Text style={styles.itemName}>{item.name}</Text>
+              <Text style={styles.itemMeta}>
+                {item.quantity}개
+                {item.selectedOptions.length > 0 && ` · ${item.selectedOptions.map((option) => option.name).join(", ")}`}
+              </Text>
+            </View>
+            <Text style={styles.itemPrice}>{formatPrice(item.totalPrice)}</Text>
+          </View>
+        ))}
+        <Text style={styles.sectionTitle} accessibilityRole="header">결제 수단</Text>
+        {paymentMethods.map((method) => (
+          <Pressable
+            key={method}
+            accessibilityRole="radio"
+            aria-checked={paymentMethod === method}
+            style={({ pressed }) => [
+              styles.method,
+              paymentMethod === method && styles.methodSelected,
+              pressed && ui.pressed,
+            ]}
+            onPress={() => setPaymentMethod(method)}
+          >
+            <Icon
+              name={paymentMethod === method ? "radio-button-on" : "radio-button-off"}
+              size={20}
+              color={paymentMethod === method ? colors.primary : colors.textMuted}
+            />
+            <Text style={styles.methodText}>{method}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+      <View style={[ui.actionBar, { paddingBottom: Math.max(16, insets.bottom) }]}>
+        <Pressable
+          accessibilityRole="button"
+          style={({ pressed }) => [ui.primaryButton, pressed && ui.pressed]}
+          onPress={handlePayment}
+        >
+          <Text style={ui.primaryButtonText}>{formatPrice(totalPrice)} 테스트 결제</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.surfaceMuted },
+  empty: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20, gap: 16 },
   container: {
     padding: 20,
     gap: 12,
   },
   title: {
-    marginBottom: 4,
     color: colors.text,
     fontSize: 26,
     fontWeight: "600",
+  },
+  notice: {
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: colors.surfaceWarm,
+    color: colors.primaryDark,
+    fontSize: 14,
+    lineHeight: 20,
   },
   sectionTitle: {
     marginTop: 14,
@@ -74,12 +121,16 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   item: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     padding: 16,
     borderRadius: 14,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
+  itemDetails: { flex: 1, minWidth: 0 },
   itemName: {
     color: colors.text,
     fontSize: 17,
@@ -90,13 +141,17 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   itemPrice: {
-    marginTop: 8,
-    color: colors.primary,
+    color: colors.text,
+    fontVariant: ["tabular-nums"],
     fontWeight: "600",
   },
   method: {
-    padding: 15,
-    borderRadius: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    minHeight: 52,
+    padding: 16,
+    borderRadius: 12,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -108,15 +163,5 @@ const styles = StyleSheet.create({
   methodText: {
     color: colors.text,
     fontWeight: "600",
-  },
-  payButton: {
-    alignItems: "center",
-    paddingVertical: 15,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-  },
-  payButtonText: {
-    color: "#ffffff",
-    fontWeight: "700",
   },
 });

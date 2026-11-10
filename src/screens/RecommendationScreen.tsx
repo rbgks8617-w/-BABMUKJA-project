@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#E9ECF1",
+    borderColor: colors.border,
   },
   heroTop: {
     flexDirection: "row",

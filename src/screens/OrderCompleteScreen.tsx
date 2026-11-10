@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Icon, ui } from "../components/AppUI";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
 import type { AppScreenProps } from "../types/app";
@@ -12,16 +13,18 @@ export default function OrderCompleteScreen({ route, navigation }: AppScreenProp
   useEffect(() => {
     addNotification({
       type: "order",
-      title: "음식 준비 알림",
-      message: `주문번호 ${order.orderNumber} 음식이 약 ${order.estimatedMinutes}분 뒤 준비돼요.`,
+      title: "테스트 주문 알림",
+      message: `테스트 주문번호 ${order.orderNumber} · 준비 시간 예시 약 ${order.estimatedMinutes}분`,
     });
   }, [addNotification, order.estimatedMinutes, order.orderNumber]);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.completeBox}>
-        <Text style={styles.check}>✓</Text>
-        <Text style={styles.title}>주문이 완료됐어요</Text>
+        <View style={styles.check}>
+          <Icon name="checkmark" size={28} color={colors.surface} />
+        </View>
+        <Text accessibilityRole="header" style={styles.title}>테스트 주문이 완료됐어요</Text>
         <Text style={styles.orderNumber}>주문번호 {order.orderNumber}</Text>
       </View>
 
@@ -41,12 +44,16 @@ export default function OrderCompleteScreen({ route, navigation }: AppScreenProp
       </View>
 
       <View style={styles.readyBox}>
-        <Text style={styles.readyLabel}>예상 준비 시간</Text>
+        <Text style={styles.readyLabel}>준비 시간 예시</Text>
         <Text style={styles.readyTime}>약 {order.estimatedMinutes}분</Text>
       </View>
 
-      <Pressable style={styles.homeButton} onPress={() => navigation.replace("RestaurantList")}>
-        <Text style={styles.homeButtonText}>홈으로 돌아가기</Text>
+      <Pressable
+        accessibilityRole="button"
+        style={({ pressed }) => [ui.primaryButton, pressed && ui.pressed]}
+        onPress={() => navigation.replace("RestaurantList", { category: "전체" })}
+      >
+        <Text style={ui.primaryButtonText}>홈으로 돌아가기</Text>
       </Pressable>
     </ScrollView>
   );
@@ -66,21 +73,19 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   check: {
-    width: 58,
-    height: 58,
-    marginBottom: 14,
-    borderRadius: 29,
+    width: 56,
+    height: 56,
+    marginBottom: 16,
+    borderRadius: 28,
     backgroundColor: colors.success,
-    color: "#ffffff",
-    fontSize: 38,
-    fontWeight: "700",
-    textAlign: "center",
-    lineHeight: 58,
+    alignItems: "center",
+    justifyContent: "center",
   },
   title: {
     color: colors.text,
     fontSize: 25,
     fontWeight: "600",
+    textAlign: "center",
   },
   orderNumber: {
     marginTop: 8,
@@ -143,16 +148,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
     color: "#ffffff",
     fontSize: 24,
-    fontWeight: "700",
-  },
-  homeButton: {
-    alignItems: "center",
-    paddingVertical: 15,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-  },
-  homeButtonText: {
-    color: "#ffffff",
     fontWeight: "700",
   },
 });

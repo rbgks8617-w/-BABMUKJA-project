@@ -1,5 +1,13 @@
 # Mobile UI refresh
 
+## Campus dining and checkout
+
+- Use the school symbol and GabiaSolmee wordmark for the brand. Use system text for interface labels and tabular figures for prices.
+- Keep the chrome neutral. Reserve campus blue for actions and selected states, and navy for the cafeteria ticket. The ticket brings the menu, price, serving time, and restaurant link into one control.
+- Label the cafeteria menu, crowd estimates, and popularity rankings as examples while they use sample data. Show the test payment label before the user confirms and again on the receipt.
+- Keep menu, cart, and payment actions above the bottom safe area. Keep the cart confirmation visible while the current menu selection stays the same.
+- Use the shared buttons and colors in `src/components/AppUI.tsx` and `src/theme/colors.ts` for new screens.
+
 ## Design and ownership
 
 - `src/theme` owns the blue, neutral, green and coral palette and system text font.

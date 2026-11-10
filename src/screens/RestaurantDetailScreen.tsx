@@ -117,7 +117,7 @@ export default function RestaurantDetailScreen({ route, navigation }: AppScreenP
               <Pressable
                 key={filter}
                 accessibilityRole="tab"
-                accessibilityState={{ selected: selectedFilter === filter }}
+                aria-selected={selectedFilter === filter}
                 style={[styles.filterChip, selectedFilter === filter && styles.filterChipActive]}
                 onPress={() => setSelectedFilter(filter)}
               >
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   name: {
-    color: "#222222",
+    color: colors.text,
     fontSize: 26,
     fontWeight: "700",
   },
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   infoRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   description: {
     marginTop: 14,
-    color: "#666666",
+    color: colors.textMuted,
     lineHeight: 21,
   },
   reviewSummary: {
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginTop: 22,
     marginBottom: 10,
-    color: "#222222",
+    color: colors.text,
     fontSize: 22,
     fontWeight: "700",
   },

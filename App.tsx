@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { Platform, Text, TextInput, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { useFonts } from "expo-font";
@@ -66,12 +66,7 @@ applyDefaultFont(Text);
 applyDefaultFont(TextInput);
 
 export default function App() {
-  const [showStartupSplash, setShowStartupSplash] = useState(true);
   const [fontsLoaded, fontError] = useFonts(appFonts);
-
-  const hideStartupSplash = useCallback(() => {
-    setShowStartupSplash(false);
-  }, []);
 
   useEffect(() => {
     if (Platform.OS !== "web" || typeof document === "undefined") {
@@ -93,23 +88,20 @@ export default function App() {
         font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
         -webkit-font-smoothing: antialiased;
       }
-      input,
-      textarea {
-        outline: none;
-      }
       html,
       body,
       #root {
         overscroll-behavior-x: contain;
       }
       * { box-sizing: border-box; }
-      :focus-visible { outline: 2px solid #2463EB; outline-offset: 3px; }
+      :focus-visible { outline: 2px solid ${colors.primary}; outline-offset: 2px; }
+      input:focus-visible, textarea:focus-visible { outline: 2px solid ${colors.primary}; outline-offset: -2px; }
     `;
     document.head.appendChild(style);
   }, []);
 
   if (!fontsLoaded && !fontError) {
-    return <View style={{ flex: 1, backgroundColor: colors.background }} />;
+    return <StartupSplash />;
   }
 
   return (
@@ -121,7 +113,7 @@ export default function App() {
               <View
                 style={{
                   flex: 1,
-                  backgroundColor: "#EDF0F4",
+                  backgroundColor: colors.surfaceMuted,
                   alignItems: "center",
                 }}
               >
@@ -129,7 +121,7 @@ export default function App() {
                   style={{
                     flex: 1,
                     width: "100%",
-                    maxWidth: 560,
+                    maxWidth: Platform.OS === "web" ? 760 : undefined,
                     backgroundColor: colors.background,
                   }}
                 >
@@ -137,9 +129,6 @@ export default function App() {
                     <StatusBar style="dark" />
                     <AppNavigator />
                   </NavigationContainer>
-                  {showStartupSplash ? (
-                    <StartupSplash onDone={hideStartupSplash} />
-                  ) : null}
                 </View>
               </View>
             </AuthProvider>

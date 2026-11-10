@@ -16,7 +16,7 @@ export function Icon({
   size?: number;
   color?: string;
 }) {
-  return <Ionicons name={name} size={size} color={color} />;
+  return <Ionicons name={name} size={size} color={color} aria-hidden />;
 }
 
 export function IconButton({
@@ -33,7 +33,7 @@ export function IconButton({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={badge > 0 ? `${label} ${badge}개` : label}
       onPress={onPress}
       style={({ pressed }) => [ui.iconButton, pressed && ui.pressed]}
     >
@@ -58,12 +58,12 @@ export function SectionHeading({
 }) {
   return (
     <View style={ui.headingRow}>
-      <Text style={ui.heading}>{title}</Text>
-      {action && (
+      <Text accessibilityRole="header" style={ui.heading}>{title}</Text>
+      {action && onPress && (
         <Pressable
           accessibilityRole="button"
           onPress={onPress}
-          style={ui.inlineAction}
+          style={({ pressed }) => [ui.inlineAction, pressed && ui.pressed]}
         >
           <Text style={ui.actionText}>{action}</Text>
           <Icon name="chevron-forward" size={14} color={colors.textMuted} />
@@ -76,7 +76,7 @@ export function SectionHeading({
 type Tab = "home" | "map" | "favorites" | "community" | "account";
 const tabs: { id: Tab; title: string; icon: IconName; selected: IconName }[] = [
   { id: "home", title: "홈", icon: "home-outline", selected: "home" },
-  { id: "map", title: "캠퍼스맵", icon: "map-outline", selected: "map" },
+  { id: "map", title: "식당", icon: "business-outline", selected: "business" },
   {
     id: "favorites",
     title: "즐겨찾기",
@@ -120,20 +120,22 @@ export function BottomNav({
         <Pressable
           key={tab.id}
           accessibilityRole="tab"
-          accessibilityState={{ selected: active === tab.id }}
+          aria-selected={active === tab.id}
           accessibilityLabel={tab.title}
           onPress={() => open(tab.id)}
-          style={ui.tab}
+          style={({ pressed }) => [ui.tab, pressed && ui.pressed]}
         >
-          <Icon
-            name={active === tab.id ? tab.selected : tab.icon}
-            color={active === tab.id ? colors.primary : colors.textSoft}
-            size={22}
-          />
+          <View style={[ui.tabIcon, active === tab.id && ui.tabIconActive]}>
+            <Icon
+              name={active === tab.id ? tab.selected : tab.icon}
+              color={active === tab.id ? colors.primary : colors.textMuted}
+              size={20}
+            />
+          </View>
           <Text
             style={[
               ui.tabLabel,
-              active === tab.id && { color: colors.primary, fontWeight: "700" },
+              active === tab.id && { color: colors.primary, fontWeight: "600" },
             ]}
           >
             {tab.title}
@@ -146,13 +148,36 @@ export function BottomNav({
 
 export const ui = StyleSheet.create({
   iconButton: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 22,
   },
   pressed: { opacity: 0.65 },
+  primaryButton: {
+    minHeight: 52,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+  },
+  primaryButtonText: {
+    color: colors.surface,
+    fontSize: 15,
+    fontWeight: "600",
+    textAlign: "center",
+    fontVariant: ["tabular-nums"],
+  },
+  actionBar: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    backgroundColor: colors.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
   badge: {
     position: "absolute",
     top: 2,
@@ -161,7 +186,7 @@ export const ui = StyleSheet.create({
     height: 17,
     paddingHorizontal: 4,
     borderRadius: 9,
-    backgroundColor: "#F06A62",
+    backgroundColor: colors.danger,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
@@ -173,12 +198,14 @@ export const ui = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
-    marginBottom: 16,
+    minHeight: 44,
+    marginBottom: 8,
   },
   heading: {
+    flexShrink: 1,
     fontSize: 20,
     lineHeight: 28,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.text,
   },
   inlineAction: {
@@ -187,20 +214,29 @@ export const ui = StyleSheet.create({
     alignItems: "center",
     minHeight: 44,
   },
-  actionText: { fontSize: 12, color: colors.textMuted },
+  actionText: { fontSize: 13, color: colors.primary, fontWeight: "600" },
   bottomNav: {
     flexDirection: "row",
-    paddingTop: 10,
-    backgroundColor: "white",
+    paddingTop: 4,
+    paddingHorizontal: 8,
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderColor: colors.border,
   },
   tab: {
     flex: 1,
-    minHeight: 46,
+    minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
-    gap: 5,
+    gap: 2,
   },
-  tabLabel: { fontSize: 10, color: colors.textMuted },
+  tabIcon: {
+    minWidth: 44,
+    height: 28,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  tabIconActive: { backgroundColor: colors.surfaceWarm },
+  tabLabel: { fontSize: 11, color: colors.textMuted, textAlign: "center" },
 });

@@ -15,7 +15,7 @@ export type RootStackParamList = {
   Auth: undefined;
   Notifications: undefined;
   Cart: undefined;
-  Payment: { orderItems?: OrderItem[] } | undefined;
+  Payment: { orderItems?: OrderItem[]; fromCart?: boolean } | undefined;
   OrderComplete: { order: CompletedOrder };
 };
 

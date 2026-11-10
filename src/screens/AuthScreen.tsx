@@ -151,6 +151,15 @@ export default function AuthScreen({ navigation }: AppScreenProps<"Auth">) {
           <Text style={styles.brandText}>대학교 밥먹자</Text>
         </View>
         <View style={styles.hero}>
+          <View style={styles.heroCopy}>
+            <Text style={styles.eyebrow}>한국공학대학교</Text>
+            <Text accessibilityRole="header" style={styles.title}>
+              {isRegisterMode ? "밥먹자 회원가입" : "밥먹자 로그인"}
+            </Text>
+            <Text style={styles.description}>
+              {isRegisterMode ? "이메일로 계정을 만들어요" : "캠퍼스 식당과 밥친구를 찾아보세요"}
+            </Text>
+          </View>
           <View style={styles.heroPicture}>
             <Image
               source={lunchboxRecommendationSource}
@@ -158,15 +167,6 @@ export default function AuthScreen({ navigation }: AppScreenProps<"Auth">) {
               style={styles.heroLunchbox}
             />
           </View>
-          <Text style={styles.eyebrow}>한국공학대학교의 맛있는 일상</Text>
-          <Text style={styles.title}>
-            {isRegisterMode ? "우리, 밥친구 할까요?" : "잘 먹고, 잘 지내요."}
-          </Text>
-          <Text style={styles.description}>
-            {isRegisterMode
-              ? "새로운 캠퍼스 생활을 함께 시작해요."
-              : "오늘의 한 끼부터 함께할 밥친구까지."}
-          </Text>
         </View>
 
         <View style={styles.modeRow}>
@@ -177,7 +177,7 @@ export default function AuthScreen({ navigation }: AppScreenProps<"Auth">) {
             ]}
             onPress={() => setMode("login")}
             accessibilityRole="tab"
-            accessibilityState={{ selected: !isRegisterMode }}
+            aria-selected={!isRegisterMode}
           >
             <Text
               style={[
@@ -195,7 +195,7 @@ export default function AuthScreen({ navigation }: AppScreenProps<"Auth">) {
             ]}
             onPress={() => setMode("register")}
             accessibilityRole="tab"
-            accessibilityState={{ selected: isRegisterMode }}
+            aria-selected={isRegisterMode}
           >
             <Text
               style={[styles.modeText, isRegisterMode && styles.modeTextActive]}
@@ -311,31 +311,41 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
     backgroundColor: colors.background,
   },
-  brandRow: { flexDirection: "row", alignItems: "center", gap: 9 },
+  brandRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   brandImage: { width: 30, height: 34, resizeMode: "contain" },
   brandText: {
     fontFamily: BRAND_FONT_FAMILY,
     fontSize: 20,
     color: colors.text,
   },
-  hero: { paddingTop: 12, paddingBottom: 30 },
+  hero: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 24,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceWarm,
+  },
+  heroCopy: { flex: 1, minWidth: 0 },
   heroPicture: {
-    height: 130,
+    width: 88,
+    height: 88,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 14,
   },
-  heroLunchbox: { width: 200, height: 200 },
+  heroLunchbox: { width: "100%", height: "100%" },
   eyebrow: { color: colors.primary, fontSize: 12, fontWeight: "600" },
   title: {
-    marginTop: 10,
+    marginTop: 4,
     color: colors.text,
-    fontSize: 28,
-    fontWeight: "700",
-    lineHeight: 38,
+    fontSize: 24,
+    fontWeight: "600",
+    lineHeight: 32,
   },
   description: {
-    marginTop: 9,
+    marginTop: 4,
     color: colors.textMuted,
     fontSize: 13,
     lineHeight: 21,
@@ -344,7 +354,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderBottomWidth: 1,
     borderColor: colors.border,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   modeButton: {
     flex: 1,
@@ -369,7 +379,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 13,
     borderRadius: 10,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
     borderColor: colors.border,
     color: colors.text,
@@ -382,7 +392,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: colors.surfaceMuted,
   },
   eye: {
     width: 44,
