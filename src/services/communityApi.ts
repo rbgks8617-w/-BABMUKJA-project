@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://arcade-amendments-moore-quotations.trycloudflare.com";
+import { API_BASE_URL } from "./apiBaseUrl";
 
 export type CommunityReviewDto = {
   id: string;
