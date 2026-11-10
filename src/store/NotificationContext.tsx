@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { CampusNotification } from "../types/app";
+import { useAuth } from "./AuthContext";
 
 type AddNotificationInput = Omit<CampusNotification, "id" | "createdAt" | "isRead"> &
   Partial<Pick<CampusNotification, "id" | "createdAt" | "isRead">>;
@@ -20,7 +21,7 @@ const initialNotifications: CampusNotification[] = [
   {
     id: "ready-1",
     type: "order",
-    title: "음식 준비 알림",
+    title: "예시 · 음식 준비 알림",
     message: "주문한 메뉴가 곧 준비돼요. 픽업 알림을 놓치지 마세요.",
     createdAt: "방금",
     isRead: false,
@@ -28,7 +29,7 @@ const initialNotifications: CampusNotification[] = [
   {
     id: "mate-1",
     type: "mate",
-    title: "나랑 밥먹자 알림",
+    title: "예시 · 나랑 밥먹자 알림",
     message: "12:30 라온식당 모임에 익명 학생이 참여했어요.",
     createdAt: "3분 전",
     isRead: false,
@@ -36,7 +37,16 @@ const initialNotifications: CampusNotification[] = [
 ];
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const [notifications, setNotifications] = useState<CampusNotification[]>(initialNotifications);
+  const { user } = useAuth();
+  return (
+    <SessionNotifications key={user ? `user:${user.id}` : "guest"} preview={!user}>
+      {children}
+    </SessionNotifications>
+  );
+}
+
+function SessionNotifications({ children, preview }: { children: ReactNode; preview: boolean }) {
+  const [notifications, setNotifications] = useState<CampusNotification[]>(preview ? initialNotifications : []);
 
   const addNotification = useCallback((notification: AddNotificationInput) => {
     const nextNotification: CampusNotification = {

@@ -63,14 +63,3 @@ export async function getSessionByToken(token: string) {
 
   return session;
 }
-
-export async function getAuthUserFromHeader(authorization = "") {
-  const [scheme, token] = authorization.split(" ");
-
-  if (scheme !== "Bearer" || !token) {
-    return null;
-  }
-
-  const session = await getSessionByToken(token);
-  return session?.user ?? null;
-}

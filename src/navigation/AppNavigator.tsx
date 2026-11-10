@@ -201,18 +201,22 @@ export default function AppNavigator() {
         component={CartScreen}
         options={({ navigation }) => pushOptions(navigation, "장바구니")}
       />
-      <Stack.Screen
-        name="Payment"
-        component={PaymentScreen}
-        options={({ navigation }) =>
-          pushOptions(navigation, "결제", "장바구니", "Cart")
-        }
-      />
-      <Stack.Screen
-        name="OrderComplete"
-        component={OrderCompleteScreen}
-        options={({ navigation }) => pushOptions(navigation, "주문 완료", "홈")}
-      />
+      {!user && (
+        <>
+          <Stack.Screen
+            name="Payment"
+            component={PaymentScreen}
+            options={({ navigation }) =>
+              pushOptions(navigation, "테스트 결제", "장바구니", "Cart")
+            }
+          />
+          <Stack.Screen
+            name="OrderComplete"
+            component={OrderCompleteScreen}
+            options={({ navigation }) => pushOptions(navigation, "테스트 주문 완료", "홈")}
+          />
+        </>
+      )}
     </Stack.Navigator>
   );
 }

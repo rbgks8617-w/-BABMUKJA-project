@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { getParticipantKey } from "../services/clientIdentity";
 import {
   createMealMateMessage,
   fetchMealMateMessages,
   type MealMateMessageDto,
 } from "../services/mealMateApi";
+import { useAuth } from "../store/AuthContext";
 import { colors } from "../theme/colors";
 import type { AppScreenProps } from "../types/app";
 
@@ -26,32 +26,27 @@ function mapMessage(message: MealMateMessageDto): ChatMessage {
 }
 
 export default function MealMateChatScreen({ route }: AppScreenProps<"MealMateChat">) {
-  const room = route.params?.room ?? {
-    id: "",
-    title: "나랑 밥먹자",
-    topic: "편하게 밥 먹기",
-    time: "시간 협의",
-    members: 1,
-    maxCount: 3,
-  };
-  const participantKey = useMemo(() => getParticipantKey(), []);
+  const room = route.params?.room;
+  const roomId = room?.id;
+  const { token } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [serverError, setServerError] = useState("");
 
   const loadMessages = useCallback(async () => {
-    if (!room.id) {
+    if (!token || !roomId) {
       return;
     }
 
     try {
-      const serverMessages = await fetchMealMateMessages(room.id, participantKey);
+      const serverMessages = await fetchMealMateMessages(roomId, token);
       setMessages(serverMessages.map(mapMessage));
       setServerError("");
     } catch {
-      setServerError("채팅 서버 연결을 확인하고 있어요");
+      setMessages([]);
+      setServerError("채팅을 불러오지 못했어요. 모임에 참여 중인지 확인해 주세요.");
     }
-  }, [participantKey, room.id]);
+  }, [roomId, token]);
 
   useEffect(() => {
     loadMessages();
@@ -62,7 +57,7 @@ export default function MealMateChatScreen({ route }: AppScreenProps<"MealMateCh
   const sendMessage = async () => {
     const text = draft.trim();
 
-    if (!text || !room.id) {
+    if (!token || !text || !roomId) {
       return;
     }
 
@@ -79,10 +74,7 @@ export default function MealMateChatScreen({ route }: AppScreenProps<"MealMateCh
     setDraft("");
 
     try {
-      const savedMessage = await createMealMateMessage(room.id, {
-        body: text,
-        participantKey,
-      });
+      const savedMessage = await createMealMateMessage(roomId, text, token);
       setMessages((currentMessages) => [
         ...currentMessages.filter((message) => message.id !== optimisticId),
         {
@@ -94,6 +86,8 @@ export default function MealMateChatScreen({ route }: AppScreenProps<"MealMateCh
       ]);
       setServerError("");
     } catch {
+      setMessages((currentMessages) => currentMessages.filter((message) => message.id !== optimisticId));
+      setDraft((currentDraft) => currentDraft || text);
       setServerError("메시지 전송에 실패했어요");
     }
   };
@@ -109,6 +103,10 @@ export default function MealMateChatScreen({ route }: AppScreenProps<"MealMateCh
     ),
     [],
   );
+
+  if (!token || !room?.id) {
+    return <View style={styles.roomHeader}><Text>참여 중인 모임에서만 채팅할 수 있어요</Text></View>;
+  }
 
   return (
     <View style={styles.screen}>

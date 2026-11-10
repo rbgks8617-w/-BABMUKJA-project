@@ -8,7 +8,7 @@ export type CommunityReviewDto = {
   valueScore: number;
   imageUrl?: string | null;
   createdAt: string;
-  authorKey?: string | null;
+  isMine: boolean;
   comments: Array<{
     id: string;
     body: string;
@@ -23,11 +23,12 @@ type ApiResponse<T> = {
   data: T;
 };
 
-async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+async function requestJson<T>(path: string, token: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
       ...(init?.headers ?? {}),
     },
   });
@@ -43,52 +44,45 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function fetchCommunityReviews() {
-  const response = await requestJson<ApiResponse<CommunityReviewDto[]>>("/api/community/reviews");
+export async function fetchCommunityReviews(token: string) {
+  const response = await requestJson<ApiResponse<CommunityReviewDto[]>>("/api/community/reviews", token);
+  return response.data;
+}
+
+export async function fetchCommunityReview(reviewId: string, token: string) {
+  const response = await requestJson<ApiResponse<CommunityReviewDto>>(`/api/community/reviews/${reviewId}`, token);
   return response.data;
 }
 
 export async function createCommunityReview(input: {
   title: string;
   body: string;
-  participantKey: string;
   tasteScore: number;
   valueScore: number;
   imageUrl?: string;
-}) {
-  const response = await requestJson<ApiResponse<CommunityReviewDto>>("/api/community/reviews", {
+}, token: string) {
+  const response = await requestJson<ApiResponse<CommunityReviewDto>>("/api/community/reviews", token, {
     method: "POST",
     body: JSON.stringify(input),
   });
   return response.data;
 }
 
-export async function createCommunityComment(reviewId: string, input: { body: string; participantKey: string }) {
-  const response = await requestJson<ApiResponse<CommunityReviewDto>>(`/api/community/reviews/${reviewId}/comments`, {
+export async function createCommunityComment(reviewId: string, body: string, token: string) {
+  const response = await requestJson<ApiResponse<CommunityReviewDto>>(`/api/community/reviews/${reviewId}/comments`, token, {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify({ body }),
   });
   return response.data;
 }
 
-export async function deleteCommunityReview(reviewId: string, input: { participantKey?: string; token?: string }) {
-  await requestJson<void>(`/api/community/reviews/${reviewId}`, {
-    method: "DELETE",
-    headers: input.token
-      ? {
-          Authorization: `Bearer ${input.token}`,
-        }
-      : undefined,
-    body: JSON.stringify({ participantKey: input.participantKey }),
-  });
+export async function deleteCommunityReview(reviewId: string, token: string) {
+  await requestJson<void>(`/api/community/reviews/${reviewId}`, token, { method: "DELETE" });
 }
 
 export async function deleteAllCommunityReviews(token: string) {
-  const response = await requestJson<ApiResponse<{ deletedCount: number }>>("/api/community/reviews", {
+  const response = await requestJson<ApiResponse<{ deletedCount: number }>>("/api/community/reviews", token, {
     method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
   return response.data;
 }

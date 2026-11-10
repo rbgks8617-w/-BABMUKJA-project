@@ -5,6 +5,7 @@ import { Icon, ui } from "../components/AppUI";
 import QuantitySelector from "../components/QuantitySelector";
 import { getMenuById } from "../services/restaurantService";
 import { useCart } from "../store/CartContext";
+import { useAuth } from "../store/AuthContext";
 import { colors } from "../theme/colors";
 import type { AppScreenProps, CartItem, MenuOption } from "../types/app";
 import { formatPrice } from "../utils/formatPrice";
@@ -19,6 +20,7 @@ function optionKey(options: MenuOption[] = []) {
 
 export default function CartScreen({ navigation }: AppScreenProps<"Cart">) {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const { cartItems, changeCartItemQuantity, removeFromCart, splitCartItemWithOptions, totalPrice } = useCart();
   const [optionDrafts, setOptionDrafts] = useState<Record<string, MenuOption[]>>({});
 
@@ -178,13 +180,20 @@ export default function CartScreen({ navigation }: AppScreenProps<"Cart">) {
         windowSize={7}
       />
       <View style={[ui.actionBar, { paddingBottom: Math.max(16, insets.bottom) }]}>
-        <Pressable
-          accessibilityRole="button"
-          style={({ pressed }) => [ui.primaryButton, pressed && ui.pressed]}
-          onPress={() => navigation.navigate("Payment", { orderItems: cartItems, fromCart: true })}
-        >
-          <Text style={ui.primaryButtonText}>{formatPrice(totalPrice)} 결제하기</Text>
-        </Pressable>
+        {user ? (
+          <View style={styles.checkoutNotice}>
+            <Text style={styles.itemName}>합계 {formatPrice(totalPrice)}</Text>
+            <Text style={styles.itemMeta}>주문과 결제는 준비 중이에요</Text>
+          </View>
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            style={({ pressed }) => [ui.primaryButton, pressed && ui.pressed]}
+            onPress={() => navigation.navigate("Payment", { orderItems: cartItems, fromCart: true })}
+          >
+            <Text style={ui.primaryButtonText}>{formatPrice(totalPrice)} 테스트 결제</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -192,6 +201,7 @@ export default function CartScreen({ navigation }: AppScreenProps<"Cart">) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.surfaceMuted },
+  checkoutNotice: { paddingVertical: 4 },
   container: {
     padding: 20,
   },

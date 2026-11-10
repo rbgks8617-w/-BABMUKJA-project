@@ -26,11 +26,12 @@ type ApiResponse<T> = {
   data: T;
 };
 
-async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+async function requestJson<T>(path: string, token: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
       ...(init?.headers ?? {}),
     },
   });
@@ -42,10 +43,8 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function fetchMealMateRooms(participantKey: string) {
-  const response = await requestJson<ApiResponse<MealMateRoomDto[]>>(
-    `/api/meal-mates?participantKey=${encodeURIComponent(participantKey)}`,
-  );
+export async function fetchMealMateRooms(token: string) {
+  const response = await requestJson<ApiResponse<MealMateRoomDto[]>>("/api/meal-mates", token);
   return response.data;
 }
 
@@ -55,42 +54,37 @@ export async function createMealMateRoom(input: {
   topic: string;
   note: string;
   maxCount: number;
-  participantKey: string;
-}) {
-  const response = await requestJson<ApiResponse<MealMateRoomDto>>("/api/meal-mates", {
+}, token: string) {
+  const response = await requestJson<ApiResponse<MealMateRoomDto>>("/api/meal-mates", token, {
     method: "POST",
     body: JSON.stringify(input),
   });
   return response.data;
 }
 
-export async function joinMealMateRoom(roomId: string, participantKey: string) {
-  const response = await requestJson<ApiResponse<MealMateRoomDto>>(`/api/meal-mates/${roomId}/join`, {
+export async function joinMealMateRoom(roomId: string, token: string) {
+  const response = await requestJson<ApiResponse<MealMateRoomDto>>(`/api/meal-mates/${roomId}/join`, token, {
     method: "POST",
-    body: JSON.stringify({ participantKey }),
   });
   return response.data;
 }
 
-export async function leaveMealMateRoom(roomId: string, participantKey: string) {
-  const response = await requestJson<ApiResponse<MealMateRoomDto>>(`/api/meal-mates/${roomId}/leave`, {
+export async function leaveMealMateRoom(roomId: string, token: string) {
+  const response = await requestJson<ApiResponse<MealMateRoomDto>>(`/api/meal-mates/${roomId}/leave`, token, {
     method: "POST",
-    body: JSON.stringify({ participantKey }),
   });
   return response.data;
 }
 
-export async function fetchMealMateMessages(roomId: string, participantKey: string) {
-  const response = await requestJson<ApiResponse<MealMateMessageDto[]>>(
-    `/api/meal-mates/${roomId}/messages?participantKey=${encodeURIComponent(participantKey)}`,
-  );
+export async function fetchMealMateMessages(roomId: string, token: string) {
+  const response = await requestJson<ApiResponse<MealMateMessageDto[]>>(`/api/meal-mates/${roomId}/messages`, token);
   return response.data;
 }
 
-export async function createMealMateMessage(roomId: string, input: { body: string; participantKey: string }) {
-  const response = await requestJson<ApiResponse<MealMateMessageDto>>(`/api/meal-mates/${roomId}/messages`, {
+export async function createMealMateMessage(roomId: string, body: string, token: string) {
+  const response = await requestJson<ApiResponse<MealMateMessageDto>>(`/api/meal-mates/${roomId}/messages`, token, {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify({ body }),
   });
   return response.data;
 }

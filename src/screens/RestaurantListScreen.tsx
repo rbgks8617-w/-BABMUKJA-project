@@ -41,6 +41,7 @@ import {
   searchCampusFood,
 } from "../services/restaurantService";
 import { useCart } from "../store/CartContext";
+import { useAuth } from "../store/AuthContext";
 import { useFavorites } from "../store/FavoriteContext";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
@@ -147,6 +148,7 @@ export default function RestaurantListScreen({
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedQuery = useDebouncedValue(searchQuery, 250);
   const { totalQuantity } = useCart();
+  const { user } = useAuth();
   const { favoriteMenuIds, isFavoriteMenu, toggleFavoriteMenu } =
     useFavorites();
   const { unreadCount } = useNotifications();
@@ -313,7 +315,7 @@ export default function RestaurantListScreen({
                     </Pressable>
                   ))}
                 </View>
-                <View style={s.featureSection}>
+                {!user && <View style={s.featureSection}>
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={`학식 예시, ${today.menuItems[0]}, ${formatPrice(today.price)}, ${today.restaurantName} 보기`}
@@ -349,7 +351,7 @@ export default function RestaurantListScreen({
                       </View>
                     </View>
                   </Pressable>
-                </View>
+                </View>}
               </>
             )}
 
@@ -457,9 +459,9 @@ export default function RestaurantListScreen({
             </View>
             {!favorites && (
               <>
-                <View style={s.section}>
+                {!user && <View style={s.section}>
                   <CrowdPanel onOpen={openRestaurant} />
-                </View>
+                </View>}
                 <Pressable
                   accessibilityRole="button"
                   onPress={() => navigation.navigate("Recommendation")}
@@ -530,6 +532,7 @@ export default function RestaurantListScreen({
                     )}
                   />
                 </View>
+                {!user && <>
                 <View style={s.divider} />
                 <View style={s.section}>
                   <SectionHeading title="인기 메뉴 예시" />
@@ -561,6 +564,7 @@ export default function RestaurantListScreen({
                     </Pressable>
                   ))}
                 </View>
+                </>}
                 <Pressable
                   accessibilityRole="button"
                   style={({ pressed }) => [s.mateBanner, pressed && ui.pressed]}

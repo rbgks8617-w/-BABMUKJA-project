@@ -106,10 +106,10 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <NotificationProvider>
+      <AuthProvider>
         <FavoriteProvider>
           <CartProvider>
-            <AuthProvider>
+            <NotificationProvider>
               <View
                 style={{
                   flex: 1,
@@ -131,10 +131,10 @@ export default function App() {
                   </NavigationContainer>
                 </View>
               </View>
-            </AuthProvider>
+            </NotificationProvider>
           </CartProvider>
         </FavoriteProvider>
-      </NotificationProvider>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }

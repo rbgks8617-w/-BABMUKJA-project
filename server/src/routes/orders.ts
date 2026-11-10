@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { requireAuth } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errorHandler.js";
 import { store } from "../repositories/inMemoryStore.js";
 import type { Order } from "../types.js";
@@ -18,13 +19,13 @@ const createOrderSchema = z.object({
 
 export const ordersRouter = Router();
 
-ordersRouter.get("/", (_request, response) => {
+ordersRouter.use(requireAuth);
+
+ordersRouter.get("/", (request, response) => {
   response.json({
-    data: store.listOrders(),
+    data: store.listOrders(request.user!.id),
   });
 });
-
-ordersRouter.use(requireAuth);
 
 ordersRouter.post("/", (request, response, next) => {
   try {

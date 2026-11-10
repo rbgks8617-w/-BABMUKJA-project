@@ -50,6 +50,7 @@ export type MealMateRoom = {
 
 export type Order = {
   id: string;
+  userId: string;
   items: Array<{
     menuId: string;
     quantity: number;

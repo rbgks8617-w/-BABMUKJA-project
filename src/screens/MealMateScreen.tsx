@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { getParticipantKey } from "../services/clientIdentity";
 import {
   createMealMateRoom,
   fetchMealMateRooms,
@@ -9,6 +8,7 @@ import {
   type MealMateRoomDto,
 } from "../services/mealMateApi";
 import { getRestaurants } from "../services/restaurantService";
+import { useAuth } from "../store/AuthContext";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
 import { Icon } from "../components/AppUI";
@@ -95,9 +95,10 @@ function mapRoomToPost(room: MealMateRoomDto, restaurants: Restaurant[]): MealMa
 }
 
 export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate">) {
+  const { user, token } = useAuth();
   const restaurants = useMemo(() => getRestaurants().slice(0, 8), []);
-  const participantKey = useMemo(() => getParticipantKey(), []);
-  const [posts, setPosts] = useState(() => buildInitialPosts(restaurants));
+  const [posts, setPosts] = useState(() => user ? [] : buildInitialPosts(restaurants));
+  const [hasLoadedRooms, setHasLoadedRooms] = useState(false);
   const [serverError, setServerError] = useState("");
   const [composerOpen, setComposerOpen] = useState(false);
   const [topic, setTopic] = useState("");
@@ -112,20 +113,23 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
   const selectedRestaurant = restaurants.find((restaurant) => restaurant.id === restaurantId) ?? restaurants[0];
 
   const loadRooms = useCallback(async () => {
+    if (!token) return;
     try {
-      const rooms = await fetchMealMateRooms(participantKey);
+      const rooms = await fetchMealMateRooms(token);
       setPosts(rooms.map((room) => mapRoomToPost(room, restaurants)));
+      setHasLoadedRooms(true);
       setServerError("");
     } catch {
-      setServerError("서버에 연결하지 못했어요. 마지막 목록 또는 예시 모임을 표시해요.");
+      setServerError("모임을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
     }
-  }, [participantKey, restaurants]);
+  }, [restaurants, token]);
 
   useEffect(() => {
+    if (!token) return;
     loadRooms();
     const timerId = setInterval(loadRooms, 5000);
     return () => clearInterval(timerId);
-  }, [loadRooms]);
+  }, [loadRooms, token]);
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -147,7 +151,7 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
   };
 
   const createPost = async () => {
-    if (!selectedRestaurant) {
+    if (!token || !selectedRestaurant) {
       return;
     }
 
@@ -166,8 +170,7 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
         topic: normalizedTopic,
         note: normalizedNote,
         maxCount,
-        participantKey,
-      });
+      }, token);
       const nextPost = mapRoomToPost(savedRoom, restaurants);
 
       setPosts((currentPosts) => [nextPost, ...currentPosts].slice(0, maxLocalMealMatePosts));
@@ -202,15 +205,17 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
   const leavePost = async (postId: string) => {
     const targetPost = posts.find((post) => post.id === postId);
 
-    if (!targetPost?.joinedByMe) {
+    if (!token || !targetPost?.joinedByMe) {
       return;
     }
 
     try {
-      const savedRoom = await leaveMealMateRoom(postId, participantKey);
+      const savedRoom = await leaveMealMateRoom(postId, token);
       const nextPost = mapRoomToPost(savedRoom, restaurants);
 
-      setPosts((currentPosts) => currentPosts.map((post) => (post.id === postId ? nextPost : post)));
+      setPosts((currentPosts) => nextPost.currentCount > 0
+        ? currentPosts.map((post) => post.id === postId ? nextPost : post)
+        : currentPosts.filter((post) => post.id !== postId));
       showToast("모임에서 나갔어요");
       setServerError("");
     } catch {
@@ -222,7 +227,7 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
   const joinPost = async (postId: string) => {
     const targetPost = posts.find((post) => post.id === postId);
 
-    if (!targetPost) {
+    if (!token || !targetPost) {
       return;
     }
 
@@ -242,7 +247,7 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
     }
 
     try {
-      const savedRoom = await joinMealMateRoom(postId, participantKey);
+      const savedRoom = await joinMealMateRoom(postId, token);
       const updatedPost = mapRoomToPost(savedRoom, restaurants);
       const isFull = updatedPost.currentCount >= updatedPost.maxCount;
 
@@ -253,7 +258,7 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
         title: isFull ? "나랑 밥먹자 모집 마감" : "나랑 밥먹자 참여 알림",
         message: isFull
           ? `${targetPost.time} ${targetPost.restaurant?.name ?? "식당"} 모임 인원이 다 찼어요.`
-          : `${targetPost.time} ${targetPost.restaurant?.name ?? "식당"} 모임에 익명 학생이 참여했어요.`,
+          : `${targetPost.time} ${targetPost.restaurant?.name ?? "식당"} 모임에 참여했어요.`,
       });
 
       showToast(isFull ? "모집 인원이 다 찼어요" : "참여했어요. 채팅방이 열렸어요");
@@ -311,7 +316,7 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
           <Text style={styles.postNote}>{post.note}</Text>
           <View style={styles.postFooter}>
             <Text style={styles.creator}>{post.createdBy ?? anonymousNames[index % anonymousNames.length]}</Text>
-            {post.joinedByMe ? (
+            {user && (post.joinedByMe ? (
               <View style={styles.joinedActions}>
                 <Pressable style={styles.chatButton} onPress={() => openChat(post)}>
                   <Text style={styles.joinButtonText}>채팅방</Text>
@@ -327,12 +332,12 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
               >
                 <Text style={[styles.joinButtonText, isFull && styles.joinButtonTextDisabled]}>{buttonLabel}</Text>
               </Pressable>
-            )}
+            ))}
           </View>
         </View>
       );
     },
-    [posts],
+    [posts, token, user],
   );
 
   const listHeader = (
@@ -343,7 +348,7 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
         <Text accessibilityRole="header" style={styles.title}>밥친구 찾기</Text>
         <Text style={styles.description}>식당과 시간이 맞는 모임에 참여해 보세요</Text>
       </View>
-      <Pressable accessibilityRole="button" onPress={() => setComposerOpen(value => !value)} style={styles.newMeeting}><Icon name={composerOpen ? "close-outline" : "add-outline"} color="white" size={20} /><Text style={styles.createButtonText}>{composerOpen ? "모집글 닫기" : "새 밥약속 만들기"}</Text></Pressable>
+      {user && <Pressable accessibilityRole="button" onPress={() => setComposerOpen(value => !value)} style={styles.newMeeting}><Icon name={composerOpen ? "close-outline" : "add-outline"} color="white" size={20} /><Text style={styles.createButtonText}>{composerOpen ? "모집글 닫기" : "새 밥약속 만들기"}</Text></Pressable>}
       {composerOpen && <View style={styles.formCard}>
         <Text style={styles.sectionTitle}>모집글 만들기</Text>
         <TextInput
@@ -402,7 +407,7 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
       </View>}
 
       <View style={styles.boardHeader}>
-        <Text style={styles.sectionTitle}>현재 모집 중</Text>
+        <Text style={styles.sectionTitle}>{user ? "현재 모집 중" : "예시 모임"}</Text>
         <Text style={styles.boardMeta}>{posts.length}개</Text>
       </View>
       {serverError ? (
@@ -420,6 +425,11 @@ export default function MealMateScreen({ navigation }: AppScreenProps<"MealMate"
         keyExtractor={(post) => post.id}
         renderItem={renderPost}
         ListHeaderComponent={listHeader}
+        ListEmptyComponent={user && !serverError ? (
+          <Text style={styles.serverNoticeText}>
+            {hasLoadedRooms ? "아직 모집 중인 모임이 없어요" : "모임을 불러오고 있어요"}
+          </Text>
+        ) : null}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.container}
         initialNumToRender={6}

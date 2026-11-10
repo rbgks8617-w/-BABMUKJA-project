@@ -1,13 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import CachedRemoteImage from "../components/CachedRemoteImage";
+import { previewCommunityPosts } from "../data/previewCommunityPosts";
 import {
   createCommunityComment,
   deleteCommunityReview,
-  fetchCommunityReviews,
+  fetchCommunityReview,
   type CommunityReviewDto,
 } from "../services/communityApi";
-import { getParticipantKey } from "../services/clientIdentity";
 import { useAuth } from "../store/AuthContext";
 import { colors } from "../theme/colors";
 import type { AppScreenProps } from "../types/app";
@@ -59,14 +59,14 @@ function formatServerTime(value: string) {
   return `${Math.floor(minutes / 1440)}일 전`;
 }
 
-function mapReviewToDetail(review: CommunityReviewDto, participantKey: string): DetailPost {
+function mapReviewToDetail(review: CommunityReviewDto): DetailPost {
   return {
     id: review.id,
     title: review.title,
     body: review.body,
     meta: `맛 ${formatRating(review.tasteScore)} · 가성비 ${formatRating(review.valueScore)}`,
     createdAt: formatServerTime(review.createdAt),
-    isMine: Boolean(participantKey && review.authorKey === participantKey),
+    isMine: review.isMine,
     imageUrl: review.imageUrl ?? undefined,
     comments: review.comments.map((comment) => ({
       id: comment.id,
@@ -94,49 +94,44 @@ function getCommentAuthorLabel(post: DetailPost, comment: DetailComment, comment
 }
 
 export default function CommunityPostDetailScreen({ navigation, route }: AppScreenProps<"CommunityPostDetail">) {
-  const participantKey = useMemo(() => getParticipantKey(), []);
   const { token, user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
-  const [post, setPost] = useState<DetailPost | null>(null);
+  const [serverPost, setPost] = useState<DetailPost | null>(null);
+  const previewPost = user ? undefined : previewCommunityPosts.find((item) => item.id === route.params.postId && item.topic === "음식 후기");
+  const post = previewPost ? { ...previewPost, meta: previewPost.meta ?? "" } : serverPost;
   const [commentDraft, setCommentDraft] = useState("");
   const [serverError, setServerError] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
 
   const loadPost = useCallback(async () => {
+    if (!token) return;
     try {
-      const reviews = await fetchCommunityReviews();
-      const review = reviews.find((item) => item.id === route.params.postId);
-
-      if (!review) {
-        setPost(null);
-        setServerError("게시글을 찾을 수 없어요");
-        return;
-      }
-
-      setPost(mapReviewToDetail(review, participantKey));
+      const review = await fetchCommunityReview(route.params.postId, token);
+      setPost(mapReviewToDetail(review));
       setServerError("");
     } catch {
-      setServerError("서버 연결을 확인하고 있어요");
+      setServerError("게시글을 불러오지 못했어요.");
     }
-  }, [participantKey, route.params.postId]);
+  }, [route.params.postId, token]);
 
   useEffect(() => {
+    if (!token) return;
     loadPost();
     const timerId = setInterval(loadPost, 5000);
     return () => clearInterval(timerId);
-  }, [loadPost]);
+  }, [loadPost, token]);
 
   async function submitComment() {
     const body = commentDraft.trim();
 
-    if (!body || !post) {
+    if (!token || !body || !post) {
       return;
     }
 
     const optimisticComment: DetailComment = {
       id: `${post.id}-comment-${Date.now()}`,
       body,
-      authorKey: participantKey,
+      authorKey: "pending",
       authorLabel: "익명?",
       createdAt: "방금",
     };
@@ -152,30 +147,28 @@ export default function CommunityPostDetailScreen({ navigation, route }: AppScre
     setCommentDraft("");
 
     try {
-      const savedReview = await createCommunityComment(post.id, {
-        body,
-        participantKey,
-      });
-      setPost(mapReviewToDetail(savedReview, participantKey));
+      const savedReview = await createCommunityComment(post.id, body, token);
+      setPost(mapReviewToDetail(savedReview));
       setServerError("");
     } catch {
+      setPost((currentPost) => currentPost && {
+        ...currentPost,
+        comments: currentPost.comments.filter((comment) => comment.id !== optimisticComment.id),
+      });
+      setCommentDraft((currentDraft) => currentDraft || body);
       setServerError("댓글 저장에 실패했어요");
-      loadPost();
     }
   }
 
   async function deletePost() {
-    if (!post || (!post.isMine && !isAdmin)) {
+    if (!token || !post || (!post.isMine && !isAdmin)) {
       return;
     }
 
     setIsDeleting(true);
 
     try {
-      await deleteCommunityReview(post.id, {
-        participantKey,
-        token: isAdmin ? token ?? undefined : undefined,
-      });
+      await deleteCommunityReview(post.id, token);
       navigation.goBack();
     } catch {
       setServerError("게시글 삭제에 실패했어요");
@@ -187,7 +180,7 @@ export default function CommunityPostDetailScreen({ navigation, route }: AppScre
   if (!post) {
     return (
       <View style={styles.emptyScreen}>
-        <Text style={styles.emptyText}>{serverError || "게시글을 불러오고 있어요"}</Text>
+        <Text style={styles.emptyText}>{!user ? "게시글을 찾을 수 없어요" : serverError || "게시글을 불러오고 있어요"}</Text>
       </View>
     );
   }
@@ -200,7 +193,7 @@ export default function CommunityPostDetailScreen({ navigation, route }: AppScre
         <View style={styles.postCard}>
           <View style={styles.postHeader}>
             <View style={styles.topicPill}>
-              <Text style={styles.topicText}>음식 후기</Text>
+              <Text style={styles.topicText}>{user ? "음식 후기" : "예시 · 음식 후기"}</Text>
             </View>
             <Text style={styles.timeText}>{post.createdAt}</Text>
           </View>
@@ -235,7 +228,7 @@ export default function CommunityPostDetailScreen({ navigation, route }: AppScre
             <Text style={styles.commentEmpty}>아직 댓글이 없어요.</Text>
           )}
 
-          <View style={styles.commentComposer}>
+          {user && <View style={styles.commentComposer}>
             <TextInput
               value={commentDraft}
               onChangeText={setCommentDraft}
@@ -246,7 +239,7 @@ export default function CommunityPostDetailScreen({ navigation, route }: AppScre
             <Pressable style={styles.commentButton} onPress={submitComment}>
               <Text style={styles.commentButtonText}>등록</Text>
             </Pressable>
-          </View>
+          </View>}
         </View>
 
         {serverError ? (

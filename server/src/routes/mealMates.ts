@@ -1,108 +1,62 @@
+import { randomUUID } from "node:crypto";
+import type { Prisma } from "@prisma/client";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db/prisma.js";
+import { runSerializable } from "../db/serializable.js";
+import { requireAuth } from "../middleware/auth.js";
 import { HttpError } from "../middleware/errorHandler.js";
 import { store } from "../repositories/inMemoryStore.js";
 
-const participantSchema = z.object({
-  participantKey: z.string().trim().min(1).max(80).default("legacy-viewer"),
-});
-
-const createRoomSchema = participantSchema.extend({
+const createRoomSchema = z.object({
   restaurantId: z.string().trim().min(1),
   time: z.string().trim().min(1).max(40),
   topic: z.string().trim().min(1).max(80),
   note: z.string().trim().max(500).default(""),
   maxCount: z.number().int().min(2).max(6).default(4),
 });
+const createMessageSchema = z.object({ body: z.string().trim().min(1).max(500) });
 
-const createMessageSchema = participantSchema.extend({
-  body: z.string().trim().min(1).max(500),
-});
+// Rooms created with unverified browser keys cannot establish membership for an account.
+const activeRoom = { creatorUserId: { not: null }, currentCount: { gt: 0 } };
 
 export const mealMatesRouter = Router();
+mealMatesRouter.use(requireAuth);
 
 async function ensureRestaurant(restaurantId: string) {
-  const existingRestaurant = await prisma.restaurant.findUnique({
+  const existing = await prisma.restaurant.findUnique({ where: { id: restaurantId }, select: { id: true } });
+  if (existing) return existing;
+
+  const seed = store.getRestaurant(restaurantId);
+  if (!seed) return null;
+
+  return prisma.restaurant.upsert({
     where: { id: restaurantId },
-    select: { id: true },
-  });
-
-  if (existingRestaurant) {
-    return existingRestaurant;
-  }
-
-  const seedRestaurant = store.getRestaurant(restaurantId);
-
-  if (!seedRestaurant) {
-    return null;
-  }
-
-  return prisma.restaurant.create({
-    data: {
-      id: seedRestaurant.id,
-      name: seedRestaurant.name,
-      building: seedRestaurant.building,
-      category: seedRestaurant.category,
-      location: seedRestaurant.location,
-      description: seedRestaurant.description,
-      imageUrl: seedRestaurant.imageUrl,
-    },
+    create: seed,
+    update: {},
     select: { id: true },
   });
 }
 
-async function resolveMealMateAnonymousNumber(roomId: string, participantKey: string) {
-  const existingMember = await prisma.mealMateMember.findUnique({
-    where: {
-      roomId_participantKey: {
-        roomId,
-        participantKey,
-      },
-    },
-    select: { anonymousNumber: true },
-  });
-
-  if (existingMember) {
-    return existingMember.anonymousNumber;
-  }
-
-  const maxMemberNumber = await prisma.mealMateMember.aggregate({
-    where: { roomId },
-    _max: { anonymousNumber: true },
-  });
-
-  return (maxMemberNumber._max.anonymousNumber ?? 0) + 1;
+function includeRoomFor(userId: string) {
+  return {
+    restaurant: { select: { name: true } },
+    members: { where: { participantKey: userId }, select: { id: true } },
+  } satisfies Prisma.MealMateRoomInclude;
 }
 
-function serializeRoom(room: {
-  id: string;
-  restaurantId: string;
-  time: string;
-  topic: string;
-  note: string;
-  currentCount: number;
-  maxCount: number;
-  createdAt: Date;
-  restaurant?: { id: string; name: string } | null;
-  members?: Array<{ participantKey: string; anonymousNumber: number }>;
-}) {
+function serializeRoom(room: Prisma.MealMateRoomGetPayload<{ include: ReturnType<typeof includeRoomFor> }>) {
   return {
     id: room.id,
     restaurantId: room.restaurantId,
-    restaurantName: room.restaurant?.name ?? "식당",
+    restaurantName: room.restaurant.name,
     time: room.time,
     topic: room.topic,
     note: room.note,
     currentCount: room.currentCount,
     maxCount: room.maxCount,
     createdAt: room.createdAt.toISOString(),
-    members:
-      room.members?.map((member) => ({
-        participantKey: member.participantKey,
-        anonymousNumber: member.anonymousNumber,
-        anonymousLabel: `익명${member.anonymousNumber}`,
-      })) ?? [],
+    joinedByMe: room.members.length > 0,
   };
 }
 
@@ -112,39 +66,43 @@ function serializeMessage(message: {
   participantKey: string;
   anonymousNumber: number;
   createdAt: Date;
-}, viewerParticipantKey = "") {
+}, userId: string) {
   return {
     id: message.id,
     body: message.body,
     anonymousNumber: message.anonymousNumber,
     anonymousLabel: `익명${message.anonymousNumber}`,
-    isMine: Boolean(viewerParticipantKey && message.participantKey === viewerParticipantKey),
+    isMine: message.participantKey === userId,
     createdAt: message.createdAt.toISOString(),
   };
 }
 
+async function findActiveMembership(tx: Prisma.TransactionClient, userId: string) {
+  return tx.mealMateMember.findFirst({
+    where: { participantKey: userId, room: activeRoom },
+    select: { roomId: true },
+  });
+}
+
+async function requireRoomMember(tx: Prisma.TransactionClient, roomId: string, userId: string) {
+  const member = await tx.mealMateMember.findFirst({
+    where: { roomId, participantKey: userId, room: activeRoom },
+    select: { id: true, anonymousNumber: true },
+  });
+  if (!member) throw new HttpError(403, "참여 중인 모임에서만 채팅할 수 있습니다.");
+  return member;
+}
+
 mealMatesRouter.get("/", async (request, response, next) => {
   try {
-    const participantKey =
-      typeof request.query.participantKey === "string" ? request.query.participantKey.trim() : "";
     const rooms = await prisma.mealMateRoom.findMany({
+      where: activeRoom,
       orderBy: { createdAt: "desc" },
       take: 60,
-      include: {
-        restaurant: { select: { id: true, name: true } },
-        members: {
-          where: participantKey ? { participantKey } : undefined,
-          select: { participantKey: true, anonymousNumber: true },
-        },
-      },
+      include: includeRoomFor(request.user!.id),
     });
 
-    response.json({
-      data: rooms.map((room) => ({
-        ...serializeRoom(room),
-        joinedByMe: room.members.length > 0,
-      })),
-    });
+    response.json({ data: rooms.map(serializeRoom) });
   } catch (error) {
     next(error);
   }
@@ -153,61 +111,27 @@ mealMatesRouter.get("/", async (request, response, next) => {
 mealMatesRouter.post("/", async (request, response, next) => {
   try {
     const payload = createRoomSchema.parse(request.body);
+    const userId = request.user!.id;
     const restaurant = await ensureRestaurant(payload.restaurantId);
+    if (!restaurant) throw new HttpError(400, "존재하지 않는 식당입니다.");
 
-    if (!restaurant) {
-      throw new HttpError(400, "존재하지 않는 식당입니다.");
-    }
-
-    const joinedRoom = await prisma.mealMateMember.findFirst({
-      where: { participantKey: payload.participantKey },
-      select: { roomId: true },
+    const room = await runSerializable(async (tx) => {
+      if (await findActiveMembership(tx, userId)) {
+        throw new HttpError(409, "이미 참여 중인 모임이 있어요. 먼저 나가주세요.");
+      }
+      return tx.mealMateRoom.create({
+        data: {
+          ...payload,
+          id: randomUUID(),
+          creatorUserId: userId,
+          currentCount: 1,
+          members: { create: { participantKey: userId, anonymousNumber: 1 } },
+        },
+        include: includeRoomFor(userId),
+      });
     });
 
-    if (joinedRoom) {
-      throw new HttpError(409, "이미 참여 중인 모임이 있어요. 먼저 나가주세요.");
-    }
-
-    const room = await prisma.mealMateRoom.create({
-      data: {
-        id: `mate-${Date.now()}`,
-        restaurantId: payload.restaurantId,
-        time: payload.time,
-        topic: payload.topic,
-        note: payload.note,
-        maxCount: payload.maxCount,
-        creatorKey: payload.participantKey,
-        currentCount: 1,
-        members: {
-          create: {
-            participantKey: payload.participantKey,
-            anonymousNumber: 1,
-          },
-        },
-        messages: {
-          create: {
-            id: `mate-message-${Date.now()}`,
-            body: `${payload.time}에 만나는 걸로 생각하고 있어요.`,
-            participantKey: payload.participantKey,
-            anonymousNumber: 1,
-          },
-        },
-      },
-      include: {
-        restaurant: { select: { id: true, name: true } },
-        members: {
-          where: { participantKey: payload.participantKey },
-          select: { participantKey: true, anonymousNumber: true },
-        },
-      },
-    });
-
-    response.status(201).json({
-      data: {
-        ...serializeRoom(room),
-        joinedByMe: true,
-      },
-    });
+    response.status(201).json({ data: serializeRoom(room) });
   } catch (error) {
     next(error);
   }
@@ -215,65 +139,38 @@ mealMatesRouter.post("/", async (request, response, next) => {
 
 mealMatesRouter.post("/:roomId/join", async (request, response, next) => {
   try {
-    const payload = participantSchema.parse(request.body);
-    const room = await prisma.mealMateRoom.findUnique({
-      where: { id: request.params.roomId },
-      select: { id: true, currentCount: true, maxCount: true },
-    });
+    const { roomId } = request.params;
+    const userId = request.user!.id;
+    const room = await runSerializable(async (tx) => {
+      const target = await tx.mealMateRoom.findFirst({
+        where: { id: roomId, ...activeRoom },
+        include: includeRoomFor(userId),
+      });
+      if (!target) throw new HttpError(404, "모임을 찾을 수 없습니다.");
+      if (target.members.length) return target;
 
-    if (!room) {
-      throw new HttpError(404, "모임을 찾을 수 없습니다.");
-    }
-
-    const joinedRoom = await prisma.mealMateMember.findFirst({
-      where: { participantKey: payload.participantKey },
-      select: { roomId: true },
-    });
-
-    if (joinedRoom && joinedRoom.roomId !== room.id) {
-      throw new HttpError(409, "이미 참여 중인 모임이 있어요. 먼저 나가주세요.");
-    }
-
-    const existingNumber = await resolveMealMateAnonymousNumber(room.id, payload.participantKey);
-    const alreadyJoined = Boolean(joinedRoom);
-
-    if (!alreadyJoined && room.currentCount >= room.maxCount) {
-      throw new HttpError(409, "이미 마감된 모임이에요.");
-    }
-
-    const updatedRoom = await prisma.$transaction(async (tx) => {
-      if (!alreadyJoined) {
-        await tx.mealMateMember.create({
-          data: {
-            roomId: room.id,
-            participantKey: payload.participantKey,
-            anonymousNumber: existingNumber,
-          },
-        });
-        await tx.mealMateRoom.update({
-          where: { id: room.id },
-          data: { currentCount: { increment: 1 } },
-        });
+      if (await findActiveMembership(tx, userId)) {
+        throw new HttpError(409, "이미 참여 중인 모임이 있어요. 먼저 나가주세요.");
+      }
+      if (target.currentCount >= target.maxCount) {
+        throw new HttpError(409, "이미 마감된 모임이에요.");
       }
 
-      return tx.mealMateRoom.findUniqueOrThrow({
-        where: { id: room.id },
-        include: {
-          restaurant: { select: { id: true, name: true } },
-          members: {
-            where: { participantKey: payload.participantKey },
-            select: { participantKey: true, anonymousNumber: true },
-          },
+      const members = await tx.mealMateMember.aggregate({ where: { roomId }, _max: { anonymousNumber: true } });
+      const messages = await tx.mealMateMessage.aggregate({ where: { roomId }, _max: { anonymousNumber: true } });
+      const anonymousNumber = Math.max(members._max.anonymousNumber ?? 0, messages._max.anonymousNumber ?? 0) + 1;
+
+      return tx.mealMateRoom.update({
+        where: { id: roomId },
+        data: {
+          currentCount: { increment: 1 },
+          members: { create: { participantKey: userId, anonymousNumber } },
         },
+        include: includeRoomFor(userId),
       });
     });
 
-    response.json({
-      data: {
-        ...serializeRoom(updatedRoom),
-        joinedByMe: true,
-      },
-    });
+    response.json({ data: serializeRoom(room) });
   } catch (error) {
     next(error);
   }
@@ -281,46 +178,19 @@ mealMatesRouter.post("/:roomId/join", async (request, response, next) => {
 
 mealMatesRouter.post("/:roomId/leave", async (request, response, next) => {
   try {
-    const payload = participantSchema.parse(request.body);
-    const member = await prisma.mealMateMember.findUnique({
-      where: {
-        roomId_participantKey: {
-          roomId: request.params.roomId,
-          participantKey: payload.participantKey,
-        },
-      },
-      select: { id: true },
-    });
-
-    if (!member) {
-      throw new HttpError(404, "참여 중인 모임이 아닙니다.");
-    }
-
-    const updatedRoom = await prisma.$transaction(async (tx) => {
+    const { roomId } = request.params;
+    const userId = request.user!.id;
+    const room = await runSerializable(async (tx) => {
+      const member = await requireRoomMember(tx, roomId, userId);
       await tx.mealMateMember.delete({ where: { id: member.id } });
-      await tx.mealMateRoom.update({
-        where: { id: request.params.roomId },
+      return tx.mealMateRoom.update({
+        where: { id: roomId },
         data: { currentCount: { decrement: 1 } },
-      });
-
-      return tx.mealMateRoom.findUniqueOrThrow({
-        where: { id: request.params.roomId },
-        include: {
-          restaurant: { select: { id: true, name: true } },
-          members: {
-            where: { participantKey: payload.participantKey },
-            select: { participantKey: true, anonymousNumber: true },
-          },
-        },
+        include: includeRoomFor(userId),
       });
     });
 
-    response.json({
-      data: {
-        ...serializeRoom(updatedRoom),
-        joinedByMe: false,
-      },
-    });
+    response.json({ data: serializeRoom(room) });
   } catch (error) {
     next(error);
   }
@@ -328,17 +198,20 @@ mealMatesRouter.post("/:roomId/leave", async (request, response, next) => {
 
 mealMatesRouter.get("/:roomId/messages", async (request, response, next) => {
   try {
-    const participantKey =
-      typeof request.query.participantKey === "string" ? request.query.participantKey.trim() : "";
-    const messages = await prisma.mealMateMessage.findMany({
-      where: { roomId: request.params.roomId },
-      orderBy: { createdAt: "asc" },
-      take: 120,
+    const { roomId } = request.params;
+    const userId = request.user!.id;
+    const room = await prisma.mealMateRoom.findFirst({
+      where: { id: roomId, ...activeRoom, members: { some: { participantKey: userId } } },
+      select: {
+        messages: {
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          take: 120,
+        },
+      },
     });
+    if (!room) throw new HttpError(403, "참여 중인 모임에서만 채팅할 수 있습니다.");
 
-    response.json({
-      data: messages.map((message) => serializeMessage(message, participantKey)),
-    });
+    response.json({ data: room.messages.reverse().map((message) => serializeMessage(message, userId)) });
   } catch (error) {
     next(error);
   }
@@ -346,46 +219,17 @@ mealMatesRouter.get("/:roomId/messages", async (request, response, next) => {
 
 mealMatesRouter.post("/:roomId/messages", async (request, response, next) => {
   try {
-    const payload = createMessageSchema.parse(request.body);
-    const room = await prisma.mealMateRoom.findUnique({
-      where: { id: request.params.roomId },
-      select: { id: true },
+    const { body } = createMessageSchema.parse(request.body);
+    const { roomId } = request.params;
+    const userId = request.user!.id;
+    const message = await runSerializable(async (tx) => {
+      const member = await requireRoomMember(tx, roomId, userId);
+      return tx.mealMateMessage.create({
+        data: { id: randomUUID(), roomId, body, participantKey: userId, anonymousNumber: member.anonymousNumber },
+      });
     });
 
-    if (!room) {
-      throw new HttpError(404, "모임을 찾을 수 없습니다.");
-    }
-
-    const anonymousNumber = await resolveMealMateAnonymousNumber(room.id, payload.participantKey);
-
-    await prisma.mealMateMember.upsert({
-      where: {
-        roomId_participantKey: {
-          roomId: room.id,
-          participantKey: payload.participantKey,
-        },
-      },
-      update: {},
-      create: {
-        roomId: room.id,
-        participantKey: payload.participantKey,
-        anonymousNumber,
-      },
-    });
-
-    const message = await prisma.mealMateMessage.create({
-      data: {
-        id: `mate-message-${Date.now()}`,
-        roomId: room.id,
-        body: payload.body,
-        participantKey: payload.participantKey,
-        anonymousNumber,
-      },
-    });
-
-    response.status(201).json({
-      data: serializeMessage(message),
-    });
+    response.status(201).json({ data: serializeMessage(message, userId) });
   } catch (error) {
     next(error);
   }

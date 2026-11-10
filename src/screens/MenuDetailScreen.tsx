@@ -14,6 +14,7 @@ import FavoriteHeartButton from "../components/FavoriteHeartButton";
 import { useFavorites } from "../store/FavoriteContext";
 import { getMenuById } from "../services/restaurantService";
 import { useCart } from "../store/CartContext";
+import { useAuth } from "../store/AuthContext";
 import { colors } from "../theme/colors";
 import type { AppScreenProps, MenuOption, OrderItem } from "../types/app";
 import { formatPrice } from "../utils/formatPrice";
@@ -23,6 +24,7 @@ export default function MenuDetailScreen({
   navigation,
 }: AppScreenProps<"MenuDetail">) {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const { menuId } = route.params;
   const menu = getMenuById(menuId);
   const { addToCart } = useCart();
@@ -170,18 +172,18 @@ export default function MenuDetailScreen({
         <View style={styles.actions}>
           <Pressable
             accessibilityRole="button"
-            style={({ pressed }) => [ui.primaryButton, styles.actionButton, styles.secondary, pressed && ui.pressed]}
+            style={({ pressed }) => [ui.primaryButton, styles.actionButton, !user && styles.secondary, pressed && ui.pressed]}
             onPress={handleAddToCart}
           >
-            <Text style={styles.secondaryText}>장바구니 담기</Text>
+            <Text style={user ? ui.primaryButtonText : styles.secondaryText}>장바구니 담기</Text>
           </Pressable>
-          <Pressable
+          {!user && <Pressable
             accessibilityRole="button"
             style={({ pressed }) => [ui.primaryButton, styles.actionButton, pressed && ui.pressed]}
             onPress={handleDirectPayment}
           >
-            <Text style={ui.primaryButtonText}>{formatPrice(totalPrice)} 결제</Text>
-          </Pressable>
+            <Text style={ui.primaryButtonText}>{formatPrice(totalPrice)} 테스트 결제</Text>
+          </Pressable>}
         </View>
       </View>
     </View>

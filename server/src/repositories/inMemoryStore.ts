@@ -72,7 +72,7 @@ export const store = {
     return order;
   },
 
-  listOrders(): Order[] {
-    return state.orders;
+  listOrders(userId: string): Order[] {
+    return state.orders.filter((order) => order.userId === userId);
   },
 };

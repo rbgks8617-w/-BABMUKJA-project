@@ -1,80 +1,36 @@
+import { randomUUID } from "node:crypto";
+import type { Prisma } from "@prisma/client";
 import { Router } from "express";
 import { z } from "zod";
-import { HttpError } from "../middleware/errorHandler.js";
 import { prisma } from "../db/prisma.js";
-import { getAuthUserFromHeader } from "../middleware/auth.js";
+import { runSerializable } from "../db/serializable.js";
+import { requireAuth } from "../middleware/auth.js";
+import { HttpError } from "../middleware/errorHandler.js";
 
 const createReviewSchema = z.object({
   title: z.string().trim().min(1).max(80),
   body: z.string().trim().min(1).max(1000),
-  participantKey: z.string().trim().min(1).max(80).default("legacy-viewer"),
   tasteScore: z.number().min(0.5).max(5),
   valueScore: z.number().min(0.5).max(5),
   imageUrl: z.string().url().optional(),
 });
 
-const createCommentSchema = z.object({
-  body: z.string().trim().min(1).max(500),
-  participantKey: z.string().trim().min(1).max(80).default("legacy-viewer"),
-});
-
-const deleteReviewSchema = z.object({
-  participantKey: z.string().trim().min(1).max(80).optional(),
-});
+const createCommentSchema = z.object({ body: z.string().trim().min(1).max(500) });
+const includeComments = { comments: { orderBy: { createdAt: "asc" as const }, take: 60 } };
 
 export const communityRouter = Router();
+communityRouter.use(requireAuth);
 
-async function resolveReviewAnonymousNumber(reviewId: string, participantKey: string) {
-  const review = await prisma.review.findUnique({
-    where: { id: reviewId },
-    select: { authorKey: true },
-  });
-
-  if (review?.authorKey && review.authorKey === participantKey) {
-    return 1;
-  }
-
-  const existingComment = await prisma.reviewComment.findFirst({
-    where: { reviewId, participantKey },
-    orderBy: { createdAt: "asc" },
-    select: { anonymousNumber: true },
-  });
-
-  if (existingComment) {
-    return existingComment.anonymousNumber;
-  }
-
-  const maxCommentNumber = await prisma.reviewComment.aggregate({
-    where: { reviewId },
-    _max: { anonymousNumber: true },
-  });
-
-  return Math.max(review?.authorKey ? 1 : 0, maxCommentNumber._max.anonymousNumber ?? 0) + 1;
-}
-
-function serializeReview(review: {
-  id: string;
-  title: string;
-  body: string;
-  authorKey: string | null;
-  tasteScore: unknown;
-  valueScore: unknown;
-  imageUrl: string | null;
-  createdAt: Date;
-  comments: Array<{
-    id: string;
-    body: string;
-    anonymousKey: string;
-    participantKey: string;
-    anonymousNumber: number;
-    createdAt: Date;
-  }>;
-}) {
+function serializeReview(review: Prisma.ReviewGetPayload<{ include: typeof includeComments }>, userId: string) {
   return {
-    ...review,
+    id: review.id,
+    title: review.title,
+    body: review.body,
     tasteScore: Number(review.tasteScore),
     valueScore: Number(review.valueScore),
+    imageUrl: review.imageUrl,
     createdAt: review.createdAt.toISOString(),
+    isMine: review.authorUserId === userId,
     comments: review.comments.map((comment) => ({
       id: comment.id,
       body: comment.body,
@@ -86,22 +42,32 @@ function serializeReview(review: {
   };
 }
 
-communityRouter.get("/reviews", async (_request, response, next) => {
+communityRouter.get("/reviews", async (request, response, next) => {
   try {
     const reviews = await prisma.review.findMany({
       orderBy: { createdAt: "desc" },
       take: 80,
-      include: {
-        comments: {
-          orderBy: { createdAt: "asc" },
-          take: 60,
-        },
-      },
+      include: includeComments,
     });
 
-    response.json({
-      data: reviews.map(serializeReview),
+    response.json({ data: reviews.map((review) => serializeReview(review, request.user!.id)) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+communityRouter.get("/reviews/:reviewId", async (request, response, next) => {
+  try {
+    const review = await prisma.review.findUnique({
+      where: { id: request.params.reviewId },
+      include: includeComments,
     });
+
+    if (!review) {
+      throw new HttpError(404, "후기 글을 찾을 수 없습니다.");
+    }
+
+    response.json({ data: serializeReview(review, request.user!.id) });
   } catch (error) {
     next(error);
   }
@@ -110,24 +76,13 @@ communityRouter.get("/reviews", async (_request, response, next) => {
 communityRouter.post("/reviews", async (request, response, next) => {
   try {
     const payload = createReviewSchema.parse(request.body);
+    const userId = request.user!.id;
     const review = await prisma.review.create({
-      data: {
-        id: `review-${Date.now()}`,
-        title: payload.title,
-        body: payload.body,
-        authorKey: payload.participantKey,
-        tasteScore: payload.tasteScore,
-        valueScore: payload.valueScore,
-        imageUrl: payload.imageUrl,
-      },
-      include: {
-        comments: true,
-      },
+      data: { id: randomUUID(), ...payload, authorUserId: userId },
+      include: includeComments,
     });
 
-    response.status(201).json({
-      data: serializeReview(review),
-    });
+    response.status(201).json({ data: serializeReview(review, userId) });
   } catch (error) {
     next(error);
   }
@@ -135,42 +90,54 @@ communityRouter.post("/reviews", async (request, response, next) => {
 
 communityRouter.post("/reviews/:reviewId/comments", async (request, response, next) => {
   try {
-    const payload = createCommentSchema.parse(request.body);
-    const existingReview = await prisma.review.findUnique({
-      where: { id: request.params.reviewId },
-      select: { id: true },
-    });
+    const { body } = createCommentSchema.parse(request.body);
+    const { reviewId } = request.params;
+    const userId = request.user!.id;
+    const review = await runSerializable(async (tx) => {
+      const existing = await tx.review.findUnique({
+        where: { id: reviewId },
+        select: { authorUserId: true },
+      });
 
-    if (!existingReview) {
-      throw new HttpError(404, "후기 글을 찾을 수 없습니다.");
-    }
+      if (!existing) {
+        throw new HttpError(404, "후기 글을 찾을 수 없습니다.");
+      }
 
-    const anonymousNumber = await resolveReviewAnonymousNumber(request.params.reviewId, payload.participantKey);
+      let anonymousNumber = 1;
+      if (existing.authorUserId !== userId) {
+        const priorComment = await tx.reviewComment.findFirst({
+          where: { reviewId, authorUserId: userId },
+          select: { anonymousNumber: true },
+        });
+        if (priorComment) {
+          anonymousNumber = priorComment.anonymousNumber;
+        } else {
+          const numbers = await tx.reviewComment.aggregate({
+            where: { reviewId },
+            _max: { anonymousNumber: true },
+          });
+          anonymousNumber = Math.max(1, numbers._max.anonymousNumber ?? 0) + 1;
+        }
+      }
 
-    const review = await prisma.review.update({
-      where: { id: request.params.reviewId },
-      data: {
-        comments: {
-          create: {
-            id: `${request.params.reviewId}-comment-${Date.now()}`,
-            body: payload.body,
-            anonymousKey: `anonymous-${anonymousNumber}`,
-            participantKey: payload.participantKey,
-            anonymousNumber,
+      return tx.review.update({
+        where: { id: reviewId },
+        data: {
+          comments: {
+            create: {
+              id: randomUUID(),
+              body,
+              authorUserId: userId,
+              anonymousKey: `anonymous-${anonymousNumber}`,
+              anonymousNumber,
+            },
           },
         },
-      },
-      include: {
-        comments: {
-          orderBy: { createdAt: "asc" },
-          take: 60,
-        },
-      },
+        include: includeComments,
+      });
     });
 
-    response.status(201).json({
-      data: serializeReview(review),
-    });
+    response.status(201).json({ data: serializeReview(review, userId) });
   } catch (error) {
     next(error);
   }
@@ -178,25 +145,17 @@ communityRouter.post("/reviews/:reviewId/comments", async (request, response, ne
 
 communityRouter.delete("/reviews/:reviewId", async (request, response, next) => {
   try {
-    const payload = deleteReviewSchema.parse(request.body);
-    const authUser = await getAuthUserFromHeader(request.header("authorization"));
-    const isAdmin = authUser?.role === "ADMIN";
-    const review = await prisma.review.findUnique({
-      where: { id: request.params.reviewId },
-      select: { id: true, authorKey: true },
+    const user = request.user!;
+    const result = await prisma.review.deleteMany({
+      where: {
+        id: request.params.reviewId,
+        ...(user.role === "ADMIN" ? {} : { authorUserId: user.id }),
+      },
     });
 
-    if (!review) {
-      throw new HttpError(404, "후기 글을 찾을 수 없습니다.");
+    if (result.count === 0) {
+      throw new HttpError(404, "삭제할 수 있는 후기 글을 찾을 수 없습니다.");
     }
-
-    if (!isAdmin && (!payload.participantKey || (review.authorKey && review.authorKey !== payload.participantKey))) {
-      throw new HttpError(403, "내가 쓴 글만 삭제할 수 있습니다.");
-    }
-
-    await prisma.review.delete({
-      where: { id: request.params.reviewId },
-    });
 
     response.status(204).send();
   } catch (error) {
@@ -206,19 +165,12 @@ communityRouter.delete("/reviews/:reviewId", async (request, response, next) => 
 
 communityRouter.delete("/reviews", async (request, response, next) => {
   try {
-    const authUser = await getAuthUserFromHeader(request.header("authorization"));
-
-    if (authUser?.role !== "ADMIN") {
+    if (request.user!.role !== "ADMIN") {
       throw new HttpError(403, "관리자만 게시글을 일괄 삭제할 수 있습니다.");
     }
 
     const result = await prisma.review.deleteMany();
-
-    response.json({
-      data: {
-        deletedCount: result.count,
-      },
-    });
+    response.json({ data: { deletedCount: result.count } });
   } catch (error) {
     next(error);
   }

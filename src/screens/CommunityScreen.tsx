@@ -10,41 +10,18 @@ import {
   fetchCommunityReviews,
   type CommunityReviewDto,
 } from "../services/communityApi";
-import { getParticipantKey } from "../services/clientIdentity";
 import { useAuth } from "../store/AuthContext";
 import { useNotifications } from "../store/NotificationContext";
 import { colors } from "../theme/colors";
 import type { AppScreenProps } from "../types/app";
 
-type CommunityTab = "음식 후기" | "나랑 밥먹자";
-
-type CommunityComment = {
-  id: string;
-  body: string;
-  byAuthor: boolean;
-  authorKey: string;
-  authorLabel?: string;
-  createdAt: string;
-};
-
-type CommunityPostItem = {
-  id: string;
-  topic: CommunityTab;
-  title: string;
-  body: string;
-  createdAt: string;
-  isMine: boolean;
-  meta?: string;
-  imageUrl?: string;
-  comments: CommunityComment[];
-};
+import { previewCommunityPosts, type CommunityPostItem, type CommunityTab } from "../data/previewCommunityPosts";
 
 const tabs: CommunityTab[] = ["음식 후기", "나랑 밥먹자"];
 const ratingStep = 0.5;
 const minRating = 0.5;
 const maxRating = 5;
 const maxLocalPosts = 80;
-const authoredReviewStorageKey = "babmukja-authored-review-ids";
 
 function formatRating(score: number) {
   return score.toFixed(1);
@@ -82,7 +59,7 @@ function formatServerTime(value: string) {
   return `${Math.floor(minutes / 1440)}일 전`;
 }
 
-function mapReviewToPost(review: CommunityReviewDto, participantKey = ""): CommunityPostItem {
+function mapReviewToPost(review: CommunityReviewDto): CommunityPostItem {
   return {
     id: review.id,
     topic: "음식 후기",
@@ -90,7 +67,7 @@ function mapReviewToPost(review: CommunityReviewDto, participantKey = ""): Commu
     body: review.body,
     meta: `맛 ${formatRating(review.tasteScore)} · 가성비 ${formatRating(review.valueScore)}`,
     createdAt: formatServerTime(review.createdAt),
-    isMine: Boolean(participantKey && review.authorKey === participantKey),
+    isMine: review.isMine,
     imageUrl: review.imageUrl ?? undefined,
     comments: review.comments.map((comment) => ({
       id: comment.id,
@@ -102,67 +79,6 @@ function mapReviewToPost(review: CommunityReviewDto, participantKey = ""): Commu
     })),
   };
 }
-
-function readAuthoredReviewIds() {
-  if (typeof globalThis.localStorage === "undefined") {
-    return new Set<string>();
-  }
-
-  try {
-    const rawValue = globalThis.localStorage.getItem(authoredReviewStorageKey);
-    const ids = rawValue ? (JSON.parse(rawValue) as string[]) : [];
-    return new Set(ids.filter((id) => typeof id === "string"));
-  } catch {
-    return new Set<string>();
-  }
-}
-
-function writeAuthoredReviewIds(ids: Set<string>) {
-  if (typeof globalThis.localStorage === "undefined") {
-    return;
-  }
-
-  globalThis.localStorage.setItem(authoredReviewStorageKey, JSON.stringify(Array.from(ids).slice(-120)));
-}
-
-const initialPosts: CommunityPostItem[] = [
-  {
-    id: "review-1",
-    topic: "음식 후기",
-    title: "맘스터치 싸이버거 세트 든든함",
-    meta: "맛 4.5 · 가성비 4.0",
-    body: "공강 짧을 때 빨리 먹기 좋고 양도 꽤 괜찮아요.",
-    createdAt: "방금",
-    isMine: false,
-    imageUrl: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=700&q=80",
-    comments: [
-      { id: "review-1-comment-1", body: "감튀까지 먹으면 진짜 든든하더라.", byAuthor: false, authorKey: "student-a", createdAt: "방금" },
-      { id: "review-1-comment-2", body: "점심 피크만 피하면 빨라요.", byAuthor: false, authorKey: "student-b", createdAt: "방금" },
-    ],
-  },
-  {
-    id: "review-2",
-    topic: "음식 후기",
-    title: "라온식당 김치찌개 괜찮음",
-    meta: "맛 4.5 · 가성비 4.5",
-    body: "종합교육관 쪽 수업이면 이동이 편해서 자주 갈 듯.",
-    createdAt: "3분 전",
-    isMine: false,
-    imageUrl: "https://images.unsplash.com/photo-1583224964978-2257b960c3d3?auto=format&fit=crop&w=700&q=80",
-    comments: [],
-  },
-  {
-    id: "mate-1",
-    topic: "나랑 밥먹자",
-    title: "12:30 라온식당 같이 갈 사람",
-    body: "수업 끝나고 바로 갈 예정이에요. 조용히 밥만 먹어도 괜찮아요.",
-    createdAt: "10분 전",
-    isMine: false,
-    comments: [],
-  },
-];
-
-const matePosts = initialPosts.filter((post) => post.topic === "나랑 밥먹자");
 
 function PostCard({
   post,
@@ -199,7 +115,7 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
   const defaultWriterHeight = Math.min(maxWriterHeight, Math.max(minWriterHeight, viewportHeight * 0.7));
 
   const [activeTab, setActiveTab] = useState<CommunityTab>("음식 후기");
-  const [posts, setPosts] = useState<CommunityPostItem[]>(initialPosts);
+  const [posts, setPosts] = useState<CommunityPostItem[]>([]);
   const [serverError, setServerError] = useState("");
   const [writerOpen, setWriterOpen] = useState(false);
   const [writeTitle, setWriteTitle] = useState("");
@@ -212,15 +128,13 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
   const writerHeightRef = useRef(defaultWriterHeight);
   const { addNotification } = useNotifications();
   const { token, user } = useAuth();
-  const participantKey = useMemo(() => getParticipantKey(), []);
   const isAdmin = user?.role === "ADMIN";
-  const authoredReviewIdsRef = useRef<Set<string>>(readAuthoredReviewIds());
   const knownCommentIdsRef = useRef<Set<string>>(new Set());
   const hasLoadedServerReviewsRef = useRef(false);
 
   const visiblePosts = useMemo(
-    () => posts.filter((post) => post.topic === activeTab),
-    [activeTab, posts],
+    () => (user ? posts : previewCommunityPosts).filter((post) => post.topic === activeTab),
+    [activeTab, posts, user],
   );
 
   const writerPanResponder = useMemo(
@@ -255,13 +169,14 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
   }, [maxWriterHeight, minWriterHeight]);
 
   const loadReviews = useCallback(async () => {
+    if (!token) return;
     try {
-      const reviews = await fetchCommunityReviews();
+      const reviews = await fetchCommunityReviews(token);
       const nextKnownCommentIds = new Set<string>();
 
       if (hasLoadedServerReviewsRef.current) {
         reviews.forEach((review) => {
-          if (!authoredReviewIdsRef.current.has(review.id)) {
+          if (!review.isMine) {
             return;
           }
 
@@ -293,18 +208,19 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
       }
 
       knownCommentIdsRef.current = nextKnownCommentIds;
-      setPosts([...reviews.map((review) => mapReviewToPost(review, participantKey)), ...matePosts]);
+      setPosts(reviews.map(mapReviewToPost));
       setServerError("");
     } catch {
-      setServerError("서버에 연결하지 못했어요. 마지막 목록 또는 예시 글을 표시해요.");
+      setServerError("후기를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
     }
-  }, [addNotification, participantKey]);
+  }, [addNotification, token]);
 
   useEffect(() => {
+    if (!token) return;
     loadReviews();
     const timerId = setInterval(loadReviews, 5000);
     return () => clearInterval(timerId);
-  }, [loadReviews]);
+  }, [loadReviews, token]);
 
   useEffect(() => {
     if (route.params?.tab) {
@@ -338,7 +254,7 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
     const body = writeBody.trim();
     const imageUrl = writeImageUrl.trim();
 
-    if (!title || !body) {
+    if (!token || !title || !body) {
       return;
     }
 
@@ -362,14 +278,11 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
       const savedReview = await createCommunityReview({
         title,
         body,
-        participantKey,
         tasteScore: writeTasteScore,
         valueScore: writeValueScore,
         imageUrl: imageUrl || undefined,
-      });
-      const savedPost = mapReviewToPost(savedReview, participantKey);
-      authoredReviewIdsRef.current.add(savedPost.id);
-      writeAuthoredReviewIds(authoredReviewIdsRef.current);
+      }, token);
+      const savedPost = mapReviewToPost(savedReview);
       setPosts((currentPosts) =>
         [savedPost, ...currentPosts.filter((post) => post.id !== optimisticPost.id)].slice(0, maxLocalPosts),
       );
@@ -406,8 +319,6 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
     }
 
     setPosts((currentPosts) => currentPosts.filter((post) => post.topic !== "음식 후기"));
-    authoredReviewIdsRef.current.clear();
-    writeAuthoredReviewIds(authoredReviewIdsRef.current);
 
     try {
       await deleteAllCommunityReviews(token);
@@ -476,9 +387,9 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
         </View>
       ) : null}
 
-      <View style={styles.sectionHeader}>
+      {(!user || activeTab === "음식 후기") && <View style={styles.sectionHeader}>
         <View>
-          <Text accessibilityRole="header" style={styles.sectionTitle}>{activeTab}</Text>
+          <Text accessibilityRole="header" style={styles.sectionTitle}>{user ? activeTab : `예시 · ${activeTab}`}</Text>
         </View>
         <View style={styles.sectionActions}>
           {isAdmin && activeTab === "음식 후기" && visiblePosts.length > 0 ? (
@@ -488,7 +399,7 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
           ) : null}
           <Text style={styles.sectionCount}>{visiblePosts.length}개</Text>
         </View>
-      </View>
+      </View>}
       {serverError ? (
         <View style={styles.serverNotice}>
           <Text style={styles.serverNoticeText}>{serverError}</Text>
@@ -504,6 +415,11 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
         keyExtractor={(post) => post.id}
         renderItem={renderPost}
         ListHeaderComponent={listHeader}
+        ListEmptyComponent={user && activeTab === "음식 후기" && !serverError ? (
+          <Text style={styles.serverNoticeText}>
+            {hasLoadedServerReviewsRef.current ? "아직 등록된 후기가 없어요" : "후기를 불러오고 있어요"}
+          </Text>
+        ) : null}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.container}
         initialNumToRender={6}
@@ -643,7 +559,7 @@ export default function CommunityScreen({ navigation, route }: AppScreenProps<"C
             </Pressable>
           </ScrollView>
         </View>
-      ) : activeTab === "음식 후기" ? (
+      ) : user && activeTab === "음식 후기" ? (
         <Pressable accessibilityRole="button" accessibilityLabel="후기 쓰기" style={styles.writeDock} onPress={openWriter}>
           <Icon name="create-outline" size={18} color="white" />
           <Text style={{ fontSize: 13, fontWeight: "700", color: "white" }}>후기 쓰기</Text>

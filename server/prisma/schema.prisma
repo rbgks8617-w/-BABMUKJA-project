@@ -35,6 +35,9 @@ model User {
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
   sessions     UserSession[]
+  reviews      Review[]
+  reviewComments ReviewComment[]
+  mealMateRooms MealMateRoom[]
 
   @@index([createdAt])
   @@map("users")
@@ -77,6 +80,8 @@ model Review {
   title     String
   body      String
   authorKey String?         @map("author_key")
+  authorUserId String?      @map("author_user_id")
+  authorUser User?          @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
   tasteScore Decimal        @map("taste_score") @db.Decimal(2, 1)
   valueScore Decimal        @map("value_score") @db.Decimal(2, 1)
   imageUrl  String?         @map("image_url")
@@ -94,12 +99,15 @@ model ReviewComment {
   body            String
   anonymousKey    String   @map("anonymous_key")
   participantKey  String   @default("legacy-viewer") @map("participant_key")
+  authorUserId    String?  @map("author_user_id")
+  authorUser      User?    @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
   anonymousNumber Int      @default(1) @map("anonymous_number")
   createdAt       DateTime @default(now()) @map("created_at")
   review          Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
   @@index([reviewId])
   @@index([reviewId, participantKey])
+  @@index([reviewId, authorUserId])
   @@index([createdAt])
   @@map("review_comments")
 }
@@ -111,6 +119,8 @@ model MealMateRoom {
   topic        String
   note         String            @default("")
   creatorKey   String?           @map("creator_key")
+  creatorUserId String?          @map("creator_user_id")
+  creatorUser   User?            @relation(fields: [creatorUserId], references: [id], onDelete: SetNull)
   currentCount Int               @default(1) @map("current_count")
   maxCount     Int               @map("max_count")
   createdAt    DateTime          @default(now()) @map("created_at")
