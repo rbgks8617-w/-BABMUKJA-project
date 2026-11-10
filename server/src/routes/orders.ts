@@ -24,6 +24,8 @@ ordersRouter.get("/", (_request, response) => {
   });
 });
 
+ordersRouter.use(requireAuth);
+
 ordersRouter.post("/", (request, response, next) => {
   try {
     const payload = createOrderSchema.parse(request.body);
@@ -39,6 +41,7 @@ ordersRouter.post("/", (request, response, next) => {
 
     const order: Order = {
       id: `order-${Date.now()}`,
+      userId: request.user!.id,
       items: payload.items,
       totalPrice,
       status: "created",
